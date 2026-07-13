@@ -343,6 +343,14 @@ async function getJSON(u){
   if(!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
+/* Lichess mengirim daftar partai sebagai NDJSON: satu objek JSON per baris,
+   bukan satu array. r.json() akan GAGAL di sini. */
+async function getNDJSON(u){
+  const r = await fetch(url(u), { headers:{ "Accept":"application/x-ndjson" } });
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const t = await r.text();
+  return t.split("\n").filter(Boolean).map(l => JSON.parse(l));
+}
 /* Log hanya ada di tab Pengaturan. Kalau tidak ada, jangan meledak —
    simpan ke S.fetchLog supaya bisa dilihat saat tab itu dibuka.
    Versi sebelumnya melempar TypeError di sini dan MEMBUNUH seluruh
@@ -419,12 +427,14 @@ async function fetchAll(){
   if(S.cfg.lichess && !out.lichess){
     const u = S.cfg.lichess.trim();
     try{
-      const [prof, act, hist] = await Promise.all([
+      const [prof, act, hist, lg] = await Promise.all([
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`).catch(()=>[]),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`).catch(()=>[]),
+        // Partai sungguhan, bukan ringkasan. `opening=true` memberi nama pembukaan.
+        getNDJSON(`https://lichess.org/api/games/user/${u}?max=200&opening=true`).catch(()=>null),
       ]);
-      out.lichess = { user:u, prof, act, hist };
+      out.lichess = { user:u, prof, act, hist, games: lg || [], gamesOk: !!lg };
     }catch(e){ out.errors.push(["Lichess", e.message]); }
   }
 
@@ -434,7 +444,9 @@ async function fetchAll(){
   if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${out.chess.games.length} partai + ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
   else if(out.chess) logLine(`Chess.com langsung: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip`, out.chess.games.length ? "" : "warn");
   if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
-  if(out.lichess) logLine(`Lichess: ${(out.lichess.act||[]).length} hari aktivitas + riwayat rating`, "");
+  if(out.lichess) logLine(`Lichess: ${out.lichess.games.length} partai + ${(out.lichess.act||[]).length} hari aktivitas` +
+    (out.lichess.gamesOk ? "" : " \u2014 daftar partai GAGAL ditarik, memakai feed aktivitas sebagai cadangan"),
+    out.lichess.gamesOk ? "" : "warn");
   if(S.cfg.chess && !out.chess) logLine("Data Chess.com tidak masuk.", "warn");
   if(S.cfg.lichess && !out.lichess) logLine("Data Lichess tidak masuk.", "warn");
 
@@ -448,11 +460,20 @@ async function fetchAll(){
    hari itu difoto dan disimpan. Konsekuensinya jujur: hari yang aplikasinya
    tidak dibuka sama sekali TIDAK akan punya catatan. */
 function recordSnapshot(out){
-  if(!out.chess || !out.chess.stats) return;
-  const st = out.chess.stats || {};
   const dk = todayKey();
+  S.snaps[dk] = S.snaps[dk] || {};
+
+  // Lichess: simpan penghitung kumulatif. Ini yang membuat jumlah puzzle
+  // harian bisa dihitung walau feed aktivitas gagal total.
+  const lp = out.lichess && out.lichess.prof && out.lichess.prof.perfs && out.lichess.prof.perfs.puzzle;
+  if(lp){
+    S.snaps[dk].puzTotal  = lp.games;
+    S.snaps[dk].puzRating = lp.rating;
+  }
+  if(!out.chess || !out.chess.stats){ S.snaps[dk].at = Date.now(); return; }
+  const st = out.chess.stats || {};
   const rush = st.puzzle_rush && st.puzzle_rush.daily ? st.puzzle_rush.daily : null;
-  S.snaps[dk] = {
+  Object.assign(S.snaps[dk], {
     rushAttempts: rush ? (rush.total_attempts || 0) : 0,
     rushScore:    rush ? (rush.score || 0) : 0,
     tacticsHigh:  st.tactics && st.tactics.highest ? st.tactics.highest.rating : null,
@@ -460,7 +481,7 @@ function recordSnapshot(out){
     rapid: st.chess_rapid && st.chess_rapid.last ? st.chess_rapid.last.rating : null,
     blitz: st.chess_blitz && st.chess_blitz.last ? st.chess_blitz.last.rating : null,
     at: Date.now(),
-  };
+  });
 }
 function rushToday(){
   const s = S.snaps[todayKey()];
@@ -487,15 +508,50 @@ function chessResultFor(g){
 function lichessDay(dk){
   const act = (S.data && S.data.lichess) ? (S.data.lichess.act||[]) : [];
   // interval.end adalah akhir hari aktivitas (detik)
-  // Hanya cocokkan pada hari BERAKHIRNYA aktivitas. Kalau start juga dicocokkan,
-  // aktivitas yang melewati tengah malam terhitung dua kali di dua hari berbeda.
-  return act.find(a => dayKey(ms(a.interval.end)) === dk) || null;
+  // Interval Lichess {start,end} sering BERAKHIR di tengah malam berikutnya.
+  // Mencocokkan pada `end` membuat aktivitas hari ini jatuh ke hari BESOK —
+  // dan hari ini tampak kosong. Cocokkan pada hari MULAInya: satu entri = satu
+  // hari, tidak pernah ganda, dan tidak pernah meleset satu hari ke depan.
+  return act.find(a => a.interval && dayKey(ms(a.interval.start)) === dk) || null;
 }
-function puzzlesOn(dk){
+function puzzlesFromActivity(dk){
   const a = lichessDay(dk);
   if(!a || !a.puzzles || !a.puzzles.score) return 0;
   const s = a.puzzles.score;
   return (s.win||0) + (s.loss||0) + (s.draw||0);
+}
+
+/* JARING PENGAMAN.
+   Feed aktivitas Lichess bisa kosong, terlambat, atau salah hari.
+   Tapi profil menyimpan penghitung KUMULATIF `perfs.puzzle.games` —
+   total puzzle yang pernah dikerjakan seumur hidup akun.
+   Selisih antara foto hari ini dan foto terakhir sebelumnya ADALAH
+   jumlah puzzle hari itu, dan angka ini tidak bergantung pada feed apa pun.
+
+   Batasnya jujur: butuh foto pembanding. Hari pertama pemakaian aplikasi
+   tidak punya pembanding, jadi selisihnya tidak bisa dihitung. */
+function puzzlesFromCounter(dk){
+  const kini = S.snaps[dk];
+  if(!kini || kini.puzTotal == null) return null;
+  const sebelum = Object.keys(S.snaps).filter(d => d < dk && S.snaps[d].puzTotal != null).sort().pop();
+  if(!sebelum) return null;
+  const d = kini.puzTotal - S.snaps[sebelum].puzTotal;
+  return d >= 0 ? d : null;
+}
+
+function puzzlesOn(dk){
+  const a = puzzlesFromActivity(dk);
+  const c = puzzlesFromCounter(dk);
+  // Ambil yang lebih besar. Feed yang kosong tidak boleh menghapus bukti
+  // dari penghitung kumulatif, dan sebaliknya.
+  return Math.max(a, c == null ? 0 : c);
+}
+function sumberPuzzle(dk){
+  const a = puzzlesFromActivity(dk), c = puzzlesFromCounter(dk);
+  if(a > 0 && c != null && c !== a) return `feed ${a} \u00b7 penghitung ${c}`;
+  if(a > 0) return "feed aktivitas";
+  if(c != null && c > 0) return "penghitung kumulatif";
+  return null;
 }
 function lichessGamesOn(dk){
   const a = lichessDay(dk);
@@ -507,19 +563,77 @@ function lichessGamesOn(dk){
   }
   return {total, byPerf, win, loss};
 }
-function gamesOn(dk){
-  const c = chessGamesOn(dk);
-  const l = lichessGamesOn(dk);
-  const byClass = {};
-  c.forEach(g => byClass[g.time_class] = (byClass[g.time_class]||0)+1);
-  for(const [p,n] of Object.entries(l.byPerf)) byClass[p] = (byClass[p]||0)+n;
-  return { total:c.length + l.total, byClass, chess:c, lichessTotal:l.total };
+/* ═══════════ MODEL PARTAI TERSATU ═══════════
+   BUG YANG DIPERBAIKI: sebelumnya partai Lichess hanya dihitung dari feed
+   aktivitas (ringkasan yang bisa kosong/terlambat), dan deret kekalahan serta
+   tabel partai hanya melihat Chess.com. Akibatnya partai rapid di Lichess
+   tidak muncul di mana pun. Sekarang kedua situs dinormalkan ke satu bentuk. */
+
+function ecoNama(pgn){
+  const m = (pgn||"").match(/\[ECOUrl "https?:\/\/[^"]*\/openings\/([^"]+)"\]/);
+  return m ? decodeURIComponent(m[1]).replace(/-/g," ").trim() : null;
 }
+/* Lichess memakai "ultraBullet"; Chess.com memakai "daily". Tanpa penyeragaman,
+   pagar anti-bullet bisa dilewati hanya dengan bermain UltraBullet. */
+function speedNorm(x){
+  if(x === "ultraBullet") return "bullet";
+  if(x === "daily") return "correspondence";
+  return x;
+}
+
+let _ng = null, _ngAt = 0;
+function normGames(){
+  if(_ng && _ngAt === S.fetchedAt) return _ng;
+  const out = [];
+  const C = S.data && S.data.chess;
+  if(C && C.games) C.games.forEach(g => {
+    const r = chessResultFor(g);
+    out.push({ t: ms(g.end_time), site:"Chess.com", speed: speedNorm(g.time_class), res:r.res,
+      rating: r.rating, opp: r.opp.username, oppRating: r.opp.rating, acc: r.acc,
+      url: g.url, opening: ecoNama(g.pgn) });
+  });
+  const L = S.data && S.data.lichess;
+  if(L && L.games) L.games.forEach(g => {
+    const me = (L.user||"").toLowerCase();
+    const w = g.players && g.players.white, b = g.players && g.players.black;
+    if(!w || !b) return;
+    const idW = ((w.user && (w.user.id || w.user.name)) || "").toLowerCase();
+    const isW = idW === me;
+    const my = isW ? w : b, op = isW ? b : w;
+    let res = "R";
+    if(g.winner) res = (g.winner === (isW ? "white" : "black")) ? "M" : "K";
+    out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
+      rating: my.rating, opp: (op.user && op.user.name) || "Anonim", oppRating: op.rating,
+      acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
+      url: "https://lichess.org/" + g.id, opening: g.opening ? g.opening.name : null });
+  });
+  _ng = out.sort((a,b)=>b.t-a.t); _ngAt = S.fetchedAt;
+  return _ng;
+}
+
+function gamesOn(dk){
+  const list = normGames().filter(g => dayKey(g.t) === dk);
+  const byClass = {};
+  list.forEach(g => byClass[g.speed] = (byClass[g.speed]||0)+1);
+  let total = list.length;
+  // Cadangan: kalau daftar partai Lichess gagal ditarik, jangan buang datanya —
+  // pakai feed aktivitas seperti dulu.
+  const L = S.data && S.data.lichess;
+  if(L && (!L.games || !L.games.length)){
+    const a = lichessGamesOn(dk);
+    for(const [p,n] of Object.entries(a.byPerf)){ const k = speedNorm(p); byClass[k] = (byClass[k]||0)+n; }
+    total += a.total;
+  }
+  return { total, byClass, list };
+}
+
+/* Deret kekalahan kini melihat KEDUA situs. Anak yang kalah 2x di Chess.com
+   lalu 2x di Lichess tetap sedang tilt — dan sebelumnya tidak terdeteksi. */
 function losingStreakToday(){
   const dk = todayKey();
-  const g = chessGamesOn(dk).sort((a,b)=>a.end_time-b.end_time);
-  let best=0, cur=0;
-  g.forEach(x => { const r = chessResultFor(x).res; if(r==="K"){cur++; best=Math.max(best,cur);} else cur=0; });
+  const g = normGames().filter(x => dayKey(x.t) === dk).sort((a,b)=>a.t-b.t);
+  let best = 0, cur = 0;
+  g.forEach(x => { if(x.res === "K"){ cur++; best = Math.max(best, cur); } else cur = 0; });
   return best;
 }
 
@@ -656,7 +770,7 @@ function bahanObrolan(){
   const bul = W.reduce((a,b)=>a+b.bullet,0);
   if(bul > 0) out.push([bul + " partai bullet minggu ini",
     "Bullet menyenangkan dan melatih refleks, tapi merusak kebiasaan kalkulasi. Sepakati batas bersama — jangan larang sepihak."]);
-  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor).filter(x=>x.acc!=null).slice(-10);
+  const G = normGames().filter(x=>x.acc!=null).slice(0,10);
   if(G.length >= 5){
     const avg = G.reduce((a,b)=>a+b.acc,0)/G.length;
     if(avg < 70) out.push(["Akurasi 10 partai terakhir " + avg.toFixed(1) + "%",
@@ -670,27 +784,53 @@ function bahanObrolan(){
   return out.slice(0,4);
 }
 function pembukaan(){
-  const G = S.data && S.data.chess ? S.data.chess.games : [];
   const map = {};
-  G.forEach(g => {
-    const m = (g.pgn||"").match(/\[ECOUrl "https?:\/\/[^"]*\/openings\/([^"]+)"\]/);
-    const nama = m ? decodeURIComponent(m[1]).replace(/-/g," ").replace(/\.\.\..*$/,"").trim() : null;
+  normGames().forEach(g => {
+    const nama = g.opening;
     if(!nama) return;
     // 2 kata: "Scandinavian Defense Mieses Kotroc" dan "Scandinavian Defense"
     // adalah pembukaan yang sama. Memecahnya jadi baris terpisah menyesatkan pelatih.
-    const kunci = nama.split(" ").slice(0,2).join(" ");
-    const r = chessResultFor(g);
+    const kunci = nama.replace(/[:,].*$/,"").split(" ").slice(0,2).join(" ");
     (map[kunci] = map[kunci] || {n:0,m:0,k:0});
     map[kunci].n++;
-    if(r.res==="M") map[kunci].m++; if(r.res==="K") map[kunci].k++;
+    if(g.res==="M") map[kunci].m++;
+    if(g.res==="K") map[kunci].k++;
   });
   return Object.entries(map).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
 }
+/* HILANG dari versi sebelumnya — tab Perkembangan & Analisis crash karenanya.
+   Versi baru: riwayat resmi Lichess + rekonstruksi dari rating tiap partai
+   (Chess.com tidak menyediakan riwayat rating sama sekali). */
+function ratingSeries(){
+  const out = [];
+  const L = S.data && S.data.lichess;
+  if(L && L.hist){
+    L.hist.filter(h => ["Rapid","Blitz","Puzzles"].includes(h.name) && h.points && h.points.length > 1)
+      .forEach(h => out.push({
+        name: "Lichess " + h.name,
+        color: { Rapid:"#1E8C7F", Blitz:"#3A78C2", Puzzles:"#5B4E8C" }[h.name],
+        pts: h.points.map(p => ({ t: Date.UTC(p[0], p[1], p[2]), v: p[3] })),
+      }));
+  }
+  const bySrc = {};
+  normGames().forEach(g => {
+    if(!g.rating || !["rapid","blitz"].includes(g.speed)) return;
+    (bySrc[`${g.site} ${g.speed}`] = bySrc[`${g.site} ${g.speed}`] || []).push({ t:g.t, v:g.rating });
+  });
+  const warna = { "Chess.com rapid":"#BE4032", "Chess.com blitz":"#C98A1E",
+                  "Lichess rapid":"#1E8C7F", "Lichess blitz":"#3A78C2" };
+  Object.entries(bySrc).filter(([,v]) => v.length > 1).forEach(([k,v]) => {
+    // riwayat resmi Lichess lebih akurat — jangan gambar dua kali
+    const speed = k.split(" ")[1];
+    if(k.startsWith("Lichess") && out.some(o => o.name === "Lichess " + speed[0].toUpperCase() + speed.slice(1))) return;
+    out.push({ name:k, color: warna[k] || "#5B4E8C", pts: v.sort((a,b)=>a.t-b.t) });
+  });
+  return out;
+}
+
 function akurasiTren(){
-  const G = (S.data && S.data.chess ? S.data.chess.games : [])
-    .map(g=>({t:ms(g.end_time), r:chessResultFor(g)}))
-    .filter(x=>x.r.acc!=null).sort((a,b)=>a.t-b.t).slice(-25);
-  return G.map(x=>({t:x.t, v:x.r.acc}));
+  return normGames().filter(g=>g.acc!=null).sort((a,b)=>a.t-b.t).slice(-25)
+    .map(g=>({ t:g.t, v:g.acc }));
 }
 
 /* ═══════════ DIAGNOSIS ═══════════
@@ -724,9 +864,23 @@ async function ujiKoneksi(){
     if(prof){
       const p = prof.perfs || {};
       const pz = p.puzzle ? `${p.puzzle.games} puzzle, rating ${p.puzzle.rating}` : "belum ada puzzle";
-      hasil.push([p.puzzle && p.puzzle.games ? "ok" : "warn", "Lichess / isi akun",
-        `${prof.username} \u00b7 ${pz}. ` + (p.puzzle && p.puzzle.games ? "" :
-        "Akun BERHASIL dibaca tapi kosong \u2014 anak belum mengerjakan satu puzzle pun. Ini bukan kesalahan aplikasi.")]);
+      const total = p.puzzle ? p.puzzle.games : 0;
+      hasil.push([total ? "ok" : "warn", "Lichess / isi akun",
+        `${prof.username} \u00b7 ${pz}. ` + (total ? "" :
+        "Akun BERHASIL dibaca tapi kosong \u2014 belum ada satu puzzle pun tercatat di server Lichess.")]);
+      const dk = todayKey();
+      const kemarin = Object.keys(S.snaps).filter(d=>d<dk && S.snaps[d].puzTotal!=null).sort().pop();
+      hasil.push([kemarin ? "ok" : "warn", "Penghitung kumulatif",
+        kemarin
+          ? `Foto terakhir ${kemarin}: ${S.snaps[kemarin].puzTotal} puzzle. Sekarang: ${total}. Selisih = ${total - S.snaps[kemarin].puzTotal} puzzle.`
+          : `Total sekarang ${total} puzzle, tapi BELUM ADA foto pembanding dari hari sebelumnya. ` +
+            `Jumlah puzzle harian baru bisa dihitung mulai besok. Ini batas nyata alat ini, bukan bug \u2014 ` +
+            `Lichess tidak menyimpan "berapa puzzle hari ini", hanya total seumur hidup.`]);
+      const feed = puzzlesFromActivity(dk);
+      hasil.push([feed ? "ok" : "warn", "Feed aktivitas hari ini",
+        feed ? `${feed} puzzle terbaca dari feed.` :
+        "Feed melaporkan 0 puzzle hari ini. Lichess kadang terlambat memperbarui feed aktivitas \u2014 " +
+        "karena itu penghitung kumulatif di atas dipakai sebagai cadangan."]);
     }
   } else hasil.push(["warn","Lichess","username kosong."]);
 
@@ -900,17 +1054,15 @@ function viewHariPelatih(){
 }
 
 function viewAnalisis(){
-  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor);
+  const G = normGames();
   const acc = akurasiTren();
   const rataAcc = acc.length ? (acc.reduce((a,b)=>a+b.v,0)/acc.length) : 0;
   const buka = pembukaan();
   const maxN = Math.max(1, ...buka.map(b=>b[1].n));
 
   const kelas = {};
-  (S.data && S.data.chess ? S.data.chess.games : []).forEach(g => kelas[g.time_class] = (kelas[g.time_class]||0)+1);
-  const maxK = Math.max(1, ...Object.values(kelas));
-
-  const putih = G.filter(x=>x.side && x.side.username && true);
+  G.forEach(g => kelas[g.speed] = (kelas[g.speed]||0)+1);
+  const maxK = Math.max(1, ...Object.values(kelas), 1);
   const m = G.filter(x=>x.res==="M").length, k = G.filter(x=>x.res==="K").length, r = G.filter(x=>x.res==="R").length;
 
   return `
@@ -1069,7 +1221,8 @@ function renderKPIs(){
   const cards = [
     { v:pct, suf:"%", i:"kepatuhan hari ini", s:`${done}/${q.length} tugas`,
       tone: pct>=75?TONE.ok : pct>=40?TONE.warn : TONE.no },
-    { v:pz, i:"puzzle hari ini", s: S.cfg.lichess ? `target ${T.puzzle}` : "butuh Lichess",
+    { v:pz, i:"puzzle hari ini",
+      s: S.cfg.lichess ? (sumberPuzzle(dk) ? `target ${T.puzzle} \u00b7 ${sumberPuzzle(dk)}` : `target ${T.puzzle}`) : "butuh Lichess",
       tone: T.puzzle && pz>=T.puzzle ? TONE.ok : TONE.warn },
     { v:g.total, i:"partai hari ini", s: Object.entries(g.byClass).map(([k,v])=>`${k} ${v}`).join(" \u00b7 ") || "\u2014",
       tone: g.total>T.gameMax ? TONE.no : TONE.teal },
@@ -1101,7 +1254,7 @@ function renderAlerts(){
   if(newTacticsRecordToday()) A.push(["ok","REKOR","Rekor rating taktik baru tercatat hari ini."]);
   if(g.total===0 && pz===0 && R.attempts===0) A.push(["warn","SEPI","Tidak ada aktivitas terdeteksi hari ini."]);
 
-  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor).filter(x=>x.acc!=null).slice(-10);
+  const G = normGames().filter(x=>x.acc!=null).slice(0,10);
   if(G.length >= 5){
     const avg = G.reduce((a,b)=>a+b.acc,0)/G.length;
     A.push([avg<70?"warn":"ok","AKURASI",`Rata-rata 10 partai terakhir: ${avg.toFixed(1)}%.` +
@@ -1192,10 +1345,12 @@ function renderSummary(){
     if(p.puzzle) rows.push(["Rating puzzle (Lichess)", `${p.puzzle.rating} \u00b7 ${p.puzzle.games} puzzle`]);
     if(p.rapid)  rows.push(["Rapid (Lichess)", `${p.rapid.rating} \u00b7 ${p.rapid.games} partai`]);
   }
+  const G = normGames();
+  const cc = G.filter(g=>g.site==="Chess.com"), li = G.filter(g=>g.site==="Lichess");
+  const hit = a => `${a.length} \u00b7 ${a.filter(x=>x.res==="M").length}M / ${a.filter(x=>x.res==="R").length}R / ${a.filter(x=>x.res==="K").length}K`;
+  if(li.length) rows.push(["Partai (Lichess)", hit(li)]);
+  if(cc.length) rows.push(["Partai (Chess.com)", hit(cc)]);
   if(C){
-    const R = C.games.map(chessResultFor);
-    const w = R.filter(x=>x.res==="M").length, l = R.filter(x=>x.res==="K").length, d = R.filter(x=>x.res==="R").length;
-    if(R.length) rows.push(["Partai (Chess.com)", `${R.length} \u00b7 ${w}M / ${d}R / ${l}K`]);
     if(C.stats && C.stats.chess_rapid && C.stats.chess_rapid.last) rows.push(["Rapid (Chess.com)", C.stats.chess_rapid.last.rating]);
     if(C.stats && C.stats.tactics && C.stats.tactics.highest) rows.push(["Taktik tertinggi (Chess.com)", C.stats.tactics.highest.rating]);
   }
@@ -1207,19 +1362,20 @@ function renderSummary(){
 
 function renderGames(){
   const el = $("#games"); if(!el) return;
-  const C = S.data && S.data.chess;
-  if(!C || !C.games.length){ el.innerHTML = `<div class="empty">Belum ada partai Chess.com.</div>`; return; }
-  const rows = C.games.slice().sort((a,b)=>b.end_time-a.end_time).slice(0,50).map(g=>{
-    const r = chessResultFor(g);
-    const cls = r.res==="M"?"w":r.res==="K"?"l":"d";
+  const G = normGames();
+  if(!G.length){ el.innerHTML = `<div class="empty">Belum ada partai dari kedua situs.</div>`; return; }
+  const rows = G.slice(0,60).map(g=>{
+    const cls = g.res==="M"?"w":g.res==="K"?"l":"d";
+    const warna = g.site==="Lichess" ? "var(--carbon)" : "var(--teal)";
     return `<tr>
-      <td>${new Date(ms(g.end_time)).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"})}</td>
-      <td>${g.time_class}</td><td>${r.opp.username} <span style="color:var(--soft)">${r.opp.rating}</span></td>
-      <td class="${cls}">${r.res}</td><td>${r.rating}</td>
-      <td>${r.acc!=null?r.acc.toFixed(1)+"%":"\u2014"}</td>
+      <td>${new Date(g.t).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"})}</td>
+      <td><b style="color:${warna}">${g.site==="Lichess"?"LI":"CC"}</b> ${g.speed}</td>
+      <td>${g.opp} <span style="color:var(--soft)">${g.oppRating||""}</span></td>
+      <td class="${cls}">${g.res}</td><td>${g.rating||"\u2014"}</td>
+      <td>${g.acc!=null?g.acc.toFixed(1)+"%":"\u2014"}</td>
       <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">buka</a></td></tr>`;
   }).join("");
-  el.innerHTML = `<table><tr><th>Tgl</th><th>Kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
+  el.innerHTML = `<table><tr><th>Tgl</th><th>Situs / kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
 }
 
 function renderPlan(){

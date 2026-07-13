@@ -83,6 +83,7 @@ function siapkanSheet_() {
   mk_(ss, SHEET_HARIAN, [
     'Tanggal', 'Status ambil',
     'Puzzle (Lichess)', 'Puzzle benar', 'Puzzle salah', 'Rating puzzle',
+    'Puzzle TOTAL kumulatif',
     'Rush percobaan', 'Rush skor',
     'Taktik tertinggi (CC)', 'Rekor baru?', 'Rating rapid', 'Rating blitz',
     'Partai hari ini', 'Rapid', 'Blitz', 'Bullet', 'Menang', 'Kalah', 'Seri',
@@ -144,33 +145,88 @@ const LI   = () => 'https://lichess.org/api/user/' + KONFIG.lichessUsername;
  * tanpa error apa pun — dan orang tua menghukum anak atas kesalahan kode.
  */
 function ambilLichess_(tanggal, tz) {
-  const hasil = { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', partai: 0, status: 'OK' };
+  const hasil = { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', puzzleTotal: null,
+                  partai: 0, partaiFeed: 0, partaiList: [], status: 'OK' };
   if (!KONFIG.lichessUsername) { hasil.status = 'MATI'; return hasil; }
   try {
     const prof = ambil_(LI_URL_());
     if (prof && prof.perfs && prof.perfs.puzzle) hasil.ratingPuzzle = prof.perfs.puzzle.rating;
 
+    if (prof && prof.perfs && prof.perfs.puzzle) hasil.puzzleTotal = prof.perfs.puzzle.games || 0;
+
     const act = ambil_(LI() + '/activity');
     (act || []).forEach(a => {
       if (!a.interval) return;
-      const akhir = new Date(msLi_(a.interval.end));
-      if (Utilities.formatDate(akhir, tz, 'yyyy-MM-dd') !== tanggal) return;
+      // BUG YANG DIPERBAIKI: interval Lichess sering BERAKHIR di tengah malam
+      // berikutnya. Mencocokkan pada `end` melempar aktivitas hari ini ke hari
+      // BESOK, sehingga hari ini tampak kosong. Cocokkan pada hari MULAInya.
+      const mulai = new Date(msLi_(a.interval.start));
+      if (Utilities.formatDate(mulai, tz, 'yyyy-MM-dd') !== tanggal) return;
       if (a.puzzles && a.puzzles.score) {
         const sc = a.puzzles.score;
         hasil.benar = sc.win || 0;
         hasil.salah = sc.loss || 0;
         hasil.puzzle = hasil.benar + hasil.salah + (sc.draw || 0);
       }
+      // Feed aktivitas dipakai sebagai CADANGAN saja untuk partai.
       if (a.games) {
         Object.keys(a.games).forEach(k => {
           const v = a.games[k];
-          hasil.partai += (v.win || 0) + (v.loss || 0) + (v.draw || 0);
+          hasil.partaiFeed += (v.win || 0) + (v.loss || 0) + (v.draw || 0);
         });
       }
     });
+
+    /* Partai sungguhan, bukan ringkasan. Lichess mengirim NDJSON:
+       satu objek JSON per baris. JSON.parse() atas seluruh badan akan GAGAL. */
+    const raw = UrlFetchApp.fetch(LI() + '/games/user/' + KONFIG.lichessUsername +
+      '?max=100&opening=true', {
+        method: 'get', muteHttpExceptions: true,
+        headers: { 'Accept': 'application/x-ndjson',
+                   'User-Agent': 'RTGM-Pantau/1.0 (kontak: ' + KONFIG.kontak + ')' },
+      });
+    if (raw.getResponseCode() === 200) {
+      const me = KONFIG.lichessUsername.toLowerCase();
+      raw.getContentText().split('\n').filter(String).forEach(baris => {
+        let g; try { g = JSON.parse(baris); } catch (e) { return; }
+        const t = new Date(msLi_(g.lastMoveAt || g.createdAt));
+        if (Utilities.formatDate(t, tz, 'yyyy-MM-dd') !== tanggal) return;
+        const w = g.players && g.players.white, b = g.players && g.players.black;
+        if (!w || !b) return;
+        const idW = ((w.user && (w.user.id || w.user.name)) || '').toLowerCase();
+        const isW = idW === me;
+        let speed = g.speed === 'ultraBullet' ? 'bullet' : g.speed;
+        let res = 'R';
+        if (g.winner) res = (g.winner === (isW ? 'white' : 'black')) ? 'M' : 'K';
+        hasil.partaiList.push({ speed: speed, res: res, t: t.getTime() });
+      });
+      hasil.partai = hasil.partaiList.length;
+    } else {
+      // gagal tarik daftar partai -> pakai angka dari feed
+      hasil.partai = hasil.partaiFeed;
+      hasil.status = 'OK (partai dari feed, daftar partai gagal)';
+    }
   } catch (e) {
     hasil.status = 'GAGAL: ' + e.message;
     log_('PERINGATAN', 'Lichess: ' + e.message);
+  }
+
+  /* JARING PENGAMAN: kalau feed aktivitas melaporkan 0 tapi penghitung
+     kumulatif naik dibanding baris kemarin, yang benar adalah selisihnya.
+     Feed Lichess bisa terlambat; penghitung total tidak pernah bohong. */
+  if (hasil.puzzle === 0 && hasil.puzzleTotal != null) {
+    const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_HARIAN);
+    const data = sh.getDataRange().getValues();
+    let sebelum = null;
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0] && data[i][0] < tanggal && data[i][6] !== '' && data[i][6] != null) {
+        sebelum = Number(data[i][6]); break;
+      }
+    }
+    if (sebelum != null && hasil.puzzleTotal > sebelum) {
+      hasil.puzzle = hasil.puzzleTotal - sebelum;
+      hasil.status = 'OK (dari penghitung kumulatif, feed kosong)';
+    }
   }
   return hasil;
 }
@@ -226,7 +282,7 @@ function catatHarian() {
 }
 
 function tulisBaris_(tanggal, status, stats, partai, li) {
-  li = li || { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', partai: 0 };
+  li = li || { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', puzzleTotal: null, partai: 0, partaiList: [] };
   const ss = SpreadsheetApp.getActive();
   const tz = ss.getSpreadsheetTimeZone();
   const sh = ss.getSheetByName(SHEET_HARIAN);
@@ -241,6 +297,37 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   const rekorBaru     = tac && Utilities.formatDate(new Date(tac.date * 1000), tz, 'yyyy-MM-dd') === tanggal;
 
   const r = ringkasPartai_(partai);
+
+  /* BUG YANG DIPERBAIKI: partai Lichess tidak pernah masuk hitungan sama sekali.
+     Anak bisa main 6 rapid di Lichess dan dasbor melaporkan "0 partai".
+     Pagar anti-tilt dan batas bullet ikut buta karenanya. */
+  (li.partaiList || []).forEach(g => {
+    r.total++;
+    if (g.speed === 'rapid')  r.rapid++;
+    if (g.speed === 'blitz')  r.blitz++;
+    if (g.speed === 'bullet') r.bullet++;
+    if (g.res === 'M') r.menang++;
+    else if (g.res === 'R') r.seri++;
+    else r.kalah++;
+  });
+  // deret kekalahan dihitung ulang lintas situs, urut waktu
+  const semua = []
+    .concat(partai.map(function (g) {
+      const me = KONFIG.chessUsername.toLowerCase();
+      const putih = (g.white.username || '').toLowerCase() === me;
+      const sisi = putih ? g.white : g.black;
+      const seri = ['agreed','repetition','stalemate','insufficient','50move','timevsinsufficient'];
+      return { t: g.end_time * 1000,
+               res: sisi.result === 'win' ? 'M' : (seri.indexOf(sisi.result) >= 0 ? 'R' : 'K') };
+    }))
+    .concat(li.partaiList || [])
+    .sort(function (a, b) { return a.t - b.t; });
+  let cur = 0; r.kalahBeruntun = 0;
+  semua.forEach(function (g) {
+    if (g.res === 'K') { cur++; r.kalahBeruntun = Math.max(r.kalahBeruntun, cur); }
+    else cur = 0;
+  });
+
   const T = KONFIG.target;
 
   // Kepatuhan: hanya menghitung yang BISA diverifikasi. Tugas manual tidak
@@ -264,6 +351,7 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   const row = [
     tanggal, status,
     li.puzzle, li.benar, li.salah, li.ratingPuzzle,
+    li.puzzleTotal == null ? '' : li.puzzleTotal,
     rushPercobaan, rushSkor,
     taktikTinggi, rekorBaru ? 'YA' : '',
     stats && stats.chess_rapid && stats.chess_rapid.last ? stats.chess_rapid.last.rating : '',
@@ -437,9 +525,10 @@ function doGet() {
     const r = data[i];
     snaps[r[0]] = {
       puzzles: r[2] || 0, puzzleWin: r[3] || 0, puzzleLoss: r[4] || 0, puzzleRating: r[5] || null,
-      rushAttempts: r[6] || 0, rushScore: r[7] || 0,
-      tacticsHigh: r[8] || null, rapid: r[10] || null, blitz: r[11] || null,
-      status: r[1], kepatuhan: r[21], langgar: r[22],
+      puzTotal: r[6] === '' || r[6] == null ? null : Number(r[6]),
+      rushAttempts: r[7] || 0, rushScore: r[8] || 0,
+      tacticsHigh: r[9] || null, rapid: r[11] || null, blitz: r[12] || null,
+      status: r[1], kepatuhan: r[22], langgar: r[23],
     };
   }
   let stats = null, games = [], lichess = null;
