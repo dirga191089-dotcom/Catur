@@ -885,6 +885,12 @@ function ratingSeries(){
         pts: h.points.map(p => ({ t: Date.UTC(p[0], p[1], p[2]), v: p[3] })),
       }));
   }
+  // Chess.com tidak menyediakan riwayat rating taktik. Satu-satunya sumbernya
+  // adalah foto harian yang aplikasi ini simpan sendiri.
+  const hari = Object.keys(S.snaps).sort();
+  const tac = hari.filter(d => S.snaps[d].tacticsHigh).map(d => ({ t:new Date(d).getTime(), v:S.snaps[d].tacticsHigh }));
+  if(tac.length > 1) out.push({ name:"Chess.com taktik (tertinggi)", color:"#D4A017", pts:tac });
+
   const bySrc = {};
   normGames().forEach(g => {
     if(!g.rating || !["rapid","blitz"].includes(g.speed)) return;
@@ -1066,6 +1072,10 @@ function viewProgres(){
     <div class="strip" id="strip"></div>
   </section>
   <section class="box st2">
+    <h2>Semua ratingmu</h2>
+    <div id="ratings"></div>
+  </section>
+  <section class="box st3">
     <h2>Angkamu</h2>
     <div id="summary"></div>
   </section>`;
@@ -1086,6 +1096,10 @@ function viewHariOrtu(){
     <div id="alerts"></div>
   </section>
   <section class="box st3">
+    <h2>Rating &amp; taktik <em>Lichess vs Chess.com</em></h2>
+    <div id="ratings"></div>
+  </section>
+  <section class="box st4">
     <h2>Catatan pelatih hari ini</h2>
     <div class="pad" id="noteList"></div>
   </section>`;
@@ -1142,6 +1156,10 @@ function viewHariPelatih(){
     <div id="alerts"></div>
   </section>
   <section class="box st3">
+    <h2>Rating &amp; taktik <em>Lichess vs Chess.com</em></h2>
+    <div id="ratings"></div>
+  </section>
+  <section class="box st4">
     <h2>Catatan pelatih</h2>
     <div class="pad">
       <div id="noteList"></div>
@@ -1279,6 +1297,75 @@ function viewAtur(){
   </section>`;
 }
 
+/* ═══════════ RATING & TAKTIK: KEDUA SITUS BERDAMPINGAN ═══════════
+   Rating antar-situs TIDAK setara. Rapid Lichess biasanya beberapa ratus poin
+   di atas rapid Chess.com untuk pemain yang sama. Membandingkannya seolah satu
+   skala adalah kesalahan yang akan membuat orang tua menyimpulkan hal yang salah.
+   Karena itu keduanya ditampilkan terpisah, tidak pernah dijumlahkan atau dirata-rata. */
+function renderRatings(){
+  const el = $("#ratings"); if(!el) return;
+  const L = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || {};
+  const C = (S.data && S.data.chess && S.data.chess.stats) || {};
+
+  const li = k => {
+    const p = L[k];
+    if(!p || p.games == null) return null;
+    if(!p.games) return { v:"\u2014", s:"belum main" };
+    return { v: p.rating + (p.prov ? "?" : ""), s: `${p.games} partai${p.prov ? " \u00b7 sementara" : ""}` };
+  };
+  const cc = k => {
+    const p = C[k];
+    if(!p || !p.last) return null;
+    const r = p.record || {};
+    return { v: p.last.rating, s: `${(r.win||0)}M / ${(r.draw||0)}R / ${(r.loss||0)}K` };
+  };
+
+  const baris = [];
+  [["rapid","Rapid"],["blitz","Blitz"],["bullet","Bullet"],["classical","Klasik"]].forEach(([k,label])=>{
+    const a = li(k), b = cc("chess_" + k);
+    if(a || b) baris.push([label, a, b]);
+  });
+
+  // ── taktik / puzzle ──
+  const lp = L.puzzle;
+  const liPuz = lp && lp.games != null
+    ? { v: lp.rating + (lp.prov ? "?" : ""), s: `${lp.games} puzzle \u00b7 terverifikasi harian` }
+    : null;
+  const tac = C.tactics;
+  const ccPuz = tac && (tac.highest || tac.lowest)
+    ? { v: tac.highest ? tac.highest.rating : "\u2014",
+        s: `tertinggi${tac.lowest ? " \u00b7 terendah " + tac.lowest.rating : ""} \u00b7 rating kini TIDAK tersedia di API` }
+    : null;
+  if(liPuz || ccPuz) baris.push(["Puzzle / Taktik", liPuz, ccPuz]);
+
+  const st = L.storm, rush = C.puzzle_rush;
+  const liStorm = st ? { v: st.score, s: `${st.runs} kali main (Puzzle Storm)` } : null;
+  const ccRush = rush && rush.best
+    ? { v: rush.best.score,
+        s: `terbaik${rush.daily ? " \u00b7 hari ini " + (rush.daily.score||0) + " dari " + (rush.daily.total_attempts||0) + " coba" : ""}` }
+    : null;
+  if(liStorm || ccRush) baris.push(["Puzzle Storm / Rush", liStorm, ccRush]);
+
+  if(!baris.length){ el.innerHTML = `<div class="empty">Belum ada data rating dari kedua situs.</div>`; return; }
+
+  const sel = x => x
+    ? `<b style="font-family:var(--mono);font-size:15px">${x.v}</b><br><span style="font-family:var(--mono);font-size:9.5px;color:var(--soft)">${x.s}</span>`
+    : `<span style="color:var(--rule)">\u2014</span>`;
+
+  el.innerHTML = `<table>
+    <tr><th></th>
+      <th style="color:var(--carbon)">Lichess</th>
+      <th style="color:var(--teal)">Chess.com</th></tr>
+    ${baris.map(([n,a,b])=>`<tr>
+      <td style="font-family:var(--sans);font-size:13px;font-weight:600">${n}</td>
+      <td>${sel(a)}</td><td>${sel(b)}</td></tr>`).join("")}
+  </table>
+  <div class="empty" style="border-top:1px solid var(--rule)">
+    Rating kedua situs BUKAN skala yang sama \u2014 rapid Lichess biasanya jauh di atas rapid
+    Chess.com untuk pemain yang sama. Bandingkan naik-turunnya, bukan angkanya.
+  </div>`;
+}
+
 /* ═══════════ RENDER BERSAMA ═══════════ */
 function renderTodos(){
   const dk = todayKey();
@@ -1316,7 +1403,8 @@ function renderKPIs(){
   const C = S.data && S.data.chess ? S.data.chess.stats : null;
   const lpuz = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
   const crapid = C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : null;
-  const lrapid = L && L.perfs && L.perfs.rapid ? L.perfs.rapid.rating : null;
+  const lrapid = L && L.perfs && L.perfs.rapid && L.perfs.rapid.games ? L.perfs.rapid.rating : null;
+  const ctac   = C && C.tactics && C.tactics.highest ? C.tactics.highest.rating : null;
 
   const cards = [
     { v:pct, suf:"%", i:"kepatuhan hari ini", s:`${done}/${q.length} tugas`,
@@ -1327,8 +1415,12 @@ function renderKPIs(){
     { v:g.total, i:"partai hari ini", s: Object.entries(g.byClass).map(([k,v])=>`${k} ${v}`).join(" \u00b7 ") || "\u2014",
       tone: g.total>T.gameMax ? TONE.no : TONE.teal },
     { v:ls, i:"kalah beruntun", s: ls>=3?"HENTIKAN SESI":"aman", tone: ls>=3?TONE.no:TONE.ok },
-    { v:crapid||lrapid||0, i:"rating rapid", s: crapid?"Chess.com":(lrapid?"Lichess":"\u2014"), tone:TONE.sky, raw:!crapid&&!lrapid },
-    { v:lpuz||0, i:"rating puzzle", s: lpuz?"Lichess":"\u2014", tone:TONE.carbon, raw:!lpuz },
+    { v:lrapid||0, i:"rapid \u00b7 lichess", s:"skala Lichess", tone:TONE.carbon, raw:!lrapid },
+    { v:crapid||0, i:"rapid \u00b7 chess.com", s:"skala Chess.com", tone:TONE.teal, raw:!crapid },
+    { v:lpuz||0, i:"rating puzzle \u00b7 lichess", s:"terverifikasi harian", tone:TONE.carbon, raw:!lpuz },
+    { v:ctac||0, i:"taktik tertinggi \u00b7 chess.com",
+      s: newTacticsRecordToday() ? "REKOR BARU HARI INI" : "rating kini tak tersedia di API",
+      tone:TONE.gold, raw:!ctac },
   ];
   if(T.rush > 0 || R.attempts > 0)
     cards.splice(2, 0, { v:R.attempts, i:"puzzle rush", s:R.attempts?`skor ${R.score}`:"belum", tone:TONE.gold });
@@ -1442,8 +1534,10 @@ function renderSummary(){
   const rows = [];
   if(L && L.prof){
     const p = L.prof.perfs || {};
-    if(p.puzzle) rows.push(["Rating puzzle (Lichess)", `${p.puzzle.rating} \u00b7 ${p.puzzle.games} puzzle`]);
-    if(p.rapid)  rows.push(["Rapid (Lichess)", `${p.rapid.rating} \u00b7 ${p.rapid.games} partai`]);
+    if(p.puzzle) rows.push(["Rating puzzle (Lichess)", `${p.puzzle.rating}${p.puzzle.prov?"?":""} \u00b7 ${p.puzzle.games} puzzle`]);
+    if(p.rapid && p.rapid.games)  rows.push(["Rapid (Lichess)", `${p.rapid.rating}${p.rapid.prov?"?":""} \u00b7 ${p.rapid.games} partai`]);
+    if(p.blitz && p.blitz.games)  rows.push(["Blitz (Lichess)", `${p.blitz.rating}${p.blitz.prov?"?":""} \u00b7 ${p.blitz.games} partai`]);
+    if(p.storm && p.storm.runs)   rows.push(["Puzzle Storm (Lichess)", `${p.storm.score} \u00b7 ${p.storm.runs} kali`]);
   }
   const G = normGames();
   const cc = G.filter(g=>g.site==="Chess.com"), li = G.filter(g=>g.site==="Lichess");
@@ -1451,8 +1545,14 @@ function renderSummary(){
   if(li.length) rows.push(["Partai (Lichess)", hit(li)]);
   if(cc.length) rows.push(["Partai (Chess.com)", hit(cc)]);
   if(C){
-    if(C.stats && C.stats.chess_rapid && C.stats.chess_rapid.last) rows.push(["Rapid (Chess.com)", C.stats.chess_rapid.last.rating]);
-    if(C.stats && C.stats.tactics && C.stats.tactics.highest) rows.push(["Taktik tertinggi (Chess.com)", C.stats.tactics.highest.rating]);
+    const st = C.stats || {};
+    if(st.chess_rapid && st.chess_rapid.last) rows.push(["Rapid (Chess.com)", st.chess_rapid.last.rating]);
+    if(st.chess_blitz && st.chess_blitz.last) rows.push(["Blitz (Chess.com)", st.chess_blitz.last.rating]);
+    if(st.tactics && st.tactics.highest)
+      rows.push(["Taktik tertinggi (Chess.com)", st.tactics.highest.rating +
+        (st.tactics.lowest ? " \u00b7 terendah " + st.tactics.lowest.rating : "")]);
+    if(st.puzzle_rush && st.puzzle_rush.best)
+      rows.push(["Puzzle Rush terbaik (Chess.com)", st.puzzle_rush.best.score]);
   }
   rows.push(["Runtun hari aktif", streakHari()]);
   el.innerHTML = rows.length
@@ -1554,7 +1654,7 @@ function render(){
   const qd = $("#questDate");
   if(qd) qd.textContent = new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"});
 
-  renderTodos(); renderKPIs(); renderAlerts(); renderNotes();
+  renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderRatings();
   renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur();
   if($("#chart")) renderChart("chart", ratingSeries(), false);
   if($("#accChart")) renderChart("accChart",
