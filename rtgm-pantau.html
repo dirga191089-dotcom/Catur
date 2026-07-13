@@ -127,6 +127,40 @@
   a.go span{font-size:11.5px;opacity:.9}
   a.go.p{background:var(--teal)} a.go.g{background:var(--sky)} a.go.d{background:var(--carbon)}
 
+  /* ══ kolom platform ══ */
+  .plats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .plat{background:var(--card);border:1px solid var(--ink);animation:rise var(--dur) both;overflow:hidden}
+  .plat > h3{
+    font-family:var(--mono);font-size:11px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;
+    padding:9px 12px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+  .plat.li > h3{background:var(--carbon)}
+  .plat.cc > h3{background:var(--teal)}
+  .plat > h3 em{font-style:normal;font-size:9px;opacity:.85;letter-spacing:.06em}
+  .plat .hero{padding:12px;border-bottom:1px solid var(--rule);display:flex;gap:14px;align-items:baseline}
+  .plat .hero b{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
+  .plat .hero span{font-family:var(--mono);font-size:10px;color:var(--soft);letter-spacing:.08em;text-transform:uppercase}
+  .plat .hero .sub{margin-left:auto;text-align:right;font-family:var(--mono);font-size:11px;color:var(--soft)}
+  .plat dl{margin:0}
+  .plat .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    padding:7px 12px;border-bottom:1px solid var(--rule);font-size:12.5px}
+  .plat .r:last-child{border-bottom:0}
+  .plat .r dt{font-family:var(--sans);color:var(--ink)}
+  .plat .r dd{font-family:var(--mono);font-weight:700;text-align:right;white-space:nowrap}
+  .plat .r dd small{display:block;font-weight:400;font-size:9.5px;color:var(--soft);letter-spacing:.04em}
+  .plat .r.dim dd{color:var(--soft);font-weight:400}
+  .plat .r.no dd{color:var(--no)}
+  .plat .r.ok dd{color:var(--ok)}
+  .plat .foot{padding:9px 12px;font-family:var(--mono);font-size:9.5px;line-height:1.5;color:var(--soft);
+    background:rgba(27,33,48,.04);border-top:1px solid var(--rule)}
+  @media(max-width:700px){ .plats{grid-template-columns:1fr;gap:10px} }
+
+  .filt{display:flex;gap:0;padding:10px 12px;border-bottom:1px solid var(--rule)}
+  .filt button{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    padding:7px 12px;border:1px solid var(--ink);border-right:0;background:var(--card);cursor:pointer;
+    color:var(--ink);min-height:36px}
+  .filt button:last-child{border-right:1px solid var(--ink)}
+  .filt button.on{background:var(--ink);color:var(--card)}
+
   /* ══ peringatan ══ */
   .alert-row{display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--rule);font-size:13px;
     align-items:flex-start;animation:rise .4s both}
@@ -210,6 +244,16 @@
   @keyframes sp{to{transform:rotate(360deg)}}
 
   /* ══ konfeti: hanya untuk anak, hanya saat semua misi selesai ══ */
+  /* Di HP, tab Pengaturan bisa 4 ketukan jauhnya. Tarik-ulang harus selalu terjangkau. */
+  #bRefresh{
+    position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:40;
+    width:52px;height:52px;border-radius:50%;border:2px solid var(--ink);background:var(--card);
+    color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);display:none}
+  #bRefresh:active{transform:translate(3px,3px);box-shadow:none}
+  #bRefresh.spin2{animation:sp 1s linear infinite}
+  @media(max-width:700px){ #bRefresh{display:block} }
+
   .conf{position:fixed;inset:0;pointer-events:none;z-index:99;overflow:hidden}
   .conf i{position:absolute;width:9px;height:14px;opacity:0;animation:fall 1.9s ease-in forwards}
   @keyframes fall{
@@ -272,6 +316,7 @@
   <div style="margin-top:6px">Anak tahu bahwa aktivitasnya dipantau — itu syaratnya, bukan pilihannya.</div>
 </footer>
 </div>
+<button id="bRefresh" aria-label="Tarik data ulang">↻</button>
 <div class="conf" id="conf"></div>
 
 <script>
@@ -320,6 +365,7 @@ let S = {
   manual:null,
   checks:{},        // "2026-07-13": { "0":true, ... }
   notes:{},         // "2026-07-13": [ {t, text} ]
+  filter:"semua",
   snaps:{},         // "2026-07-13": { rushAttempts, rushScore, tacticsHigh, tacticsHighDate, rapid, blitz }
   data:null,        // hasil tarik terakhir
   fetchedAt:0,
@@ -338,17 +384,40 @@ function manualTasks(){ return S.manual || tier().manual; }
 
 /* ═══════════ pengambilan data ═══════════ */
 function url(u){ return S.cfg.proxy ? S.cfg.proxy + encodeURIComponent(u) : u; }
-async function getJSON(u){
-  const r = await fetch(url(u), { headers:{ "Accept":"application/json" } });
-  if(!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+
+/* Jaringan seluler menggantung tanpa pernah menolak. Tanpa batas waktu,
+   fetch menunggu selamanya dan aplikasi TAMPAK beku, bukan gagal.
+   Ditambah 2x ulang-coba dengan jeda: kegagalan sesaat di HP itu normal. */
+const BATAS_MS = 12000, ULANG = 2;
+async function ambilMentah(u, accept){
+  let galat;
+  for(let i = 0; i <= ULANG; i++){
+    const ac = new AbortController();
+    const jam = setTimeout(() => ac.abort(), BATAS_MS);
+    try{
+      const r = await fetch(url(u), { headers:{ Accept: accept }, signal: ac.signal, cache:"no-store" });
+      clearTimeout(jam);
+      if(r.status === 429){ galat = new Error("HTTP 429"); await tidur(1500 * (i+1)); continue; }
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r;
+    }catch(e){
+      clearTimeout(jam);
+      galat = e.name === "AbortError"
+        ? new Error("waktu habis setelah " + (BATAS_MS/1000) + " detik \u2014 jaringan lambat atau menggantung")
+        : e;
+      // 404 tidak akan berubah walau diulang
+      if(/HTTP 4(0[0-9]|1[0-8])/.test(String(galat.message))) break;
+      if(i < ULANG) await tidur(700 * (i+1));
+    }
+  }
+  throw galat;
 }
+const tidur = ms2 => new Promise(r => setTimeout(r, ms2));
+async function getJSON(u){ return (await ambilMentah(u, "application/json")).json(); }
 /* Lichess mengirim daftar partai sebagai NDJSON: satu objek JSON per baris,
    bukan satu array. r.json() akan GAGAL di sini. */
 async function getNDJSON(u){
-  const r = await fetch(url(u), { headers:{ "Accept":"application/x-ndjson" } });
-  if(!r.ok) throw new Error("HTTP " + r.status);
-  const t = await r.text();
+  const t = await (await ambilMentah(u, "application/x-ndjson")).text();
   return t.split("\n").filter(Boolean).map(l => JSON.parse(l));
 }
 /* Log hanya ada di tab Pengaturan. Kalau tidak ada, jangan meledak —
@@ -437,6 +506,12 @@ function snapsDariCSV(teks){
 }
 
 async function fetchAll(){
+  if(typeof navigator !== "undefined" && navigator.onLine === false){
+    logClear();
+    logLine("Perangkat sedang LURING. Data yang ditampilkan adalah data terakhir yang tersimpan.", "warn");
+    renderAll();
+    return;
+  }
   logClear();
   const _el = $("#fetchLog");
   if(_el) _el.innerHTML = `<div class="alert-row"><b>\u2026</b><span><span class="spin"></span> menarik data\u2026</span></div>`;
@@ -480,11 +555,11 @@ async function fetchAll(){
         getJSON(`https://api.chess.com/pub/player/${u}/stats`),
         getJSON(`https://api.chess.com/pub/player/${u}/games/archives`).catch(()=>({archives:[]})),
       ]);
-      const months = (arch.archives || []).slice(-12);
-      const batches = [];
-      for(const m of months){
-        batches.push(await getJSON(m).then(r=>r.games||[]).catch(()=>[]));
-      }
+      /* Di HP, 12 permintaan berurutan = 12 kesempatan gagal + kena rate limit.
+         Ambil 3 bulan terakhir saja (cukup untuk semua analisis), paralel. */
+      const months = (arch.archives || []).slice(-3);
+      const batches = await Promise.all(
+        months.map(m => getJSON(m).then(r => r.games || []).catch(() => [])));
       out.chess = { user:u, stats, games:batches.flat(), months:months.length };
     }catch(e){ out.errors.push(["Chess.com", e.message]); }
   }
@@ -496,7 +571,7 @@ async function fetchAll(){
         getJSON(`https://lichess.org/api/user/${u}/activity`).catch(()=>[]),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`).catch(()=>[]),
         // Partai sungguhan, bukan ringkasan. `opening=true` memberi nama pembukaan.
-        getNDJSON(`https://lichess.org/api/games/user/${u}?max=200&opening=true`).catch(()=>null),
+        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true`).catch(()=>null),
       ]);
       out.lichess = { user:u, prof, act, hist, games: lg || [], gamesOk: !!lg };
     }catch(e){ out.errors.push(["Lichess", e.message]); }
@@ -523,7 +598,23 @@ async function fetchAll(){
   if(S.cfg.chess && !out.chess) logLine("Data Chess.com tidak masuk.", "warn");
   if(S.cfg.lichess && !out.lichess) logLine("Data Lichess tidak masuk.", "warn");
 
-  S.data = out; S.fetchedAt = Date.now();
+  /* BUG DI HP: versi lama menimpa S.data mentah-mentah. Kalau jaringan seluler
+     putus di tengah, out.chess = null dan SELURUH data Chess.com yang tadinya
+     sudah benar ikut terhapus. Sekarang: hanya bagian yang BERHASIL yang diganti;
+     bagian yang gagal mempertahankan data terakhir yang baik. */
+  const lama = S.data || { chess:null, lichess:null, errors:[] };
+  const baru = {
+    chess:   out.chess   || lama.chess   || null,
+    lichess: out.lichess || lama.lichess || null,
+    errors:  out.errors,
+  };
+  const pakaiLama = (!out.chess && lama.chess) || (!out.lichess && lama.lichess);
+  if(pakaiLama) logLine("Sebagian gagal \u2014 data lama dipertahankan, tidak dihapus. " +
+    "Angka yang kamu lihat mungkin bukan dari tarikan barusan.", "warn");
+
+  S.data = baru;
+  // Waktu hanya diperbarui kalau ADA yang benar-benar masuk.
+  if(out.chess || out.lichess || S.cfg.csv) S.fetchedAt = Date.now();
   recordSnapshot(out);
   await persist(); renderAll();
 }
@@ -1071,10 +1162,7 @@ function viewProgres(){
     <h2>21 hari terakhir <em>makin gelap = makin banyak latihan</em></h2>
     <div class="strip" id="strip"></div>
   </section>
-  <section class="box st2">
-    <h2>Semua ratingmu</h2>
-    <div id="ratings"></div>
-  </section>
+  <div class="plats" id="plats"></div>
   <section class="box st3">
     <h2>Angkamu</h2>
     <div id="summary"></div>
@@ -1087,6 +1175,7 @@ function viewHariOrtu(){
   <div id="setupHint" class="warnbox hide"><b>Belum tersambung</b>
     Isi username di tab Pengaturan, lalu tekan Tarik data.</div>
   <div class="cards" id="kpis"></div>
+  <div class="plats" id="plats"></div>
   <section class="box st1">
     <h2>Tugas hari ini <em id="questDate"></em></h2>
     <div id="todos"></div>
@@ -1094,10 +1183,6 @@ function viewHariOrtu(){
   <section class="box st2">
     <h2>Perlu perhatian</h2>
     <div id="alerts"></div>
-  </section>
-  <section class="box st3">
-    <h2>Rating &amp; taktik <em>Lichess vs Chess.com</em></h2>
-    <div id="ratings"></div>
   </section>
   <section class="box st4">
     <h2>Catatan pelatih hari ini</h2>
@@ -1147,6 +1232,7 @@ function viewHariPelatih(){
   <div id="setupHint" class="warnbox hide"><b>Belum tersambung</b>
     Isi username di tab Pengaturan, lalu tekan Tarik data.</div>
   <div class="cards" id="kpis"></div>
+  <div class="plats" id="plats"></div>
   <section class="box st1">
     <h2>Tugas hari ini <em id="questDate"></em></h2>
     <div id="todos"></div>
@@ -1154,10 +1240,6 @@ function viewHariPelatih(){
   <section class="box st2">
     <h2>Peringatan otomatis</h2>
     <div id="alerts"></div>
-  </section>
-  <section class="box st3">
-    <h2>Rating &amp; taktik <em>Lichess vs Chess.com</em></h2>
-    <div id="ratings"></div>
   </section>
   <section class="box st4">
     <h2>Catatan pelatih</h2>
@@ -1254,7 +1336,14 @@ function viewRencana(){
 }
 
 function viewPartai(){
-  return `<section class="box"><h2>Partai terakhir <em>Chess.com</em></h2><div id="games"></div></section>`;
+  return `<section class="box">
+    <h2>Partai terakhir <em>kedua situs</em></h2>
+    <div class="filt" id="filt">
+      ${[["semua","Semua"],["Lichess","Lichess"],["Chess.com","Chess.com"]].map(([v,l])=>
+        `<button data-f="${v}" class="${(S.filter||"semua")===v?"on":""}">${l}</button>`).join("")}
+    </div>
+    <div id="games"></div>
+  </section>`;
 }
 
 function viewAtur(){
@@ -1295,6 +1384,101 @@ function viewAtur(){
       <p><b>Chess.com tidak menyimpan riwayat</b> rating taktik maupun Puzzle Rush. Aplikasi ini yang mencatatnya. Hari yang tidak dibuka, tidak tercatat — kecuali Apps Script terpasang.</p>
     </div>
   </section>`;
+}
+
+/* ═══════════ KOLOM PER PLATFORM ═══════════
+   Satu kolom untuk tiap situs. Yang TIDAK dipisah, dan alasannya:
+     - kepatuhan  : target harian dipenuhi lintas situs, bukan per situs
+     - deret kalah: kalah 2x di Lichess lalu 2x di Chess.com ADALAH 4 beruntun
+     - batas volume: kalau per situs, pagar bisa dilewati dengan pindah situs
+   Ketiganya tetap gabungan di kartu KPI dan peringatan. */
+
+function siteDay(site, dk){
+  const list = normGames().filter(g => g.site === site && dayKey(g.t) === dk);
+  const by = {};
+  list.forEach(g => by[g.speed] = (by[g.speed]||0)+1);
+  const acc = list.filter(g => g.acc != null);
+  return {
+    n: list.length, by,
+    m: list.filter(g=>g.res==="M").length,
+    k: list.filter(g=>g.res==="K").length,
+    r: list.filter(g=>g.res==="R").length,
+    acc: acc.length ? acc.reduce((a,b)=>a+b.acc,0)/acc.length : null,
+  };
+}
+
+function renderPlatforms(){
+  const el = $("#plats"); if(!el) return;
+  const dk = todayKey(), T = targets();
+  const L = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || null;
+  const C = (S.data && S.data.chess && S.data.chess.stats) || null;
+  const dL = siteDay("Lichess", dk), dC = siteDay("Chess.com", dk);
+  const pz = puzzlesOn(dk), R = rushToday();
+
+  const baris = (label, nilai, sub, kelas) =>
+    `<div class="r ${kelas||""}"><dt>${label}</dt><dd>${nilai}${sub?`<small>${sub}</small>`:""}</dd></div>`;
+  const hasil = d => d.n ? `${d.m}M / ${d.r}R / ${d.k}K` : "\u2014";
+  const kelas = d => Object.entries(d.by).map(([k,v])=>`${k} ${v}`).join(" \u00b7 ") || "belum main";
+  const rate = (p) => p && p.games ? p.rating + (p.prov ? "?" : "") : null;
+
+  // ── LICHESS: rumah puzzle ──
+  const li = !S.cfg.lichess
+    ? `<div class="plat li"><h3>Lichess</h3><div class="empty">Username belum diisi.</div></div>`
+    : `<div class="plat li">
+        <h3>Lichess <em>sumber puzzle</em></h3>
+        <div class="hero">
+          <div><b style="color:${T.puzzle && pz>=T.puzzle ? "var(--ok)" : "var(--ink)"}">${pz}</b>
+            <span>puzzle hari ini</span></div>
+          <div class="sub">target ${T.puzzle}<br>${sumberPuzzle(dk) || "belum ada"}</div>
+        </div>
+        <dl>
+          ${baris("Rating puzzle", L && rate(L.puzzle) || "\u2014",
+              L && L.puzzle && L.puzzle.games ? `${L.puzzle.games} puzzle \u00b7 naik & turun` : "", L?"":"dim")}
+          ${baris("Partai hari ini", dL.n || "\u2014", kelas(dL), dL.n?"":"dim")}
+          ${baris("Hasil hari ini", hasil(dL), dL.acc ? `akurasi ${dL.acc.toFixed(1)}%` : "", dL.n?"":"dim")}
+          ${baris("Rapid", (L && rate(L.rapid)) || "\u2014", L && L.rapid && L.rapid.games ? `${L.rapid.games} partai` : "belum main")}
+          ${baris("Blitz", (L && rate(L.blitz)) || "\u2014", L && L.blitz && L.blitz.games ? `${L.blitz.games} partai` : "belum main")}
+          ${baris("Bullet", (L && rate(L.bullet)) || "\u2014", L && L.bullet && L.bullet.games ? `${L.bullet.games} partai` : "belum main")}
+          ${baris("Puzzle Storm", L && L.storm && L.storm.runs ? L.storm.score : "\u2014",
+              L && L.storm && L.storm.runs ? `${L.storm.runs} kali main` : "")}
+        </dl>
+        <div class="foot">Jumlah puzzle harian TERVERIFIKASI. Rating puzzle bergerak naik dan turun \u2014
+          inilah angka yang paling jujur menggambarkan kemampuan taktik anak.</div>
+      </div>`;
+
+  // ── CHESS.COM: rumah partai ──
+  const tac = C && C.tactics;
+  const rush = C && C.puzzle_rush;
+  const cc = !S.cfg.chess
+    ? `<div class="plat cc"><h3>Chess.com</h3><div class="empty">Username belum diisi.</div></div>`
+    : `<div class="plat cc">
+        <h3>Chess.com <em>sumber partai</em></h3>
+        <div class="hero">
+          <div><b style="color:${dC.n ? "var(--ink)" : "var(--soft)"}">${dC.n}</b><span>partai hari ini</span></div>
+          <div class="sub">${hasil(dC)}<br>${dC.acc ? "akurasi " + dC.acc.toFixed(1) + "%" : "belum dianalisis"}</div>
+        </div>
+        <dl>
+          ${baris("Puzzle harian", "TIDAK ADA", "API Chess.com tidak menyediakannya", "no")}
+          ${baris("Rating taktik", tac && tac.highest ? tac.highest.rating : "\u2014",
+              tac && tac.highest ? `TERTINGGI \u00b7 tak pernah turun` : "", "dim")}
+          ${baris("Taktik terendah", tac && tac.lowest ? tac.lowest.rating : "\u2014", "", "dim")}
+          ${baris("Puzzle Rush hari ini", R.attempts || "\u2014",
+              R.attempts ? `skor ${R.score}` : (T.rush ? "belum dikerjakan" : "tidak ditargetkan"),
+              R.attempts ? "ok" : "dim")}
+          ${baris("Puzzle Rush terbaik", rush && rush.best ? rush.best.score : "\u2014", "")}
+          ${baris("Rapid", C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : "\u2014",
+              C && C.chess_rapid && C.chess_rapid.record
+                ? `${C.chess_rapid.record.win||0}M / ${C.chess_rapid.record.draw||0}R / ${C.chess_rapid.record.loss||0}K` : "")}
+          ${baris("Blitz", C && C.chess_blitz && C.chess_blitz.last ? C.chess_blitz.last.rating : "\u2014",
+              C && C.chess_blitz && C.chess_blitz.record
+                ? `${C.chess_blitz.record.win||0}M / ${C.chess_blitz.record.draw||0}R / ${C.chess_blitz.record.loss||0}K` : "")}
+          ${baris("Kontrol waktu hari ini", "\u00a0", kelas(dC), "dim")}
+        </dl>
+        <div class="foot">Rating taktik yang ditampilkan adalah yang TERTINGGI sepanjang masa \u2014 ia tidak pernah
+          turun, jadi ia tidak bisa memberi tahu kalau kemampuan anak menurun. Gunakan rating puzzle Lichess untuk itu.</div>
+      </div>`;
+
+  el.innerHTML = li + cc;
 }
 
 /* ═══════════ RATING & TAKTIK: KEDUA SITUS BERDAMPINGAN ═══════════
@@ -1562,20 +1746,30 @@ function renderSummary(){
 
 function renderGames(){
   const el = $("#games"); if(!el) return;
-  const G = normGames();
-  if(!G.length){ el.innerHTML = `<div class="empty">Belum ada partai dari kedua situs.</div>`; return; }
+  $$("#filt button").forEach(b => b.onclick = () => { S.filter = b.dataset.f; persist(); render(); });
+  const f = S.filter || "semua";
+  const G = normGames().filter(g => f === "semua" || g.site === f);
+  if(!G.length){ el.innerHTML = `<div class="empty">Belum ada partai${f==="semua"?" dari kedua situs":" di "+f}.</div>`; return; }
+  // Rating Lichess dan Chess.com BUKAN skala yang sama. Menaruhnya di satu kolom
+  // membuat 1462 dan 1180 terlihat sebanding — dan itu kesimpulan yang salah.
   const rows = G.slice(0,60).map(g=>{
     const cls = g.res==="M"?"w":g.res==="K"?"l":"d";
-    const warna = g.site==="Lichess" ? "var(--carbon)" : "var(--teal)";
+    const li = g.site === "Lichess";
     return `<tr>
       <td>${new Date(g.t).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"})}</td>
-      <td><b style="color:${warna}">${g.site==="Lichess"?"LI":"CC"}</b> ${g.speed}</td>
+      <td>${g.speed}</td>
       <td>${g.opp} <span style="color:var(--soft)">${g.oppRating||""}</span></td>
-      <td class="${cls}">${g.res}</td><td>${g.rating||"\u2014"}</td>
+      <td class="${cls}">${g.res}</td>
+      <td style="text-align:right;color:var(--carbon);font-weight:${li?700:400}">${li ? g.rating||"\u2014" : ""}</td>
+      <td style="text-align:right;color:var(--teal);font-weight:${li?400:700}">${li ? "" : g.rating||"\u2014"}</td>
       <td>${g.acc!=null?g.acc.toFixed(1)+"%":"\u2014"}</td>
       <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">buka</a></td></tr>`;
   }).join("");
-  el.innerHTML = `<table><tr><th>Tgl</th><th>Situs / kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
+  el.innerHTML = `<table>
+    <tr><th>Tgl</th><th>Kontrol</th><th>Lawan</th><th>Hasil</th>
+      <th style="text-align:right;color:var(--carbon)">Rating LI</th>
+      <th style="text-align:right;color:var(--teal)">Rating CC</th>
+      <th>Akurasi</th><th></th></tr>${rows}</table>`;
 }
 
 function renderPlan(){
@@ -1647,14 +1841,19 @@ function render(){
   };
   $("#view").innerHTML = V[S.tab]();
 
-  $("#sub").textContent = (S.cfg.name ? S.cfg.name.toUpperCase() + " \u00b7 " : "") +
-    (S.fetchedAt ? "DATA " + new Date(S.fetchedAt).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "BELUM ADA DATA");
+  const umur = S.fetchedAt ? Date.now() - S.fetchedAt : null;
+  const basi = umur != null && umur > 6*3600*1000;
+  $("#sub").innerHTML = (S.cfg.name ? S.cfg.name.toUpperCase() + " \u00b7 " : "") +
+    (S.fetchedAt
+      ? (basi ? `<b style="color:var(--warn)">DATA ${Math.round(umur/3600000)} JAM LALU</b>` :
+         "DATA " + new Date(S.fetchedAt).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}))
+      : "BELUM ADA DATA");
   const hint = $("#setupHint");
   if(hint) hint.classList.toggle("hide", !!(S.cfg.chess || S.cfg.lichess || S.cfg.gs));
   const qd = $("#questDate");
   if(qd) qd.textContent = new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"});
 
-  renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderRatings();
+  renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderPlatforms(); renderRatings();
   renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur();
   if($("#chart")) renderChart("chart", ratingSeries(), false);
   if($("#accChart")) renderChart("accChart",
@@ -1685,7 +1884,30 @@ $$(".who button").forEach(b => b.onclick = () => {
   persist(); render();
 });
 async function persist(){ await Store.save(S); }
-let _rz; addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(render, 250); });
+
+const bR = $("#bRefresh");
+if(bR) bR.onclick = async () => {
+  bR.classList.add("spin2");
+  try { await fetchAll(); } finally { bR.classList.remove("spin2"); }
+};
+/* BUG DI HP: membuka papan ketik memicu event `resize`. Versi lama memanggil
+   render() penuh -> innerHTML diganti -> kolom yang sedang diketik kehilangan
+   fokus DAN isinya. Itu penyebab utama rasa "tidak stabil" di HP.
+   Sekarang: hanya grafik yang digambar ulang, dan tidak sama sekali kalau ada
+   kolom yang sedang aktif. */
+let _rz, _w = innerWidth;
+addEventListener("resize", () => {
+  const aktif = document.activeElement;
+  if(aktif && /^(INPUT|TEXTAREA|SELECT)$/.test(aktif.tagName)) return;   // papan ketik terbuka
+  if(Math.abs(innerWidth - _w) < 40) return;   // hanya tinggi yang berubah (bar URL menyusut)
+  _w = innerWidth;
+  clearTimeout(_rz);
+  _rz = setTimeout(() => {
+    if($("#chart")) renderChart("chart", ratingSeries(), false);
+    if($("#accChart")) renderChart("accChart",
+      akurasiTren().length ? [{name:"Akurasi", color:"#1E8C7F", pts:akurasiTren()}] : [], true);
+  }, 250);
+});
 
 function renderAll(){ render(); }   // dipanggil oleh fetchAll()
 
