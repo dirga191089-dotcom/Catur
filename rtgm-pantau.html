@@ -2,7 +2,12 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6E7DF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RTGM Pantau">
 <title>RTGM · Pantau</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +20,8 @@
     --sans:"Archivo",system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   body{background:var(--paper);color:var(--ink);font-family:var(--sans);padding:18px 14px 50px;
     background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 28px;background-position:0 -1px}
   .sheet{max-width:1080px;margin:0 auto}
@@ -119,6 +126,48 @@
     border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
   @keyframes sp{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+  /* ══════════════ MOBILE ══════════════ */
+  @media(max-width:700px){
+    body{padding:12px 10px calc(36px + env(safe-area-inset-bottom));background-size:100% 26px}
+    header{margin-bottom:10px}
+    .brand{font-size:17px}
+    .who{width:100%}
+    .who button{flex:1;min-height:44px;padding:10px 4px}
+
+    /* tab jadi satu baris yang bisa digeser, dan menempel di atas saat di-scroll */
+    nav{position:sticky;top:0;z-index:19;background:var(--paper);
+        flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+        margin:0 -10px 14px;padding:0 10px;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav button{white-space:nowrap;min-height:44px;padding:10px 13px}
+
+    .cards{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .kpi b{font-size:20px}
+
+    /* sasaran sentuh: 20px terlalu kecil untuk jempol */
+    .task{padding:13px 12px;grid-template-columns:30px 1fr auto;gap:11px}
+    .task .mark{width:30px;height:30px;font-size:16px}
+    .task .t{font-size:14px}
+    .bar{max-width:none}
+
+    /* tabel partai: digeser mendatar, bukan dipaksa muat lalu tak terbaca */
+    #games{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    #games table{min-width:560px}
+
+    /* 16px mencegah iOS otomatis men-zoom saat kolom disentuh */
+    input,select,textarea{font-size:16px;padding:10px}
+    .btn{min-height:46px;flex:1}
+    .btnrow{gap:8px}
+    .fields{grid-template-columns:1fr}
+    .chart{height:200px}
+    .alert-row{font-size:12.5px}
+    footer{font-size:9.5px}
+  }
+  @media(max-width:380px){
+    .cards{grid-template-columns:1fr}
+    .who button{font-size:9px;letter-spacing:.04em}
+  }
 </style>
 </head>
 <body>
@@ -177,7 +226,7 @@
 <div id="tab-perkembangan" class="hide">
   <section class="box">
     <h2>Riwayat rating <em>Lichess: dari API &middot; Chess.com: direkonstruksi dari arsip partai</em></h2>
-    <svg class="chart" id="chart" viewBox="0 0 760 190" preserveAspectRatio="none" role="img" aria-label="Grafik rating"></svg>
+    <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
     <div class="legend" id="legend"></div>
   </section>
 
@@ -643,7 +692,12 @@ function ratingSeries(){
 }
 function renderChart(){
   const series = ratingSeries();
-  const svg = $("#chart"), W=760, H=190, P=34;
+  const svg = $("#chart"), H=190, P=34;
+  // Lebar mengikuti layar. Kalau dipaksa 760px lalu diregangkan, teks dan garis
+  // ikut gepeng di HP. Ini bukan soal estetika: angka rating jadi tak terbaca.
+  const W = Math.max(300, Math.round(svg.getBoundingClientRect().width) || 760);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   if(!series.length){ svg.innerHTML = `<text x="20" y="100" font-family="Space Mono" font-size="12" fill="#5D6473">Belum ada data rating.</text>`; $("#legend").innerHTML=""; return; }
   const all = series.flatMap(s=>s.pts);
   const t0 = Math.min(...all.map(p=>p.t)), t1 = Math.max(...all.map(p=>p.t));
@@ -808,6 +862,8 @@ $("#bReset").onclick = async () => {
   await Store.clear(); location.reload();
 };
 async function persist(){ await Store.save(S); }
+
+let _rz; addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(renderChart, 200); });
 
 (async () => {
   const saved = await Store.load();
