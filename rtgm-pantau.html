@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTGM · Pantau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E6E7DF; --card:#F1F2EB; --ink:#1B2130; --soft:#5D6473;
+    --rule:#C3C7BA; --carbon:#5B4E8C; --ok:#2F6B4F; --no:#A8372A; --warn:#B07A1E;
+    --mono:"Space Mono",ui-monospace,Menlo,monospace;
+    --sans:"Archivo",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);padding:18px 14px 50px;
+    background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 28px;background-position:0 -1px}
+  .sheet{max-width:1080px;margin:0 auto}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:16px;background:var(--paper)}
+  .brand{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:.14em}
+  .brand span{color:var(--carbon)}
+  .tagline{font-family:var(--mono);font-size:10px;color:var(--soft);letter-spacing:.14em;margin-top:2px}
+  .who{display:flex;gap:0;font-family:var(--mono);font-size:10px;letter-spacing:.1em}
+  .who button{background:var(--card);border:1px solid var(--ink);border-right:0;padding:7px 12px;cursor:pointer;
+    text-transform:uppercase;font-family:inherit;font-size:inherit;color:var(--ink)}
+  .who button:last-child{border-right:1px solid var(--ink)}
+  .who button.on{background:var(--ink);color:var(--card)}
+
+  nav{display:flex;gap:0;margin-bottom:18px;flex-wrap:wrap}
+  nav button{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;cursor:pointer;color:var(--soft)}
+  nav button.on{color:var(--ink);border-bottom-color:var(--carbon)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+  .kpi{background:var(--card);border:1px solid var(--ink);padding:10px 12px}
+  .kpi b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15;font-weight:700}
+  .kpi i{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+  .kpi.alert{border-color:var(--no);box-shadow:3px 3px 0 rgba(168,55,42,.2)}
+  .kpi.alert b{color:var(--no)}
+  .kpi small{display:block;font-family:var(--mono);font-size:10px;color:var(--carbon);margin-top:3px}
+
+  section.box{background:var(--card);border:1px solid var(--ink);margin-bottom:16px}
+  section.box>h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;
+    padding:8px 12px;background:var(--ink);color:var(--card);display:flex;justify-content:space-between;align-items:center}
+  section.box>h2 em{font-style:normal;font-size:9px;opacity:.7;letter-spacing:.08em}
+  .pad{padding:12px}
+
+  /* tugas harian */
+  .task{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;
+    padding:9px 12px;border-bottom:1px solid var(--rule)}
+  .task:last-child{border-bottom:0}
+  .task .mark{width:20px;height:20px;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;background:var(--card)}
+  .task .mark[aria-disabled="true"]{cursor:default}
+  .task.done .mark{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .task.auto .mark{background:var(--carbon);color:#fff;border-color:var(--carbon)}
+  .task .t{font-size:13.5px;line-height:1.35}
+  .task .t small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:2px}
+  .task .t small.src{color:var(--carbon)}
+  .task .prog{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
+  .task.done .t{opacity:.65}
+  .bar{height:4px;background:var(--rule);margin-top:5px;max-width:180px}
+  .bar i{display:block;height:100%;background:var(--carbon)}
+
+  .alerts{padding:0}
+  .alert-row{display:flex;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);font-size:13px;align-items:flex-start}
+  .alert-row:last-child{border-bottom:0}
+  .alert-row b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:2px 6px;white-space:nowrap;
+    border:1px solid currentColor}
+  .alert-row.no b{color:var(--no)} .alert-row.warn b{color:var(--warn)} .alert-row.ok b{color:var(--ok)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);
+    text-align:left;padding:7px 12px;border-bottom:1px solid var(--ink)}
+  td{padding:7px 12px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12px}
+  td.w{color:var(--ok);font-weight:700} td.l{color:var(--no);font-weight:700} td.d{color:var(--soft);font-weight:700}
+  tr:last-child td{border-bottom:0}
+  .empty{padding:16px 12px;font-family:var(--mono);font-size:11px;color:var(--soft);line-height:1.7}
+
+  input,select,textarea{font-family:var(--mono);font-size:12px;padding:7px 9px;border:1px solid var(--ink);
+    background:#fff;color:var(--ink);width:100%}
+  textarea{font-family:var(--sans);font-size:13px;min-height:70px;resize:vertical}
+  label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--soft);margin-bottom:4px;margin-top:10px}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  @media(max-width:640px){.fields{grid-template-columns:1fr}}
+  .btn{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    padding:9px 14px;cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--ink);
+    box-shadow:2px 2px 0 var(--ink);width:auto}
+  .btn:active{transform:translate(2px,2px);box-shadow:none}
+  .btn.go{background:var(--ink);color:var(--card)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+  .chart{width:100%;height:190px;display:block}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;padding:0 12px 10px}
+  .legend i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+
+  .strip{display:flex;gap:3px;padding:12px;overflow-x:auto}
+  .strip div{flex:0 0 auto;width:26px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--soft)}
+  .strip .cell{width:26px;height:26px;border:1px solid var(--rule);margin-bottom:3px;background:#fff}
+  .strip .cell.l1{background:#D7D3E6} .strip .cell.l2{background:#B0A7CE}
+  .strip .cell.l3{background:#877BB5} .strip .cell.l4{background:var(--carbon)}
+
+  .note{border-left:3px solid var(--carbon);background:rgba(91,78,140,.07);padding:9px 11px;font-size:13px;line-height:1.5;margin-bottom:8px}
+  .note b{font-family:var(--mono);font-size:10px;letter-spacing:.08em;display:block;color:var(--soft);margin-bottom:3px}
+
+  .warnbox{border:2px dashed var(--warn);background:rgba(176,122,30,.08);padding:11px 13px;font-size:12.5px;line-height:1.55;margin-bottom:16px}
+  .warnbox b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);display:block;margin-bottom:4px}
+  .warnbox code{font-family:var(--mono);font-size:11px;background:rgba(27,33,48,.07);padding:1px 4px}
+
+  footer{margin-top:22px;border-top:1px solid var(--rule);padding-top:10px;
+    font-family:var(--mono);font-size:10px;color:var(--soft);line-height:1.7}
+  .hide{display:none!important}
+  .spin{display:inline-block;width:9px;height:9px;border:2px solid var(--carbon);border-top-color:transparent;
+    border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <div>
+    <div class="brand">RTGM <span>/</span> PANTAU</div>
+    <div class="tagline" id="sub">DASBOR ORANG TUA &amp; PELATIH &middot; v0.1</div>
+  </div>
+  <div class="who">
+    <button data-role="ortu" class="on">Orang tua</button>
+    <button data-role="pelatih">Pelatih</button>
+    <button data-role="anak">Anak</button>
+  </div>
+</header>
+
+<nav>
+  <button data-tab="hari" class="on">Hari ini</button>
+  <button data-tab="perkembangan">Perkembangan</button>
+  <button data-tab="partai">Partai</button>
+  <button data-tab="rencana">Rencana &amp; kurikulum</button>
+  <button data-tab="atur">Pengaturan</button>
+</nav>
+
+<!-- ══ HARI INI ══ -->
+<div id="tab-hari">
+  <div id="setupHint" class="warnbox hide">
+    <b>Belum tersambung</b>
+    Isi username Chess.com dan/atau Lichess anak di tab <b style="display:inline;color:var(--ink)">Pengaturan</b>, lalu tekan Tarik data.
+  </div>
+
+  <div class="cards" id="kpis"></div>
+
+  <section class="box">
+    <h2>Tugas hari ini <em id="questDate"></em></h2>
+    <div id="quests"><div class="empty">Belum ada data.</div></div>
+  </section>
+
+  <section class="box">
+    <h2>Peringatan otomatis</h2>
+    <div class="alerts" id="alerts"><div class="empty">Belum ada data.</div></div>
+  </section>
+
+  <section class="box" id="noteBox">
+    <h2>Catatan pelatih hari ini</h2>
+    <div class="pad">
+      <div id="noteList"></div>
+      <textarea id="noteInput" placeholder="Catatan untuk anak & orang tua…"></textarea>
+      <div class="btnrow"><button class="btn go" id="bNote">Simpan catatan</button></div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ PERKEMBANGAN ══ -->
+<div id="tab-perkembangan" class="hide">
+  <section class="box">
+    <h2>Riwayat rating <em>Lichess: dari API &middot; Chess.com: direkonstruksi dari arsip partai</em></h2>
+    <svg class="chart" id="chart" viewBox="0 0 760 190" preserveAspectRatio="none" role="img" aria-label="Grafik rating"></svg>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="box">
+    <h2>Aktivitas 21 hari terakhir <em>hanya hari saat aplikasi dibuka yang tercatat</em></h2>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section class="box">
+    <h2>Ringkasan</h2>
+    <div id="summary"><div class="empty">Belum ada data.</div></div>
+  </section>
+</div>
+
+<!-- ══ PARTAI ══ -->
+<div id="tab-partai" class="hide">
+  <section class="box">
+    <h2>Partai terakhir <em>klik untuk buka di situs aslinya</em></h2>
+    <div id="games"><div class="empty">Belum ada data.</div></div>
+  </section>
+</div>
+
+<!-- ══ RENCANA ══ -->
+<div id="tab-rencana" class="hide">
+  <section class="box">
+    <h2>Tier kurikulum</h2>
+    <div class="pad">
+      <label>Tier saat ini</label>
+      <select id="tier"></select>
+      <div id="tierInfo" style="margin-top:12px"></div>
+    </div>
+  </section>
+  <section class="box">
+    <h2>Target harian <em>dipakai untuk verifikasi otomatis</em></h2>
+    <div class="pad">
+      <div class="fields">
+        <div><label>Puzzle Rush / hari — percobaan (Chess.com)</label><input type="number" id="tRush" min="0"></div>
+        <div><label>Target skor Puzzle Rush</label><input type="number" id="tRushScore" min="0"></div>
+        <div><label>Puzzle / hari (Lichess — kosongkan jika tak dipakai)</label><input type="number" id="tPuzzle" min="0"></div>
+        <div><label>Partai rapid / hari</label><input type="number" id="tRapid" min="0"></div>
+        <div><label>Batas partai bullet / hari</label><input type="number" id="tBulletMax" min="0"></div>
+        <div><label>Batas total partai / hari (anti-tilt)</label><input type="number" id="tGameMax" min="0"></div>
+      </div>
+      <label>Tugas manual (satu per baris — dicentang pelatih/orang tua)</label>
+      <textarea id="tManual" style="font-family:var(--mono);font-size:12px"></textarea>
+      <div class="btnrow"><button class="btn go" id="bTargets">Simpan target</button></div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ PENGATURAN ══ -->
+<div id="tab-atur" class="hide">
+  <section class="box">
+    <h2>Sambungan</h2>
+    <div class="pad">
+      <div class="fields">
+        <div><label>Nama anak</label><input id="cName" placeholder="mis. Arka"></div>
+        <div><label>Zona waktu</label><input id="cTz" disabled></div>
+        <div><label>Username Chess.com</label><input id="cChess" placeholder="mis. arkachess" autocapitalize="off"></div>
+        <div><label>Username Lichess</label><input id="cLichess" placeholder="mis. arka_id" autocapitalize="off"></div>
+      </div>
+      <label>Proxy CORS (opsional — isi HANYA jika tarik data gagal)</label>
+      <input id="cProxy" placeholder="https://proxy-anda.workers.dev/?url=" autocapitalize="off">
+      <div class="btnrow">
+        <button class="btn go" id="bFetch">Tarik data</button>
+        <button class="btn" id="bExport">Ekspor JSON</button>
+        <button class="btn" id="bReset" style="color:var(--no)">Hapus semua</button>
+      </div>
+      <div id="fetchLog" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="box">
+    <h2>Yang bisa dan tidak bisa dipantau di Chess.com</h2>
+    <div class="pad" style="font-size:13px;line-height:1.6">
+      <p style="margin-bottom:8px"><b>Terverifikasi otomatis:</b> Puzzle Rush hari ini (jumlah percobaan + skor), rekor rating taktik baru, semua partai + hasil + rating + akurasi, deret kekalahan, volume bermain.</p>
+      <p style="margin-bottom:8px"><b>TIDAK tersedia di API Chess.com:</b> jumlah puzzle harian di menu <b style="display:inline">Puzzles</b> biasa. Chess.com hanya memberi rating taktik <em>tertinggi</em> dan <em>terendah</em> — bukan rating saat ini, bukan jumlah harian. Karena itu tugas "kerjakan 30 puzzle" berada di daftar manual: hanya sekuat kejujuran anak.</p>
+      <p style="margin-bottom:8px"><b>Juga tidak tersedia:</b> pelajaran/video yang ditonton, waktu layar, latihan di papan fisik, penggunaan bantuan mesin.</p>
+      <p><b>Catatan penting:</b> Chess.com tidak menyimpan riwayat rating taktik maupun riwayat Puzzle Rush. Aplikasi ini yang mencatatnya — satu foto keadaan setiap kali kamu tekan Tarik data. <b style="display:inline">Hari yang aplikasinya tidak dibuka sama sekali tidak akan punya catatan.</b> Buka minimal sekali sehari, di malam hari.</p>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div>Data ditarik langsung dari API publik Chess.com &amp; Lichess. Tidak ada server, tidak ada database. Semua tersimpan di perangkat ini.</div>
+  <div style="margin-top:6px">Anak sebaiknya tahu bahwa aktivitasnya dipantau. Pengawasan yang disembunyikan merusak kepercayaan, dan data ini toh publik — siapa pun bisa melihatnya.</div>
+</footer>
+</div>
+
+<script>
+/* ═══════════ penyimpanan ═══════════ */
+const KEY = "rtgm.pantau.v1";
+const Store = {
+  has: typeof window !== "undefined" && window.storage && window.storage.get,
+  async load(){ try{
+      if(this.has){ const r = await window.storage.get(KEY); return r&&r.value?JSON.parse(r.value):null; }
+      const raw = localStorage.getItem(KEY); return raw?JSON.parse(raw):null;
+    }catch(e){ return null; } },
+  async save(o){ const s=JSON.stringify(o);
+    try{ if(this.has){ await window.storage.set(KEY,s); return; } localStorage.setItem(KEY,s); }catch(e){} },
+  async clear(){ try{ if(this.has){ await window.storage.delete(KEY); return; } localStorage.removeItem(KEY);}catch(e){} }
+};
+
+/* ═══════════ kurikulum (dari roadmap) ═══════════ */
+const TIERS = [
+  { id:1, nama:"Tier 1 — Fondasi", rating:"1200–1500", usia:"8–9 th",
+    fokus:"Fork, Pin, Skewer, Double Check, Mat baris belakang, visi geometris",
+    evaluasi:"Review akurasi puzzle mingguan",
+    target:{rush:20,rushScore:12,puzzle:30,rapid:2,bulletMax:0,gameMax:6},
+    manual:["Kerjakan 30 puzzle di menu Puzzles (bukan Rush)","Drill endgame 15 menit (Raja+Pion vs Raja, oposisi)","Ulang 3 pola mat dasar di papan fisik"] },
+  { id:2, nama:"Tier 2 — Kompetisi", rating:"1500–1800", usia:"9–10 th",
+    fokus:"Strategi posisional, lajur terbuka, outpost kuda, repertoar 1.e4 / Sicilian / KID",
+    evaluasi:"Pemeriksaan anotasi mandiri anak; filter opening via API",
+    target:{rush:25,rushScore:18,puzzle:40,rapid:2,bulletMax:0,gameMax:6},
+    manual:["Kerjakan 40 puzzle di menu Puzzles (bukan Rush)","Anotasi 1 partai sendiri SEBELUM buka engine","Drill endgame benteng 20 menit"] },
+  { id:3, nama:"Tier 3 — Master", rating:"2000–2200", usia:"10–12 th",
+    fokus:"Candidate moves (Kotov), kalkulasi 4–6 langkah, prophylaxis, Lucena & Philidor",
+    evaluasi:"Uji visualisasi buta; skor kelulusan modul endgame",
+    target:{rush:30,rushScore:25,puzzle:50,rapid:2,bulletMax:0,gameMax:5},
+    manual:["Kerjakan 50 puzzle di menu Puzzles (bukan Rush)","Kalkulasi 5 posisi tanpa menggeser bidak","Analisis 1 partai kalah bersama pelatih"] },
+  { id:4, nama:"Tier 4 — Elite", rating:"2300+", usia:"13–15 th",
+    fokus:"Deep prep anti-database, novelty langkah 15+, manajemen krisis waktu",
+    evaluasi:"Simulasi tekanan waktu; persiapan lawan spesifik",
+    target:{rush:30,rushScore:30,puzzle:40,rapid:1,bulletMax:0,gameMax:4},
+    manual:["Persiapan lawan turnamen 45 menit","Analisis mendalam 1 partai klasik","Latihan blitz-drill krisis waktu"] },
+];
+
+/* ═══════════ status ═══════════ */
+let S = {
+  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"", proxy:"" },
+  tier:1,
+  targets:null,
+  manual:null,
+  checks:{},        // "2026-07-13": { "0":true, ... }
+  notes:{},         // "2026-07-13": [ {t, text} ]
+  snaps:{},         // "2026-07-13": { rushAttempts, rushScore, tacticsHigh, tacticsHighDate, rapid, blitz }
+  data:null,        // hasil tarik terakhir
+  fetchedAt:0,
+  role:"ortu", tab:"hari"
+};
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const todayKey = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD lokal
+const dayKey = d => new Date(d).toLocaleDateString("sv-SE");
+// Chess.com mengirim detik, Lichess mengirim milidetik. Deteksi sendiri, jangan berasumsi.
+const ms = t => (t < 1e11 ? t * 1000 : t);
+
+function tier(){ return TIERS.find(t=>t.id===S.tier) || TIERS[0]; }
+function targets(){ return S.targets || tier().target; }
+function manualTasks(){ return S.manual || tier().manual; }
+
+/* ═══════════ pengambilan data ═══════════ */
+function url(u){ return S.cfg.proxy ? S.cfg.proxy + encodeURIComponent(u) : u; }
+async function getJSON(u){
+  const r = await fetch(url(u), { headers:{ "Accept":"application/json" } });
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+function logLine(msg, kind){
+  const el = $("#fetchLog");
+  const d = document.createElement("div");
+  d.className = "alert-row " + (kind||"");
+  d.innerHTML = `<b>${kind==="no"?"GAGAL":kind==="warn"?"SEBAGIAN":"OK"}</b><span>${msg}</span>`;
+  el.appendChild(d);
+}
+
+async function fetchAll(){
+  $("#fetchLog").innerHTML = `<div class="alert-row"><b>…</b><span><span class="spin"></span> menarik data…</span></div>`;
+  const out = { chess:null, lichess:null, errors:[] };
+
+  if(S.cfg.chess){
+    const u = S.cfg.chess.trim().toLowerCase();
+    try{
+      // Ambil daftar arsip bulanan yang benar-benar ada, lalu tarik semuanya
+      // (maksimal 12 bulan terakhir agar sopan terhadap rate limit).
+      const [stats, arch] = await Promise.all([
+        getJSON(`https://api.chess.com/pub/player/${u}/stats`),
+        getJSON(`https://api.chess.com/pub/player/${u}/games/archives`).catch(()=>({archives:[]})),
+      ]);
+      const months = (arch.archives || []).slice(-12);
+      const batches = [];
+      for(const m of months){
+        batches.push(await getJSON(m).then(r=>r.games||[]).catch(()=>[]));
+      }
+      out.chess = { user:u, stats, games:batches.flat(), months:months.length };
+    }catch(e){ out.errors.push(["Chess.com", e.message]); }
+  }
+  if(S.cfg.lichess){
+    const u = S.cfg.lichess.trim();
+    try{
+      const [prof, act, hist] = await Promise.all([
+        getJSON(`https://lichess.org/api/user/${u}`),
+        getJSON(`https://lichess.org/api/user/${u}/activity`).catch(()=>[]),
+        getJSON(`https://lichess.org/api/user/${u}/rating-history`).catch(()=>[]),
+      ]);
+      out.lichess = { user:u, prof, act, hist };
+    }catch(e){ out.errors.push(["Lichess", e.message]); }
+  }
+
+  $("#fetchLog").innerHTML = "";
+  if(!S.cfg.chess && !S.cfg.lichess){ logLine("Belum ada username yang diisi.", "no"); return; }
+  out.errors.forEach(([site,msg])=>{
+    const cors = /Failed to fetch|NetworkError|Load failed/i.test(msg);
+    logLine(`${site}: ${msg}${cors?" — kemungkinan besar diblokir CORS. Isi kolom Proxy CORS di atas, atau buka file ini lewat http:// bukan file://":""}`, "no");
+  });
+  if(out.chess) logLine(`Chess.com: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip + statistik`, out.chess.games.length ? "" : "warn");
+  if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
+  if(out.lichess) logLine(`Lichess: ${(out.lichess.act||[]).length} hari aktivitas + riwayat rating`, "");
+  if(S.cfg.chess && !out.chess) logLine("Data Chess.com tidak masuk.", "warn");
+  if(S.cfg.lichess && !out.lichess) logLine("Data Lichess tidak masuk.", "warn");
+
+  S.data = out; S.fetchedAt = Date.now();
+  recordSnapshot(out);
+  await persist(); renderAll();
+}
+
+/* Chess.com tidak menyimpan riwayat rating taktik maupun riwayat Puzzle Rush.
+   Jadi aplikasi ini yang jadi pencatatnya: setiap kali data ditarik, keadaan
+   hari itu difoto dan disimpan. Konsekuensinya jujur: hari yang aplikasinya
+   tidak dibuka sama sekali TIDAK akan punya catatan. */
+function recordSnapshot(out){
+  if(!out.chess) return;
+  const st = out.chess.stats || {};
+  const dk = todayKey();
+  const rush = st.puzzle_rush && st.puzzle_rush.daily ? st.puzzle_rush.daily : null;
+  S.snaps[dk] = {
+    rushAttempts: rush ? (rush.total_attempts || 0) : 0,
+    rushScore:    rush ? (rush.score || 0) : 0,
+    tacticsHigh:  st.tactics && st.tactics.highest ? st.tactics.highest.rating : null,
+    tacticsHighDate: st.tactics && st.tactics.highest ? st.tactics.highest.date : null,
+    rapid: st.chess_rapid && st.chess_rapid.last ? st.chess_rapid.last.rating : null,
+    blitz: st.chess_blitz && st.chess_blitz.last ? st.chess_blitz.last.rating : null,
+    at: Date.now(),
+  };
+}
+function rushToday(){
+  const s = S.snaps[todayKey()];
+  return s ? { attempts: s.rushAttempts, score: s.rushScore } : { attempts:0, score:0 };
+}
+function newTacticsRecordToday(){
+  const s = S.snaps[todayKey()];
+  return !!(s && s.tacticsHighDate && dayKey(ms(s.tacticsHighDate)) === todayKey());
+}
+
+/* ═══════════ olah data ═══════════ */
+function chessGamesOn(dk){
+  const d = S.data && S.data.chess ? S.data.chess.games : [];
+  return d.filter(g => dayKey(ms(g.end_time)) === dk);
+}
+function chessResultFor(g){
+  const me = S.data.chess.user;
+  const side = (g.white.username||"").toLowerCase() === me ? g.white : g.black;
+  const opp  = (g.white.username||"").toLowerCase() === me ? g.black : g.white;
+  const r = side.result;
+  const res = r === "win" ? "M" : ["agreed","repetition","stalemate","insufficient","50move","timevsinsufficient"].includes(r) ? "R" : "K";
+  return { side, opp, res, rating:side.rating, acc: g.accuracies ? (side===g.white?g.accuracies.white:g.accuracies.black) : null };
+}
+function lichessDay(dk){
+  const act = (S.data && S.data.lichess) ? (S.data.lichess.act||[]) : [];
+  // interval.end adalah akhir hari aktivitas (detik)
+  return act.find(a => dayKey(ms(a.interval.end)) === dk || dayKey(ms(a.interval.start)) === dk) || null;
+}
+function puzzlesOn(dk){
+  const a = lichessDay(dk);
+  if(!a || !a.puzzles || !a.puzzles.score) return 0;
+  const s = a.puzzles.score;
+  return (s.win||0) + (s.loss||0) + (s.draw||0);
+}
+function lichessGamesOn(dk){
+  const a = lichessDay(dk);
+  if(!a || !a.games) return {total:0, byPerf:{}, win:0, loss:0};
+  let total=0, win=0, loss=0; const byPerf={};
+  for(const [perf,v] of Object.entries(a.games)){
+    const n = (v.win||0)+(v.loss||0)+(v.draw||0);
+    byPerf[perf]=n; total+=n; win+=(v.win||0); loss+=(v.loss||0);
+  }
+  return {total, byPerf, win, loss};
+}
+function gamesOn(dk){
+  const c = chessGamesOn(dk);
+  const l = lichessGamesOn(dk);
+  const byClass = {};
+  c.forEach(g => byClass[g.time_class] = (byClass[g.time_class]||0)+1);
+  for(const [p,n] of Object.entries(l.byPerf)) byClass[p] = (byClass[p]||0)+n;
+  return { total:c.length + l.total, byClass, chess:c, lichessTotal:l.total };
+}
+function losingStreakToday(){
+  const dk = todayKey();
+  const g = chessGamesOn(dk).sort((a,b)=>a.end_time-b.end_time);
+  let best=0, cur=0;
+  g.forEach(x => { const r = chessResultFor(x).res; if(r==="K"){cur++; best=Math.max(best,cur);} else cur=0; });
+  return best;
+}
+
+/* ═══════════ render: tugas harian ═══════════ */
+function buildQuests(){
+  const dk = todayKey(), T = targets();
+  const g = gamesOn(dk);
+  const pz = puzzlesOn(dk);
+  const rapid = (g.byClass.rapid||0);
+  const bullet = (g.byClass.bullet||0);
+  const q = [];
+
+  if(S.cfg.chess && T.rush > 0){
+    const R = rushToday();
+    q.push({ auto:true, ok: R.attempts >= T.rush, now:R.attempts, goal:T.rush,
+      t:`Puzzle Rush: minimal ${T.rush} puzzle dicoba`,
+      src:`Chess.com — terverifikasi otomatis. Skor hari ini: ${R.score || 0}${T.rushScore?` (target ${T.rushScore})`:""}` });
+  }
+  if(S.cfg.lichess && T.puzzle > 0) q.push({ auto:true, ok: pz >= T.puzzle, now:pz, goal:T.puzzle,
+    t:`Selesaikan ${T.puzzle} puzzle`, src:"Lichess — terverifikasi otomatis" });
+
+  if(T.rapid > 0) q.push({ auto:true, ok: rapid >= T.rapid, now:rapid, goal:T.rapid,
+    t:`Main ${T.rapid} partai rapid`, src:"Chess.com + Lichess — terverifikasi otomatis" });
+
+  q.push({ auto:true, ok: bullet <= T.bulletMax, now:bullet, goal:T.bulletMax, invert:true,
+    t: T.bulletMax === 0 ? "Tidak main bullet" : `Bullet maksimal ${T.bulletMax} partai`,
+    src:"Bullet merusak kalkulasi anak. Ini pagar, bukan target." });
+
+  q.push({ auto:true, ok: g.total <= T.gameMax, now:g.total, goal:T.gameMax, invert:true,
+    t:`Total partai maksimal ${T.gameMax}`, src:"Pagar anti-tilt: bermain berlebihan setelah kalah menurunkan rating." });
+
+  manualTasks().forEach((m,i) => q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i], t:m,
+    src:"Manual — dicentang pelatih atau orang tua" }));
+  return q;
+}
+
+function renderQuests(){
+  const dk = todayKey();
+  $("#questDate").textContent = new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"});
+  const q = buildQuests();
+  const el = $("#quests");
+  if(!S.cfg.chess && !S.cfg.lichess){ el.innerHTML = `<div class="empty">Sambungkan akun dulu di Pengaturan.</div>`; return; }
+  el.innerHTML = q.map(x => {
+    const pct = x.goal ? Math.min(100, Math.round(100 * (x.invert ? (x.ok?1:0) : x.now/x.goal))) : 0;
+    const prog = x.auto ? (x.invert ? `${x.now}/${x.goal}` : `${x.now}/${x.goal}`) : "";
+    return `<div class="task ${x.ok?"done":""} ${x.auto&&x.ok?"auto":""}" data-m="${x.auto?"":x.idx}">
+      <span class="mark" role="checkbox" aria-checked="${x.ok}" aria-disabled="${x.auto}"
+        ${x.auto?"":`tabindex="0" data-toggle="${x.idx}"`}>${x.ok?"\u2713":""}</span>
+      <span class="t">${x.t}
+        <small class="${x.auto?"src":""}">${x.src}</small>
+        ${x.auto && !x.invert ? `<span class="bar"><i style="width:${pct}%"></i></span>` : ""}
+      </span>
+      <span class="prog" style="color:${x.ok?"var(--ok)":"var(--soft)"}">${prog}</span>
+    </div>`;
+  }).join("");
+  $$("[data-toggle]").forEach(b => {
+    const go = () => {
+      const i = b.dataset.toggle;
+      S.checks[dk] = S.checks[dk] || {};
+      S.checks[dk]["m"+i] = !S.checks[dk]["m"+i];
+      persist(); renderQuests(); renderKPIs();
+    };
+    b.onclick = go;
+    b.onkeydown = e => { if(e.key===" "||e.key==="Enter"){ e.preventDefault(); go(); } };
+  });
+  // anak & ortu tidak boleh mencentang tugas manual? -> ortu boleh, anak tidak
+  if(S.role === "anak") $$("[data-toggle]").forEach(b => { b.onclick=null; b.style.cursor="default"; b.setAttribute("aria-disabled","true"); });
+}
+
+function renderKPIs(){
+  const dk = todayKey();
+  const q = buildQuests();
+  const done = q.filter(x=>x.ok).length;
+  const pct = q.length ? Math.round(100*done/q.length) : 0;
+  const pz = puzzlesOn(dk), g = gamesOn(dk);
+  const ls = losingStreakToday();
+  const R = rushToday();
+
+  const L = S.data && S.data.lichess ? S.data.lichess.prof : null;
+  const C = S.data && S.data.chess ? S.data.chess.stats : null;
+  const lrapid = L && L.perfs && L.perfs.rapid ? L.perfs.rapid.rating : null;
+  const lpuz  = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
+  const crapid = C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : null;
+  const ctac   = C && C.tactics && C.tactics.highest ? C.tactics.highest.rating : null;
+
+  const cards = [
+    { b: pct + "%", i:"kepatuhan hari ini", small: `${done}/${q.length} tugas`, alert: pct < 60 },
+    { b: R.attempts, i:"puzzle rush hari ini", small: R.attempts ? `skor ${R.score}` : "belum dikerjakan", alert: R.attempts === 0 },
+    { b: g.total, i:"partai hari ini", small: Object.entries(g.byClass).map(([k,v])=>`${k} ${v}`).join(" · ") || "—" },
+    { b: ls, i:"deret kalah beruntun", small: ls>=3?"hentikan sesi":"aman", alert: ls>=3 },
+    { b: crapid || lrapid || "—", i:"rating rapid", small: crapid?"Chess.com":(lrapid?"Lichess":"—") },
+    { b: ctac || lpuz || "\u2014", i:"rating taktik tertinggi",
+      small: newTacticsRecordToday() ? "REKOR BARU HARI INI" : (ctac?"Chess.com":(lpuz?"Lichess":"\u2014")) },
+  ];
+  $("#kpis").innerHTML = cards.map(c=>`
+    <div class="kpi ${c.alert?"alert":""}"><b>${c.b}</b><i>${c.i}</i>${c.small?`<small>${c.small}</small>`:""}</div>`).join("");
+}
+
+function renderAlerts(){
+  const dk = todayKey(), T = targets();
+  const g = gamesOn(dk), pz = puzzlesOn(dk), ls = losingStreakToday();
+  const A = [];
+
+  if(ls >= 3) A.push(["no","TILT", `Kalah ${ls} partai beruntun hari ini. Hentikan sesi. Bermain terus setelah 3 kekalahan hampir selalu memperburuk rating dan mood.`]);
+  if(g.byClass.bullet > T.bulletMax) A.push(["no","BULLET", `${g.byClass.bullet} partai bullet hari ini (batas ${T.bulletMax}). Bullet melatih refleks, bukan kalkulasi — bertentangan dengan target tier ini.`]);
+  if(g.total > T.gameMax) A.push(["warn","VOLUME", `${g.total} partai hari ini, melewati batas ${T.gameMax}. Kuantitas tanpa analisis tidak menaikkan rating.`]);
+  const R = rushToday();
+  if(S.cfg.chess && R.attempts === 0 && new Date().getHours() >= 19) A.push(["warn","PUZZLE RUSH", "Puzzle Rush belum dikerjakan hari ini dan sudah lewat jam 19."]);
+  if(S.cfg.chess && R.attempts > 0 && T.rushScore && R.score < T.rushScore) A.push(["warn","SKOR RUSH", `Skor Puzzle Rush hari ini ${R.score}, di bawah target ${T.rushScore}. Skor turun biasanya berarti mengerjakan sambil terburu-buru atau lelah.`]);
+  if(newTacticsRecordToday()) A.push(["ok","REKOR", "Rekor rating taktik baru tercatat hari ini."]);
+  if(S.cfg.lichess && pz === 0 && new Date().getHours() >= 19) A.push(["warn","PUZZLE", "Belum ada puzzle Lichess hari ini dan sudah lewat jam 19."]);
+  if(g.total === 0 && pz === 0 && R.attempts === 0) A.push(["warn","SEPI", "Tidak ada aktivitas terdeteksi hari ini sama sekali."]);
+
+  // akurasi turun (chess.com)
+  const recent = (S.data&&S.data.chess?S.data.chess.games:[]).slice(-10).map(chessResultFor).filter(x=>x.acc!=null);
+  if(recent.length >= 5){
+    const avg = recent.reduce((a,b)=>a+b.acc,0)/recent.length;
+    if(avg < 70) A.push(["warn","AKURASI", `Akurasi rata-rata 10 partai terakhir: ${avg.toFixed(1)}%. Di bawah 70% biasanya berarti bermain terlalu cepat untuk kontrol waktunya.`]);
+    else A.push(["ok","AKURASI", `Akurasi rata-rata 10 partai terakhir: ${avg.toFixed(1)}%.`]);
+  }
+  if(!A.length) A.push(["ok","AMAN","Tidak ada tanda bahaya hari ini."]);
+
+  $("#alerts").innerHTML = A.map(([k,tag,msg])=>`
+    <div class="alert-row ${k}"><b>${tag}</b><span>${msg}</span></div>`).join("");
+}
+
+/* ═══════════ perkembangan ═══════════ */
+function ratingSeries(){
+  const out = [];
+  const L = S.data && S.data.lichess;
+  if(L && L.hist){
+    L.hist.filter(h=>["Rapid","Blitz","Puzzles"].includes(h.name) && h.points.length)
+      .forEach((h,i)=>{
+        out.push({ name:"Lichess "+h.name, color:["#5B4E8C","#2F6B4F","#B07A1E"][i%3],
+          pts: h.points.map(p=>({ t: Date.UTC(p[0], p[1], p[2]), v: p[3] })) });
+      });
+  }
+  const snapDays = Object.keys(S.snaps).sort();
+  if(snapDays.length > 1){
+    const tac = snapDays.filter(d=>S.snaps[d].tacticsHigh).map(d=>({t:new Date(d).getTime(), v:S.snaps[d].tacticsHigh}));
+    if(tac.length > 1) out.push({ name:"Chess.com taktik (tertinggi)", color:"#B07A1E", pts:tac });
+  }
+  const C = S.data && S.data.chess;
+  if(C && C.games.length){
+    const byClass = {};
+    C.games.forEach(g=>{
+      const r = chessResultFor(g);
+      (byClass[g.time_class] = byClass[g.time_class] || []).push({ t:ms(g.end_time), v:r.rating });
+    });
+    Object.entries(byClass).filter(([k,v])=>["rapid","blitz"].includes(k) && v.length>1)
+      .forEach(([k,v],i)=> out.push({ name:"Chess.com "+k, color:["#A8372A","#1B2130"][i%2], pts:v }));
+  }
+  return out;
+}
+function renderChart(){
+  const series = ratingSeries();
+  const svg = $("#chart"), W=760, H=190, P=34;
+  if(!series.length){ svg.innerHTML = `<text x="20" y="100" font-family="Space Mono" font-size="12" fill="#5D6473">Belum ada data rating.</text>`; $("#legend").innerHTML=""; return; }
+  const all = series.flatMap(s=>s.pts);
+  const t0 = Math.min(...all.map(p=>p.t)), t1 = Math.max(...all.map(p=>p.t));
+  const v0 = Math.min(...all.map(p=>p.v)) - 20, v1 = Math.max(...all.map(p=>p.v)) + 20;
+  const X = t => P + (W-P-8) * (t1===t0 ? .5 : (t-t0)/(t1-t0));
+  const Y = v => H-22 - (H-22-10) * (v1===v0 ? .5 : (v-v0)/(v1-v0));
+  let g = "";
+  for(let i=0;i<4;i++){
+    const v = v0 + (v1-v0)*i/3;
+    g += `<line x1="${P}" y1="${Y(v)}" x2="${W-8}" y2="${Y(v)}" stroke="#C3C7BA" stroke-width="1"/>
+          <text x="2" y="${Y(v)+3}" font-family="Space Mono" font-size="9" fill="#5D6473">${Math.round(v)}</text>`;
+  }
+  series.forEach(s=>{
+    const pts = s.pts.slice().sort((a,b)=>a.t-b.t);
+    const d = pts.map((p,i)=>`${i?"L":"M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+  g += `<text x="${P}" y="${H-6}" font-family="Space Mono" font-size="9" fill="#5D6473">${new Date(t0).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</text>
+        <text x="${W-8}" y="${H-6}" text-anchor="end" font-family="Space Mono" font-size="9" fill="#5D6473">${new Date(t1).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</text>`;
+  svg.innerHTML = g;
+  $("#legend").innerHTML = series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+}
+function renderStrip(){
+  const days = [];
+  for(let i=20;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dayKey(d)); }
+  const rush = dk => (S.snaps[dk] ? S.snaps[dk].rushAttempts : 0);
+  const vals = days.map(dk => puzzlesOn(dk) + rush(dk) + gamesOn(dk).total*3);
+  const max = Math.max(1, ...vals);
+  $("#strip").innerHTML = days.map((dk,i)=>{
+    const lv = vals[i]===0 ? 0 : Math.ceil(4*vals[i]/max);
+    const d = new Date(dk);
+    return `<div><div class="cell l${lv}" title="${dk}: ${rush(dk)} rush, ${puzzlesOn(dk)} puzzle Lichess, ${gamesOn(dk).total} partai"></div>${d.getDate()}</div>`;
+  }).join("");
+}
+function renderSummary(){
+  const C = S.data && S.data.chess, L = S.data && S.data.lichess;
+  const rows = [];
+  if(C){
+    const R = C.games.map(chessResultFor);
+    const w = R.filter(r=>r.res==="M").length, l = R.filter(r=>r.res==="K").length, d = R.filter(r=>r.res==="R").length;
+    const acc = R.filter(r=>r.acc!=null);
+    rows.push(["Chess.com — total partai terarsip", `${R.length} (${w}M / ${d}R / ${l}K)`]);
+    if(acc.length) rows.push(["Chess.com — akurasi rata-rata", (acc.reduce((a,b)=>a+b.acc,0)/acc.length).toFixed(1)+"%"]);
+    if(C.stats.puzzle_rush && C.stats.puzzle_rush.best) rows.push(["Puzzle Rush terbaik", C.stats.puzzle_rush.best.score]);
+    if(C.stats.tactics && C.stats.tactics.highest) rows.push(["Rating taktik tertinggi", C.stats.tactics.highest.rating]);
+  }
+  if(L){
+    const p = L.prof.perfs || {};
+    if(p.puzzle) rows.push(["Lichess — rating puzzle", `${p.puzzle.rating} (${p.puzzle.games} puzzle total)`]);
+    if(p.rapid)  rows.push(["Lichess — rapid", `${p.rapid.rating} (${p.rapid.games} partai)`]);
+    if(L.prof.playTime) rows.push(["Lichess — total waktu main", (L.prof.playTime.total/3600).toFixed(1)+" jam"]);
+    const days = (L.act||[]).length;
+    rows.push(["Lichess — hari aktif tercatat", days]);
+  }
+  if(!rows.length){ $("#summary").innerHTML = `<div class="empty">Belum ada data.</div>`; return; }
+  $("#summary").innerHTML = `<table>${rows.map(([a,b])=>`<tr><td style="font-family:var(--sans);font-size:13px">${a}</td><td style="text-align:right;font-weight:700">${b}</td></tr>`).join("")}</table>`;
+}
+
+/* ═══════════ partai ═══════════ */
+function renderGames(){
+  const C = S.data && S.data.chess;
+  if(!C || !C.games.length){ $("#games").innerHTML = `<div class="empty">Belum ada partai Chess.com. (Riwayat partai per-partai hanya tersedia dari Chess.com; Lichess di sini hanya diringkas per hari.)</div>`; return; }
+  const rows = C.games.slice().sort((a,b)=>b.end_time-a.end_time).slice(0,50).map(g=>{
+    const r = chessResultFor(g);
+    const cls = r.res==="M"?"w":r.res==="K"?"l":"d";
+    return `<tr>
+      <td>${new Date(ms(g.end_time)).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"})}</td>
+      <td>${g.time_class}</td>
+      <td>${r.opp.username} <span style="color:var(--soft)">${r.opp.rating}</span></td>
+      <td class="${cls}">${r.res}</td>
+      <td>${r.rating}</td>
+      <td>${r.acc!=null?r.acc.toFixed(1)+"%":"—"}</td>
+      <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--carbon)">buka</a></td>
+    </tr>`;
+  }).join("");
+  $("#games").innerHTML = `<table>
+    <tr><th>Tgl</th><th>Kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
+}
+
+/* ═══════════ catatan ═══════════ */
+function renderNotes(){
+  const dk = todayKey();
+  const list = S.notes[dk] || [];
+  $("#noteList").innerHTML = list.length
+    ? list.map(n=>`<div class="note"><b>${new Date(n.t).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</b>${n.text.replace(/</g,"&lt;")}</div>`).join("")
+    : `<div class="empty" style="padding:0 0 8px">Belum ada catatan hari ini.</div>`;
+  const editable = S.role !== "anak";
+  $("#noteInput").classList.toggle("hide", !editable);
+  $("#bNote").classList.toggle("hide", !editable);
+}
+
+/* ═══════════ rencana ═══════════ */
+function renderPlan(){
+  $("#tier").innerHTML = TIERS.map(t=>`<option value="${t.id}" ${t.id===S.tier?"selected":""}>${t.nama} · ${t.rating} · ${t.usia}</option>`).join("");
+  const t = tier();
+  $("#tierInfo").innerHTML = `
+    <div class="note"><b>Fokus latihan</b>${t.fokus}</div>
+    <div class="note"><b>Metode evaluasi pelatih</b>${t.evaluasi}</div>`;
+  const T = targets();
+  $("#tRush").value = T.rush || 0; $("#tRushScore").value = T.rushScore || 0;
+  $("#tPuzzle").value = T.puzzle; $("#tRapid").value = T.rapid;
+  $("#tBulletMax").value = T.bulletMax; $("#tGameMax").value = T.gameMax;
+  $("#tManual").value = manualTasks().join("\n");
+}
+
+/* ═══════════ render utama ═══════════ */
+function renderAll(){
+  $("#sub").textContent = (S.cfg.name ? S.cfg.name.toUpperCase() + " · " : "") +
+    (S.fetchedAt ? "DATA " + new Date(S.fetchedAt).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "BELUM ADA DATA");
+  $("#setupHint").classList.toggle("hide", !!(S.cfg.chess || S.cfg.lichess));
+  renderKPIs(); renderQuests(); renderAlerts();
+  renderChart(); renderStrip(); renderSummary(); renderGames(); renderNotes(); renderPlan();
+  $("#noteBox").classList.toggle("hide", S.role === "anak" && !(S.notes[todayKey()]||[]).length);
+}
+
+/* ═══════════ event ═══════════ */
+$$("nav button").forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab;
+  $$("nav button").forEach(x=>x.classList.toggle("on", x===b));
+  ["hari","perkembangan","partai","rencana","atur"].forEach(t =>
+    $("#tab-"+t).classList.toggle("hide", t !== S.tab));
+});
+$$(".who button").forEach(b => b.onclick = () => {
+  S.role = b.dataset.role;
+  $$(".who button").forEach(x=>x.classList.toggle("on", x===b));
+  persist(); renderAll();
+});
+$("#bFetch").onclick = async () => {
+  S.cfg.name = $("#cName").value.trim();
+  S.cfg.chess = $("#cChess").value.trim();
+  S.cfg.lichess = $("#cLichess").value.trim();
+  S.cfg.proxy = $("#cProxy").value.trim();
+  await persist();
+  await fetchAll();
+};
+$("#bTargets").onclick = async () => {
+  S.targets = { rush:+$("#tRush").value||0, rushScore:+$("#tRushScore").value||0,
+                puzzle:+$("#tPuzzle").value||0, rapid:+$("#tRapid").value||0,
+                bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0 };
+  S.manual = $("#tManual").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  await persist(); renderAll();
+};
+$("#tier").onchange = async e => {
+  S.tier = +e.target.value; S.targets = null; S.manual = null;
+  await persist(); renderAll();
+};
+$("#bNote").onclick = async () => {
+  const v = $("#noteInput").value.trim(); if(!v) return;
+  const dk = todayKey();
+  (S.notes[dk] = S.notes[dk] || []).push({ t:Date.now(), text:v });
+  $("#noteInput").value = "";
+  await persist(); renderNotes();
+};
+$("#bExport").onclick = () => {
+  const blob = new Blob([JSON.stringify(S,null,1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `rtgm-pantau-${todayKey()}.json`; a.click();
+};
+$("#bReset").onclick = async () => {
+  if(!confirm("Hapus semua pengaturan, catatan, dan data? Tidak bisa dibatalkan.")) return;
+  await Store.clear(); location.reload();
+};
+async function persist(){ await Store.save(S); }
+
+(async () => {
+  const saved = await Store.load();
+  if(saved) S = Object.assign(S, saved);
+  $("#cName").value = S.cfg.name; $("#cChess").value = S.cfg.chess;
+  $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
+  $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  $$(".who button").forEach(x=>x.classList.toggle("on", x.dataset.role===S.role));
+  renderAll();
+  // auto-refresh kalau data lebih tua dari 15 menit
+  if((S.cfg.chess||S.cfg.lichess) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
+})();
+</script>
+</body>
+</html>
