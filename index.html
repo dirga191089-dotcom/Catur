@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTGM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E6E7DF; --card:#F1F2EB; --ink:#1B2130; --soft:#5D6473;
+    --rule:#C3C7BA; --carbon:#5B4E8C;
+    --mono:"Space Mono",ui-monospace,Menlo,monospace;
+    --sans:"Archivo",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 18px;
+    background-image:linear-gradient(var(--rule) 1px,transparent 1px);
+    background-size:100% 28px;background-position:0 -1px}
+  .sheet{max-width:560px;width:100%}
+  .brand{font-family:var(--mono);font-weight:700;font-size:26px;letter-spacing:.16em}
+  .brand span{color:var(--carbon)}
+  .tag{font-family:var(--mono);font-size:10.5px;color:var(--soft);letter-spacing:.16em;margin-top:4px}
+  hr{border:0;border-top:2px solid var(--ink);margin:12px 0 22px}
+  a.app{
+    display:block;text-decoration:none;color:inherit;background:var(--card);
+    border:1px solid var(--ink);box-shadow:4px 4px 0 rgba(27,33,48,.14);
+    padding:16px 18px;margin-bottom:14px;transition:transform .07s,box-shadow .07s}
+  a.app:hover{background:var(--paper)}
+  a.app:active{transform:translate(4px,4px);box-shadow:0 0 0}
+  a.app b{display:block;font-family:var(--mono);font-size:15px;letter-spacing:.06em;margin-bottom:5px}
+  a.app b i{font-style:normal;color:var(--carbon)}
+  a.app p{font-size:13.5px;line-height:1.5;color:var(--soft)}
+  a.app em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--carbon);display:block;margin-top:7px}
+  footer{font-family:var(--mono);font-size:10px;color:var(--soft);line-height:1.7;
+    border-top:1px solid var(--rule);padding-top:10px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="brand">RTGM<span>.</span></div>
+  <div class="tag">ROAD TO GRANDMASTER &middot; SISTEM LATIHAN &amp; PEMANTAUAN</div>
+  <hr>
+
+  <a class="app" href="rtgm-pantau.html">
+    <b>Pantau <i>&rarr;</i></b>
+    <p>Dasbor orang tua &amp; pelatih. Tugas harian, verifikasi otomatis dari Chess.com, peringatan tilt, grafik rating.</p>
+    <em>Orang tua &middot; Pelatih</em>
+  </a>
+
+  <a class="app" href="rtgm-taktik.html">
+    <b>Taktik <i>&rarr;</i></b>
+    <p>Latihan taktik dengan pengulangan berjarak. 60 puzzle terverifikasi mesin. Jalan tanpa internet.</p>
+    <em>Anak</em>
+  </a>
+
+  <footer>
+    Semua data tersimpan di perangkat ini. Tidak ada server, tidak ada akun.<br>
+    Anak sebaiknya tahu bahwa aktivitasnya dipantau.
+  </footer>
+</div>
+</body>
+</html>
