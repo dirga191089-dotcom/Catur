@@ -239,7 +239,9 @@
         <div><label>Username Chess.com</label><input id="cChess" placeholder="mis. arkachess" autocapitalize="off"></div>
         <div><label>Username Lichess</label><input id="cLichess" placeholder="mis. arka_id" autocapitalize="off"></div>
       </div>
-      <label>Proxy CORS (opsional — isi HANYA jika tarik data gagal)</label>
+      <label>URL Web App Apps Script (disarankan — hilangkan CORS + riwayat lengkap)</label>
+      <input id="cGs" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off">
+      <label>Proxy CORS (opsional — hanya jika tidak pakai Apps Script dan tarik langsung gagal)</label>
       <input id="cProxy" placeholder="https://proxy-anda.workers.dev/?url=" autocapitalize="off">
       <div class="btnrow">
         <button class="btn go" id="bFetch">Tarik data</button>
@@ -307,7 +309,7 @@ const TIERS = [
 
 /* ═══════════ status ═══════════ */
 let S = {
-  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"", proxy:"" },
+  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"", proxy:"", gs:"https://script.google.com/macros/s/AKfycbyl6T5hbyNThNeJShu_4gpbxkHl5jibfFyoy1AWX9PKM3K423qUJfdkrqWZegbvBr1MYQ/exec" },
   tier:1,
   targets:null,
   manual:null,
@@ -348,7 +350,22 @@ async function fetchAll(){
   $("#fetchLog").innerHTML = `<div class="alert-row"><b>…</b><span><span class="spin"></span> menarik data…</span></div>`;
   const out = { chess:null, lichess:null, errors:[] };
 
-  if(S.cfg.chess){
+  // Sumber utama: Apps Script. Ia sudah punya SELURUH riwayat harian —
+  // termasuk hari-hari saat dasbor ini tidak pernah dibuka.
+  if(S.cfg.gs){
+    try{
+      const r = await fetch(S.cfg.gs.trim(), { redirect:"follow" });
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const d = await r.json();
+      if(d.error) throw new Error(d.error);
+      out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
+      if(!d.stats) out.errors.push(["Apps Script", "Endpoint hidup, tapi stats kosong \u2014 kemungkinan besar Chess.com memblokir IP Google (403). Riwayat dari Sheet tetap dipakai, tapi angka hari ini tidak akan terisi. Kalau ini menetap, hapus URL Web App dan biarkan dasbor menarik langsung dari browser."]);
+      if(d.snaps) S.snaps = Object.assign({}, d.snaps, S.snaps);
+      if(d.nama && !S.cfg.name) S.cfg.name = d.nama;
+    }catch(e){ out.errors.push(["Apps Script", e.message]); }
+  }
+
+  if(S.cfg.chess && !out.chess){
     const u = S.cfg.chess.trim().toLowerCase();
     try{
       // Ambil daftar arsip bulanan yang benar-benar ada, lalu tarik semuanya
@@ -378,12 +395,13 @@ async function fetchAll(){
   }
 
   $("#fetchLog").innerHTML = "";
-  if(!S.cfg.chess && !S.cfg.lichess){ logLine("Belum ada username yang diisi.", "no"); return; }
+  if(!S.cfg.chess && !S.cfg.lichess && !S.cfg.gs){ logLine("Belum ada username yang diisi.", "no"); return; }
   out.errors.forEach(([site,msg])=>{
     const cors = /Failed to fetch|NetworkError|Load failed/i.test(msg);
     logLine(`${site}: ${msg}${cors?" — kemungkinan besar diblokir CORS. Isi kolom Proxy CORS di atas, atau buka file ini lewat http:// bukan file://":""}`, "no");
   });
-  if(out.chess) logLine(`Chess.com: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip + statistik`, out.chess.games.length ? "" : "warn");
+  if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${out.chess.games.length} partai + ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
+  else if(out.chess) logLine(`Chess.com langsung: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip`, out.chess.games.length ? "" : "warn");
   if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
   if(out.lichess) logLine(`Lichess: ${(out.lichess.act||[]).length} hari aktivitas + riwayat rating`, "");
   if(S.cfg.chess && !out.chess) logLine("Data Chess.com tidak masuk.", "warn");
@@ -399,7 +417,7 @@ async function fetchAll(){
    hari itu difoto dan disimpan. Konsekuensinya jujur: hari yang aplikasinya
    tidak dibuka sama sekali TIDAK akan punya catatan. */
 function recordSnapshot(out){
-  if(!out.chess) return;
+  if(!out.chess || !out.chess.stats) return;
   const st = out.chess.stats || {};
   const dk = todayKey();
   const rush = st.puzzle_rush && st.puzzle_rush.daily ? st.puzzle_rush.daily : null;
@@ -758,6 +776,7 @@ $("#bFetch").onclick = async () => {
   S.cfg.chess = $("#cChess").value.trim();
   S.cfg.lichess = $("#cLichess").value.trim();
   S.cfg.proxy = $("#cProxy").value.trim();
+  S.cfg.gs = $("#cGs").value.trim();
   await persist();
   await fetchAll();
 };
@@ -795,11 +814,12 @@ async function persist(){ await Store.save(S); }
   if(saved) S = Object.assign(S, saved);
   $("#cName").value = S.cfg.name; $("#cChess").value = S.cfg.chess;
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
+  $("#cGs").value = S.cfg.gs || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $$(".who button").forEach(x=>x.classList.toggle("on", x.dataset.role===S.role));
   renderAll();
   // auto-refresh kalau data lebih tua dari 15 menit
-  if((S.cfg.chess||S.cfg.lichess) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
+  if((S.cfg.chess||S.cfg.lichess||S.cfg.gs) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
 })();
 </script>
 </body>

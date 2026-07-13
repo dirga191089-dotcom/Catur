@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTGM · Taktik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E6E7DF; --card:#F1F2EB; --ink:#1B2130; --ink-soft:#5D6473;
+    --rule:#C3C7BA; --carbon:#5B4E8C; --ok:#2F6B4F; --no:#A8372A;
+    --sq-l:#DCDED2; --sq-d:#98A492; --mark:rgba(91,78,140,.30);
+    --mono:"Space Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+    --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans);
+    min-height:100vh; padding:20px 16px 40px;
+    /* garis kertas ledger */
+    background-image:linear-gradient(var(--rule) 1px,transparent 1px);
+    background-size:100% 28px; background-position:0 -1px;
+  }
+  .sheet{max-width:1040px;margin:0 auto}
+
+  /* ── kop ── */
+  header{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:22px;
+    background:var(--paper);
+  }
+  .brand{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:.14em}
+  .brand span{color:var(--carbon)}
+  .tagline{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);letter-spacing:.16em;margin-top:2px}
+  .meters{display:flex;gap:22px;font-family:var(--mono)}
+  .meter{text-align:right}
+  .meter b{display:block;font-size:21px;line-height:1.1;font-weight:700}
+  .meter i{font-style:normal;font-size:9.5px;letter-spacing:.14em;color:var(--ink-soft);text-transform:uppercase}
+
+  /* ── tata letak ── */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:26px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  /* ── papan ── */
+  .boardwrap{position:relative}
+  .board{
+    display:grid;grid-template-columns:repeat(8,1fr);
+    aspect-ratio:1/1;width:100%;
+    border:2px solid var(--ink);
+    box-shadow:6px 6px 0 rgba(27,33,48,.10);
+  }
+  .sq{
+    position:relative;border:0;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:clamp(22px,6.2vw,44px);line-height:1;
+    background:var(--sq-l);
+  }
+  .sq.d{background:var(--sq-d)}
+  .sq:focus-visible{outline:3px solid var(--carbon);outline-offset:-3px;z-index:3}
+  .sq .p{pointer-events:none;user-select:none;transform:translateY(-.04em)}
+  .sq .p.w{color:#FBFBF7;-webkit-text-stroke:1.3px var(--ink);text-shadow:0 1px 0 rgba(27,33,48,.25)}
+  .sq .p.b{color:var(--ink);-webkit-text-stroke:.6px var(--ink)}
+  .sq.sel{background:var(--mark)}
+  .sq.sel.d{background:color-mix(in srgb,var(--mark) 70%,var(--sq-d))}
+  .sq.from::after,.sq.to::after{
+    content:"";position:absolute;inset:0;border:3px solid var(--carbon);opacity:.55
+  }
+  .sq .dot{
+    position:absolute;width:26%;height:26%;border-radius:50%;
+    background:var(--carbon);opacity:.42;pointer-events:none
+  }
+  .sq .ring{
+    position:absolute;inset:8%;border-radius:50%;
+    border:4px solid var(--carbon);opacity:.42;pointer-events:none
+  }
+  .sq .co{
+    position:absolute;font-family:var(--mono);font-size:9px;color:var(--ink);
+    opacity:.5;pointer-events:none
+  }
+  .sq .co.f{right:3px;bottom:1px}
+  .sq .co.r{left:3px;top:1px}
+  .sq.bad{animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  /* ── stempel ── */
+  .stamp{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    pointer-events:none;z-index:5
+  }
+  .stamp.on{display:flex}
+  .stamp b{
+    font-family:var(--mono);font-weight:700;font-size:clamp(26px,7vw,52px);
+    letter-spacing:.1em;padding:.16em .38em;
+    border:5px double currentColor;border-radius:3px;
+    transform:rotate(-9deg);opacity:.86;
+    animation:slam .22s cubic-bezier(.2,1.6,.4,1)
+  }
+  .stamp.ok b{color:var(--ok)}
+  .stamp.no b{color:var(--no)}
+  @keyframes slam{from{transform:rotate(-9deg) scale(2.1);opacity:0}to{transform:rotate(-9deg) scale(1);opacity:.86}}
+  @media(prefers-reduced-motion:reduce){
+    .stamp b,.sq.bad{animation:none}
+  }
+
+  /* ── panel ── */
+  .panel{background:var(--card);border:1px solid var(--ink);padding:0}
+  .panel h2{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;font-weight:700;
+    text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--ink);
+    background:var(--ink);color:var(--card)
+  }
+  .cardmeta{padding:12px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;
+    font-family:var(--mono);font-size:12px;padding:4px 0}
+  .row span:first-child{color:var(--ink-soft);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  .pips{letter-spacing:2px;color:var(--carbon)}
+  .turn{
+    margin-top:8px;font-family:var(--mono);font-weight:700;font-size:13px;
+    padding:7px 10px;border:1px dashed var(--ink);text-align:center
+  }
+  .verdict{
+    margin-top:10px;font-family:var(--mono);font-size:12px;line-height:1.5;
+    padding:8px 10px;border-left:3px solid var(--carbon);background:rgba(91,78,140,.07);
+    min-height:38px;display:flex;align-items:center
+  }
+  .verdict.ok{border-color:var(--ok);background:rgba(47,107,79,.09)}
+  .verdict.no{border-color:var(--no);background:rgba(168,55,42,.09)}
+  .acts{display:flex;gap:8px;padding:0 12px 12px}
+  button.btn{
+    flex:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:9px 6px;cursor:pointer;
+    background:var(--card);color:var(--ink);border:1px solid var(--ink);
+    box-shadow:2px 2px 0 var(--ink);transition:transform .06s,box-shadow .06s
+  }
+  button.btn:hover{background:var(--paper)}
+  button.btn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+  button.btn:focus-visible{outline:2px solid var(--carbon);outline-offset:2px}
+  button.btn.go{background:var(--ink);color:var(--card)}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+
+  /* ── scoresheet ── */
+  .log{border-top:1px solid var(--ink)}
+  .log ol{list-style:none;max-height:238px;overflow:auto}
+  .log li{
+    display:grid;grid-template-columns:26px 1fr auto auto;gap:8px;align-items:baseline;
+    font-family:var(--mono);font-size:12px;
+    padding:5px 12px;border-bottom:1px solid var(--rule)
+  }
+  .log li .n{color:var(--ink-soft);font-size:10px}
+  .log li .mv{font-weight:700}
+  .log li .rs{font-weight:700}
+  .log li.ok .rs{color:var(--ok)}
+  .log li.no .rs{color:var(--no)}
+  .log li .nx{color:var(--carbon);font-size:10px}
+  .log .empty{padding:14px 12px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);line-height:1.6}
+
+  /* ── selesai ── */
+  .done{
+    padding:28px 18px;text-align:center;font-family:var(--mono);
+    border:2px dashed var(--ink);background:var(--card)
+  }
+  .done b{display:block;font-size:16px;letter-spacing:.1em;margin-bottom:8px}
+  .done p{font-size:12px;color:var(--ink-soft);line-height:1.7}
+  .done .btn{margin-top:14px;max-width:220px;margin-inline:auto}
+
+  /* ── promosi ── */
+  .promo{
+    position:absolute;inset:0;background:rgba(27,33,48,.55);z-index:9;
+    display:none;align-items:center;justify-content:center
+  }
+  .promo.on{display:flex}
+  .promo div{display:flex;background:var(--card);border:2px solid var(--ink)}
+  .promo button{
+    font-size:34px;width:64px;height:64px;background:var(--card);border:0;
+    border-right:1px solid var(--rule);cursor:pointer;color:var(--ink)
+  }
+  .promo button:last-child{border:0}
+  .promo button:hover{background:var(--mark)}
+
+  footer{
+    margin-top:26px;display:flex;justify-content:space-between;align-items:center;
+    font-family:var(--mono);font-size:10px;color:var(--ink-soft);
+    border-top:1px solid var(--rule);padding-top:10px;flex-wrap:wrap;gap:10px
+  }
+  footer button{
+    font-family:var(--mono);font-size:10px;background:none;border:0;
+    color:var(--no);cursor:pointer;text-decoration:underline;letter-spacing:.08em
+  }
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div>
+      <div class="brand">RTGM <span>/</span> TAKTIK</div>
+      <div class="tagline">MVP v0.1 &middot; PENGULANGAN BERJARAK</div>
+    </div>
+    <div class="meters">
+      <div class="meter"><b id="mDue">0</b><i>jatuh tempo</i></div>
+      <div class="meter"><b id="mStreak">0</b><i>runtun hari</i></div>
+      <div class="meter"><b id="mAcc">—</b><i>akurasi</i></div>
+      <div class="meter"><b id="mLearn">0</b><i>dikuasai</i></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="boardwrap">
+        <div class="board" id="board" role="grid" aria-label="Papan catur"></div>
+        <div class="stamp" id="stamp"><b></b></div>
+        <div class="promo" id="promo"><div></div></div>
+      </div>
+      <p class="sr" id="live" aria-live="polite"></p>
+    </div>
+
+    <aside>
+      <section class="panel">
+        <h2>Kartu berjalan</h2>
+        <div class="cardmeta">
+          <div class="row"><span>Motif</span><b id="cMotif">—</b></div>
+          <div class="row"><span>Tingkat</span><b class="pips" id="cDiff">—</b></div>
+          <div class="row"><span>Kotak SRS</span><b id="cBox">—</b></div>
+          <div class="turn" id="cTurn">—</div>
+          <div class="verdict" id="cVerdict">Cari langkah terkuat. Klik bidak, lalu klik tujuannya.</div>
+        </div>
+        <div class="acts">
+          <button class="btn" id="bHint">Petunjuk</button>
+          <button class="btn go" id="bNext">Lanjut</button>
+        </div>
+        <div class="log">
+          <h2 style="border-top:1px solid var(--ink)">Kertas skor</h2>
+          <ol id="log"><li class="empty" style="display:block">Belum ada langkah tercatat.<br>Setiap percobaan masuk ke sini.</li></ol>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>
+    <span id="fInfo">60 kartu &middot; progres tersimpan di perangkat ini</span>
+    <button id="bReset">hapus semua progres</button>
+  </footer>
+</div>
+
+<script>
+/* ══ data puzzle: dihasilkan & diverifikasi Stockfish + pencarian mat ekshaustif ══ */
+const PUZZLES = [{"id":"p001","type":"mate","motif":"back-rank","motifLabel":"Mat baris belakang","side":"b","mateIn":1,"difficulty":1,"node":{"fen":"b6r/5p2/p1k2p2/1p1r4/4RP2/1Q4Pp/PPP4P/1K1R4 b - - 1 26","legal":["h8g8","h8f8","h8e8","h8d8","h8c8","h8b8","h8h7","h8h6","h8h5","h8h4","a8b7","c6d7","c6c7","c6b7","c6d6","c6b6","c6c5","d5d8","d5d7","d5d6","d5h5","d5g5","d5f5","d5e5","d5c5","d5d4","d5d3","d5d2","d5d1","f6f5","a6a5","b5b4"],"solutions":["d5d1"],"lines":{"d5d1":{"san":"Rxd1#","after":"b6r/5p2/p1k2p2/1p6/4RP2/1Q4Pp/PPP4P/1K1r4 w - - 0 27","done":true}}}},{"id":"p002","type":"mate","motif":"back-rank","motifLabel":"Mat baris belakang","side":"w","mateIn":1,"difficulty":1,"node":{"fen":"r1q1rk2/pp3p1Q/2p2p1p/3p4/3P2P1/4R2P/PPP2P2/5RK1 w - - 3 21","legal":["h7h8","h7g8","h7g7","h7f7","h7h6","h7g6","h7f5","h7e4","h7d3","e3e8","e3e7","e3e6","e3e5","e3e4","e3g3","e3f3","e3d3","e3c3","e3b3","e3a3","e3e2","e3e1","g1h2","g1g2","g1h1","f1e1","f1d1","f1c1","f1b1","f1a1","g4g5","h3h4","f2f3","c2c3","b2b3","a2a3","f2f4","c2c4","b2b4","a2a4"],"solutions":["h7h8"],"lines":{"h7h8":{"san":"Qh8#","after":"r1q1rk1Q/pp3p2/2p2p1p/3p4/3P2P1/4R2P/PPP2P2/5RK1 b - - 4 21","done":true}}}},{"id":"p003","type":"mate","motif":"mate","motifLabel":"Serangan mat","side":"b","mateIn":1,"difficulty":1,"node":{"fen":"r5k1/1p3pp1/p1n2q1p/3p4/P1pPr1bN/2P3Kn/2PB4/R1QBR3 b - - 1 24","legal":["g8h8","g8f8","g8h7","a8f8","a8e8","a8d8","a8c8","a8b8","a8a7","f6d8","f6e7","f6g6","f6e6","f6d6","f6g5","f6f5","f6e5","f6h4","f6f4","f6d4","f6f3","f6f2","f6f1","c6d8","c6b8","c6e7","c6a7","c6e5","c6a5","c6d4","c6b4","g4c8","g4d7","g4e6","g4h5","g4f5","g4f3","g4e2","g4d1","e4e8","e4e7","e4e6","e4e5","e4f4","e4d4","e4e3","e4e2","e4e1","h3g5","h3f4","h3f2","h3g1","g7g6","b7b6","h6h5","a6a5","g7g5","b7b5"],"solutions":["f6f2"],"lines":{"f6f2":{"san":"Qf2#","after":"r5k1/1p3pp1/p1n4p/3p4/P1pPr1bN/2P3Kn/2PB1q2/R1QBR3 w - - 2 25","done":true}}}},{"id":"p004","type":"mate","motif":"back-rank","motifLabel":"Mat baris belakang","side":"w","mateIn":1,"difficulty":1,"node":{"fen":"r1b3Bk/1p5n/2p2b1Q/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 w Q - 3 24","legal":["g8h7","g8f7","g8e6","g8d5","h6f8","h6h7","h6g7","h6g6","h6f6","h6h5","h6g5","h6f4","h6e3","h6d2","h6c1","g3g7","g3g6","g3g5","g3g4","g3h3","g3f3","g3e3","g3d3","c3d5","c3b5","c3e4","c3a4","c3e2","c3a2","c3d1","c3b1","e1e2","e1d2","e1f1","e1d1","a1a2","a1d1","a1c1","a1b1","e1c1","e5f6","e5e6","h4h5","a3a4","f2f3","b2b3","f2f4","b2b4"],"solutions":["h6h7"],"lines":{"h6h7":{"san":"Qxh7#","after":"r1b3Bk/1p5Q/2p2b2/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 b Q - 0 24","done":true}}}},{"id":"p005","type":"mate","motif":"mate","motifLabel":"Serangan mat","side":"w","mateIn":1,"difficulty":1,"node":{"fen":"4R3/p4Rp1/1p6/kP1p4/2pN4/2P1P2p/P5PP/R5K1 w - - 1 31","legal":["e8h8","e8g8","e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","e8e6","e8e5","e8e4","f7f8","f7g7","f7e7","f7d7","f7c7","f7b7","f7a7","f7f6","f7f5","f7f4","f7f3","f7f2","f7f1","d4e6","d4c6","d4f5","d4f3","d4b3","d4e2","d4c2","g1f2","g1h1","g1f1","a1f1","a1e1","a1d1","a1c1","a1b1","g2h3","e3e4","g2g3","a2a3","g2g4","a2a4"],"solutions":["f7a7"],"lines":{"f7a7":{"san":"Rxa7#","after":"4R3/R5p1/1p6/kP1p4/2pN4/2P1P2p/P5PP/R5K1 b - - 0 31","done":true}}}},{"id":"p006","type":"mate","motif":"back-rank","motifLabel":"Mat baris belakang","side":"w","mateIn":1,"difficulty":1,"node":{"fen":"r1b1kb1r/ppP2ppp/4p3/8/2n4N/8/PP3PPP/R1BQ1K1R w k - 1 15","legal":["h4g6","h4f5","h4f3","h1g1","f1e2","f1g1","f1e1","d1d8","d1d7","d1d6","d1h5","d1d5","d1g4","d1d4","d1a4","d1f3","d1d3","d1b3","d1e2","d1d2","d1c2","d1e1","c1h6","c1g5","c1f4","c1e3","c1d2","a1b1","h2h3","g2g3","f2f3","b2b3","a2a3","g2g4","f2f4","b2b4","a2a4"],"solutions":["d1d8"],"lines":{"d1d8":{"san":"Qd8#","after":"r1bQkb1r/ppP2ppp/4p3/8/2n4N/8/PP3PPP/R1B2K1R b k - 2 15","done":true}}}},{"id":"p007","type":"mate","motif":"back-rank","motifLabel":"Mat baris belakang","side":"b","mateIn":1,"difficulty":1,"node":{"fen":"rq4k1/p2r3p/4p1p1/2p1p2Q/5n1P/3P1P2/2pR4/B1K3R1 b - - 2 27","legal":["g8h8","g8f8","g8g7","g8f7","b8f8","b8e8","b8d8","b8c8","b8c7","b8b7","b8d6","b8b6","b8b5","b8b4","b8b3","b8b2","b8b1","d7d8","d7g7","d7f7","d7e7","d7c7","d7b7","d7d6","d7d5","d7d4","d7d3","f4h5","f4d5","f4h3","f4d3","f4g2","f4e2","h7h6","a7a6","g6g5","e5e4","c5c4","a7a5"],"solutions":["b8b1"],"lines":{"b8b1":{"san":"Qb1#","after":"r5k1/p2r3p/4p1p1/2p1p2Q/5n1P/3P1P2/2pR4/BqK3R1 w - - 3 28","done":true}}}},{"id":"p008","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"1b1q2k1/3pRpp1/1p1P3p/r7/p4Q2/P1P3P1/1P3P1P/2K5 b - - 3 30","legal":["g8h8","g8f8","g8h7","d8f8","d8e8","d8c8","d8e7","d8c7","b8c7","b8a7","b8d6","a5a8","a5a7","a5a6","a5h5","a5g5","a5f5","a5e5","a5d5","a5c5","a5b5","g7g6","f7f6","h6h5","b6b5","g7g5","f7f5"],"solutions":["d8e7"],"lines":{"d8e7":{"san":"Qxe7","after":"1b4k1/3pqpp1/1p1P3p/r7/p4Q2/P1P3P1/1P3P1P/2K5 w - - 0 31","done":true}}}},{"id":"p009","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"2r1k2r/1pBbnppp/2n1p3/1pQp1P2/6P1/P7/1PP4P/2KR2R1 b k - 0 19","legal":["h8g8","h8f8","e8f8","c8d8","c8b8","c8a8","c8c7","e7g8","e7g6","e7f5","c6d8","c6b8","c6a7","c6e5","c6a5","c6d4","c6b4","e8g8","e6f5","h7h6","g7g6","f7f6","b7b6","e6e5","d5d4","b5b4","h7h5","g7g5"],"solutions":["c8c7"],"lines":{"c8c7":{"san":"Rxc7","after":"4k2r/1prbnppp/2n1p3/1pQp1P2/6P1/P7/1PP4P/2KR2R1 w k - 0 20","done":true}}}},{"id":"p010","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"2R1nk2/5pp1/2r5/2pp1P1p/4P3/1P2N3/2P2PPP/4K3 b - - 2 27","legal":["f8g8","f8e7","c6c8","c6c7","c6h6","c6g6","c6f6","c6e6","c6d6","c6b6","c6a6","d5e4","g7g6","f7f6","h5h4","d5d4","c5c4","g7g5"],"solutions":["c6c8"],"lines":{"c6c8":{"san":"Rxc8","after":"2r1nk2/5pp1/8/2pp1P1p/4P3/1P2N3/2P2PPP/4K3 w - - 0 28","done":true}}}},{"id":"p011","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"8/ppk4p/7N/8/2Pp2P1/8/PP2rPKP/4R3 b - - 0 28","legal":["c7d8","c7c8","c7b8","c7d7","c7d6","c7c6","c7b6","e2e8","e2e7","e2e6","e2e5","e2e4","e2e3","e2f2","e2d2","e2c2","e2b2","e2e1","b7b6","a7a6","d4d3","b7b5","a7a5"],"solutions":["e2e1"],"lines":{"e2e1":{"san":"Rxe1","after":"8/ppk4p/7N/8/2Pp2P1/8/PP3PKP/4r3 w - - 0 29","done":true}}}},{"id":"p012","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"rb1qR3/p2p1ppk/1p5p/3P4/8/P1Pp2P1/1P1Q1P1P/2KR4 b - - 0 24","legal":["d8e8","d8c8","d8e7","d8c7","d8f6","d8g5","d8h4","b8c7","b8d6","b8e5","b8f4","b8g3","h7g6","g7g6","f7f6","d7d6","a7a6","h6h5","b6b5","g7g5","f7f5","a7a5"],"solutions":["d8e8"],"lines":{"d8e8":{"san":"Qxe8","after":"rb2q3/p2p1ppk/1p5p/3P4/8/P1Pp2P1/1P1Q1P1P/2KR4 w - - 0 25","done":true}}}},{"id":"p013","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"2k5/p1p3pp/1pb2p2/2br4/2B1NpnP/5N2/PPR1KPP1/8 w - - 0 26","legal":["e4f6","e4d6","e4g5","e4c5","e4g3","e4c3","e4d2","c4a6","c4d5","c4b5","c4d3","c4b3","f3g5","f3e5","f3d4","f3h2","f3d2","f3g1","f3e1","e2f1","e2e1","c2c3","c2d2","c2c1","h4h5","g2g3","b2b3","a2a3","b2b4","a2a4"],"solutions":["c4d5"],"lines":{"c4d5":{"san":"Bxd5","after":"2k5/p1p3pp/1pb2p2/2bB4/4NpnP/5N2/PPR1KPP1/8 b - - 0 26","done":true}}}},{"id":"p014","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"r4R2/p2k1p1p/1pb1p2p/4P3/P7/2P1B3/1P3K1P/8 b - - 0 24","legal":["a8f8","a8e8","a8d8","a8c8","a8b8","d7e7","d7c7","c6b7","c6d5","c6b5","c6e4","c6a4","c6f3","c6g2","c6h1","f7f6","a7a6","h6h5","b6b5","f7f5","a7a5"],"solutions":["a8f8"],"lines":{"a8f8":{"san":"Rxf8","after":"5r2/p2k1p1p/1pb1p2p/4P3/P7/2P1B3/1P3K1P/8 w - - 0 25","done":true}}}},{"id":"p015","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"r1b1kbnr/1p3ppp/p1p5/8/2p1P3/2P2N2/PP1P1PqP/RNBQK1R1 w Qkq - 0 9","legal":["f3g5","f3e5","f3h4","f3d4","g1g2","g1h1","g1f1","e1e2","d1a4","d1b3","d1e2","d1c2","b1a3","e4e5","h2h3","d2d3","b2b3","a2a3","h2h4","d2d4","b2b4","a2a4"],"solutions":["g1g2"],"lines":{"g1g2":{"san":"Rxg2","after":"r1b1kbnr/1p3ppp/p1p5/8/2p1P3/2P2N2/PP1P1PRP/RNBQK3 b Qkq - 0 9","done":true}}}},{"id":"p016","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"r7/1k5p/p1b5/1p2r3/2p1Q3/N1P5/PP3P1P/R3K3 w Q - 0 23","legal":["e4e5","e4e3","e4e2","a3b5","a3c4","a3c2","a3b1","e1e2","e1d2","e1f1","e1d1","a1d1","a1c1","a1b1","e1c1","h2h3","f2f3","b2b3","h2h4","f2f4","b2b4"],"solutions":["e4e5"],"lines":{"e4e5":{"san":"Qxe5","after":"r7/1k5p/p1b5/1p2Q3/2p5/N1P5/PP3P1P/R3K3 b Q - 0 23","done":true}}}},{"id":"p017","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"rb1qR3/p2p1ppk/1p5p/3P4/3p4/P5P1/1PPQ1P1P/2KR4 b - - 0 23","legal":["d8e8","d8c8","d8e7","d8c7","d8f6","d8g5","d8h4","b8c7","b8d6","b8e5","b8f4","b8g3","h7g6","g7g6","f7f6","d7d6","a7a6","h6h5","b6b5","d4d3","g7g5","f7f5","a7a5"],"solutions":["d8e8"],"lines":{"d8e8":{"san":"Qxe8","after":"rb2q3/p2p1ppk/1p5p/3P4/3p4/P5P1/1PPQ1P1P/2KR4 w - - 0 24","done":true}}}},{"id":"p018","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"3r1b1r/pp3k2/2B5/2Pp1p1p/5P2/6p1/PP2R1KP/4R3 b - - 0 29","legal":["h8g8","h8h7","h8h6","f8g7","f8e7","f8h6","f8d6","f8c5","d8e8","d8c8","d8b8","d8a8","d8d7","d8d6","f7g8","f7g7","f7g6","f7f6","b7c6","g3h2","b7b6","a7a6","h5h4","d5d4","b7b5","a7a5"],"solutions":["b7c6"],"lines":{"b7c6":{"san":"bxc6","after":"3r1b1r/p4k2/2p5/2Pp1p1p/5P2/6p1/PP2R1KP/4R3 w - - 0 30","done":true}}}},{"id":"p019","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"4r3/ppk2Nrp/8/2p5/2PR4/8/PP3PPP/5KR1 b - - 0 24","legal":["e8h8","e8g8","e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","e8e6","e8e5","e8e4","e8e3","e8e2","e8e1","g7g8","g7f7","g7g6","g7g5","g7g4","g7g3","g7g2","c7c8","c7b8","c7c6","c7b6","c5d4","h7h6","b7b6","a7a6","h7h5","b7b5","a7a5"],"solutions":["c5d4"],"lines":{"c5d4":{"san":"cxd4","after":"4r3/ppk2Nrp/8/8/2Pp4/8/PP3PPP/5KR1 w - - 0 25","done":true}}}},{"id":"p020","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"rr4k1/1p3p1p/p5p1/8/1n1b1P2/P4BPP/6R1/1R2K3 w - - 0 26","legal":["f3b7","f3c6","f3h5","f3d5","f3g4","f3e4","f3e2","f3d1","g2h2","g2f2","g2e2","g2d2","g2c2","g2b2","g2a2","g2g1","e1e2","e1d2","e1f1","e1d1","b1b4","b1b3","b1b2","b1d1","b1c1","b1a1","a3b4","f4f5","h3h4","g3g4","a3a4"],"solutions":["a3b4"],"lines":{"a3b4":{"san":"axb4","after":"rr4k1/1p3p1p/p5p1/8/1P1b1P2/5BPP/6R1/1R2K3 b - - 0 26","done":true}}}},{"id":"p021","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"8/p2k1p1p/1Pb1p2p/4P1B1/8/2P5/1P3K1P/8 b - - 0 27","legal":["d7e8","d7c8","c6a8","c6b7","c6d5","c6b5","c6e4","c6a4","c6f3","c6g2","c6h1","a7b6","h6g5","f7f6","a7a6","h6h5","f7f5","a7a5"],"solutions":["h6g5"],"lines":{"h6g5":{"san":"hxg5","after":"8/p2k1p1p/1Pb1p3/4P1p1/8/2P5/1P3K1P/8 w - - 0 28","done":true}}}},{"id":"p022","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"2r3k1/1p1b1pp1/1npn3p/p2p4/P2P3P/2PB2B1/2P2PP1/R5K1 w - - 0 23","legal":["g3d6","g3e5","g3f4","g3h2","d3h7","d3g6","d3a6","d3f5","d3b5","d3e4","d3c4","d3e2","d3f1","g1h2","g1h1","g1f1","a1a3","a1a2","a1f1","a1e1","a1d1","a1c1","a1b1","h4h5","c3c4","f2f3","f2f4"],"solutions":["g3d6"],"lines":{"g3d6":{"san":"Bxd6","after":"2r3k1/1p1b1pp1/1npB3p/p2p4/P2P3P/2PB4/2P2PP1/R5K1 b - - 0 23","done":true}}}},{"id":"p023","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"8/p1k2ppp/Bn3p2/N1pr4/6P1/P7/1PP2P1P/1K1Rr3 w - - 0 27","legal":["a6c8","a6b7","a6b5","a6c4","a6d3","a6e2","a6f1","a5b7","a5c6","a5c4","a5b3","d1e1","d1c1","b1a2","b1c1","b1a1","g4g5","a3a4","h2h3","f2f3","c2c3","b2b3","h2h4","f2f4","c2c4","b2b4"],"solutions":["d1e1"],"lines":{"d1e1":{"san":"Rxe1","after":"8/p1k2ppp/Bn3p2/N1pr4/6P1/P7/1PP2P1P/1K2R3 b - - 0 27","done":true}}}},{"id":"p024","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"r1b1kb1r/pp3pp1/1Q2pn1p/3p4/4PBP1/2N5/PPP2P1P/2KR1B1R b kq - 0 11","legal":["h8g8","h8h7","f8e7","f8d6","f8c5","f8b4","f8a3","e8e7","e8d7","c8d7","a8b8","f6g8","f6h7","f6d7","f6h5","f6g4","f6e4","a7b6","d5e4","g7g6","a7a6","h6h5","e6e5","d5d4","g7g5","a7a5"],"solutions":["a7b6"],"lines":{"a7b6":{"san":"axb6","after":"r1b1kb1r/1p3pp1/1p2pn1p/3p4/4PBP1/2N5/PPP2P1P/2KR1B1R w kq - 0 12","done":true}}}},{"id":"p025","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":2,"node":{"fen":"2r5/2Bb1ppk/2p4p/pp6/P1pP3P/2P5/2P2PP1/R5K1 b - - 3 27","legal":["c8h8","c8g8","c8f8","c8e8","c8d8","c8b8","c8a8","c8c7","h7h8","h7g8","h7g6","d7e8","d7e6","d7f5","d7g4","d7h3","b5a4","g7g6","f7f6","h6h5","c6c5","b5b4","g7g5","f7f5"],"solutions":["c8c7"],"lines":{"c8c7":{"san":"Rxc7","after":"8/2rb1ppk/2p4p/pp6/P1pP3P/2P5/2P2PP1/R5K1 w - - 0 28","done":true}}}},{"id":"p026","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":2,"node":{"fen":"4rrk1/pp3pp1/6np/3p4/3N2P1/q7/1PP3P1/2KR1B1R w - - 0 20","legal":["d4e6","d4c6","d4f5","d4b5","d4f3","d4b3","d4e2","h1h6","h1h5","h1h4","h1h3","h1h2","h1g1","f1a6","f1b5","f1c4","f1d3","f1e2","d1d3","d1d2","d1e1","c1d2","c1b1","b2a3","g4g5","g2g3","c2c3","c2c4"],"solutions":["b2a3"],"lines":{"b2a3":{"san":"bxa3","after":"4rrk1/pp3pp1/6np/3p4/3N2P1/P7/2P3P1/2KR1B1R b - - 0 20","done":true}}}},{"id":"p027","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"q3nk2/R4pp1/7r/2pppP1p/8/1P1PN3/2P1KPPP/8 w - - 0 24","legal":["a7a8","a7f7","a7e7","a7d7","a7c7","a7b7","a7a6","a7a5","a7a4","a7a3","a7a2","a7a1","e3d5","e3g4","e3c4","e3f1","e3d1","e2f3","e2d2","e2f1","e2e1","e2d1","f5f6","d3d4","b3b4","h2h3","g2g3","f2f3","c2c3","h2h4","g2g4","f2f4","c2c4"],"solutions":["a7a8"],"lines":{"a7a8":{"san":"Rxa8","after":"R3nk2/5pp1/7r/2pppP1p/8/1P1PN3/2P1KPPP/8 b - - 0 24","done":true}}}},{"id":"p028","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"1b3qk1/3pRpp1/1p1P3p/r7/p3Q3/P1P3P1/1P3P1P/2K5 b - - 5 31","legal":["g8h8","f8e8","f8d8","f8c8","f8e7","b8c7","b8a7","b8d6","a5a8","a5a7","a5a6","a5h5","a5g5","a5f5","a5e5","a5d5","a5c5","a5b5","g7g6","f7f6","h6h5","b6b5","g7g5","f7f5"],"solutions":["f7f5"],"lines":{"f7f5":{"san":"f5","after":"1b3qk1/3pR1p1/1p1P3p/r4p2/p3Q3/P1P3P1/1P3P1P/2K5 w - - 0 32","done":true}}}},{"id":"p029","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"4rB2/pp1k4/4p3/q6p/b2p2p1/3P4/PP3NPP/R3NRK1 b - - 0 25","legal":["e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","d7d8","d7c8","d7c7","d7c6","a5d8","a5c7","a5b6","a5a6","a5g5","a5f5","a5e5","a5d5","a5c5","a5b5","a5b4","a5c3","a5d2","a5e1","a4c6","a4b5","a4b3","a4c2","a4d1","b7b6","a7a6","e6e5","h5h4","g4g3","b7b5"],"solutions":["e8f8"],"lines":{"e8f8":{"san":"Rxf8","after":"5r2/pp1k4/4p3/q6p/b2p2p1/3P4/PP3NPP/R3NRK1 w - - 0 26","done":true}}}},{"id":"p030","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"4r2r/1Q3pp1/3Pk3/p6p/8/3R1N2/P1P2PPP/2K4R b - - 2 23","legal":["h8g8","h8f8","h8h7","h8h6","e8g8","e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","e6f6","e6f5","g7g6","f7f6","h5h4","a5a4","g7g5","f7f5"],"solutions":["e6f6"],"lines":{"e6f6":{"san":"Kf6","after":"4r2r/1Q3pp1/3P1k2/p6p/8/3R1N2/P1P2PPP/2K4R w - - 3 24","done":true}}}},{"id":"p031","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"r3qk2/pp1bp1br/3p2Q1/P7/8/2p1B3/2P1BPPP/R4RK1 w - - 0 21","legal":["g6e8","g6h7","g6g7","g6f7","g6h6","g6f6","g6e6","g6d6","g6h5","g6g5","g6f5","g6g4","g6e4","g6g3","g6d3","e3a7","e3h6","e3b6","e3g5","e3c5","e3f4","e3d4","e3d2","e3c1","e2a6","e2h5","e2b5","e2g4","e2c4","e2f3","e2d3","e2d1","g1h1","f1e1","f1d1","f1c1","f1b1","a1a4","a1a3","a1a2","a1e1","a1d1","a1c1","a1b1","a5a6","h2h3","g2g3","f2f3","h2h4","g2g4","f2f4"],"solutions":["g6h7"],"lines":{"g6h7":{"san":"Qxh7","after":"r3qk2/pp1bp1bQ/3p4/P7/8/2p1B3/2P1BPPP/R4RK1 b - - 0 21","done":true}}}},{"id":"p032","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"2k1r2r/pp3pb1/2b1P3/q1p1Q2p/3p1Bp1/2PP4/PP3NPP/R3NRK1 b - - 1 19","legal":["h8g8","h8f8","h8h7","h8h6","e8g8","e8f8","e8d8","e8e7","e8e6","c8d8","g7f8","g7h6","g7f6","g7e5","c6d7","c6d5","c6b5","c6e4","c6a4","c6f3","c6g2","a5d8","a5c7","a5b6","a5a6","a5b5","a5b4","a5a4","a5c3","a5a3","a5a2","f7e6","d4c3","f7f6","b7b6","a7a6","h5h4","c5c4","g4g3","f7f5","b7b5"],"solutions":["g7e5"],"lines":{"g7e5":{"san":"Bxe5","after":"2k1r2r/pp3p2/2b1P3/q1p1b2p/3p1Bp1/2PP4/PP3NPP/R3NRK1 w - - 0 20","done":true}}}},{"id":"p033","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"1r4k1/1q3ppn/2p1pb1p/8/PRQ1P3/4B2P/5PP1/6K1 w - - 1 26","legal":["c4e6","c4c6","c4a6","c4d5","c4c5","c4b5","c4d4","c4d3","c4c3","c4b3","c4e2","c4c2","c4a2","c4f1","c4c1","b4b7","b4b6","b4b5","b4b3","b4b2","b4b1","e3a7","e3h6","e3b6","e3g5","e3c5","e3f4","e3d4","e3d2","e3c1","g1h2","g1h1","g1f1","e4e5","a4a5","h3h4","g2g3","f2f3","g2g4","f2f4"],"solutions":["b4b7"],"lines":{"b4b7":{"san":"Rxb7","after":"1r4k1/1R3ppn/2p1pb1p/8/P1Q1P3/4B2P/5PP1/6K1 b - - 0 26","done":true}}}},{"id":"p034","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"r2qr1k1/pp1N1pp1/2pb1n1p/3p4/3P2PB/2NQ3P/PPP2P2/4RRK1 b - - 0 15","legal":["g8h8","e8f8","e8e7","e8e6","e8e5","e8e4","e8e3","e8e2","e8e1","d8c8","d8b8","d8e7","d8d7","d8c7","d8b6","d8a5","a8c8","a8b8","f6h7","f6d7","f6h5","f6g4","f6e4","d6f8","d6b8","d6e7","d6c7","d6e5","d6c5","d6f4","d6b4","d6g3","d6a3","d6h2","g7g6","b7b6","a7a6","h6h5","c6c5","g7g5","b7b5","a7a5"],"solutions":["d8d7"],"lines":{"d8d7":{"san":"Qxd7","after":"r3r1k1/pp1q1pp1/2pb1n1p/3p4/3P2PB/2NQ3P/PPP2P2/4RRK1 w - - 0 16","done":true}}}},{"id":"p035","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"1k1r1b2/ppq2b1p/5p2/5B2/2QP3B/2P1PN1P/PP3K2/R5r1 w - - 1 24","legal":["f5c8","f5h7","f5d7","f5g6","f5e6","f5g4","f5e4","f5d3","f5c2","f5b1","h4f6","h4g5","h4g3","c4f7","c4c7","c4e6","c4c6","c4a6","c4d5","c4c5","c4b5","c4b4","c4a4","c4d3","c4b3","c4e2","c4f1","f3g5","f3e5","f3h2","f3d2","f3g1","f3e1","f2e2","f2g1","a1g1","a1f1","a1e1","a1d1","a1c1","a1b1","d4d5","e3e4","b2b3","a2a3","b2b4","a2a4"],"solutions":["c4c7"],"lines":{"c4c7":{"san":"Qxc7+","after":"1k1r1b2/ppQ2b1p/5p2/5B2/3P3B/2P1PN1P/PP3K2/R5r1 b - - 0 24","done":true}}}},{"id":"p036","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"r4Nk1/1p3n2/p3qp2/8/P4P2/7P/1BP3P1/R4R1K w - - 0 26","legal":["f8h7","f8d7","f8g6","f8e6","b2f6","b2e5","b2d4","b2c3","b2a3","b2c1","h1h2","h1g1","f1f3","f1f2","f1g1","f1e1","f1d1","f1c1","f1b1","a1a3","a1a2","a1e1","a1d1","a1c1","a1b1","f4f5","a4a5","h3h4","g2g3","c2c3","g2g4","c2c4"],"solutions":["f8e6"],"lines":{"f8e6":{"san":"Nxe6","after":"r5k1/1p3n2/p3Np2/8/P4P2/7P/1BP3P1/R4R1K b - - 0 26","done":true}}}},{"id":"p037","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"r4r1k/pp4p1/2q1b2p/3p4/2P1p2P/P3R3/3QBPP1/3R2K1 w - - 1 27","legal":["e3e4","e3h3","e3g3","e3f3","e3d3","e3c3","e3b3","e2h5","e2g4","e2f3","e2d3","e2f1","d2d5","d2a5","d2d4","d2b4","d2d3","d2c3","d2c2","d2b2","d2a2","d2e1","d2c1","g1h2","g1h1","g1f1","d1f1","d1e1","d1c1","d1b1","d1a1","c4d5","h4h5","c4c5","a3a4","g2g3","f2f3","g2g4","f2f4"],"solutions":["c4d5"],"lines":{"c4d5":{"san":"cxd5","after":"r4r1k/pp4p1/2q1b2p/3P4/4p2P/P3R3/3QBPP1/3R2K1 b - - 0 27","done":true}}}},{"id":"p038","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"r1q2rk1/p3bppp/1p2n3/4p1P1/3NN2P/2P2P2/PP2Q3/1K1R3R b - - 1 21","legal":["g8h8","f8e8","f8d8","c8e8","c8d8","c8b8","c8d7","c8c7","c8b7","c8c6","c8a6","c8c5","c8c4","c8c3","a8b8","e7d8","e7f6","e7d6","e7g5","e7c5","e7b4","e7a3","e6d8","e6c7","e6g5","e6c5","e6f4","e6d4","e5d4","h7h6","g7g6","f7f6","a7a6","b6b5","h7h5","f7f5","a7a5"],"solutions":["e5d4"],"lines":{"e5d4":{"san":"exd4","after":"r1q2rk1/p3bppp/1p2n3/6P1/3pN2P/2P2P2/PP2Q3/1K1R3R w - - 0 22","done":true}}}},{"id":"p039","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"r2qk2r/1pp2p2/n2b1p2/p2Pp3/b1P1R2p/5N1P/PP3PP1/R1BQ2K1 w kq - 0 16","legal":["e4e5","e4h4","e4g4","e4f4","e4d4","e4e3","e4e2","e4e1","f3g5","f3e5","f3h4","f3d4","f3h2","f3d2","f3e1","g1h2","g1h1","g1f1","d1d4","d1a4","d1d3","d1b3","d1e2","d1d2","d1c2","d1f1","d1e1","c1h6","c1g5","c1f4","c1e3","c1d2","a1b1","c4c5","g2g3","b2b3","a2a3","g2g4","b2b4"],"solutions":["d1a4"],"lines":{"d1a4":{"san":"Qxa4+","after":"r2qk2r/1pp2p2/n2b1p2/p2Pp3/Q1P1R2p/5N1P/PP3PP1/R1B3K1 b kq - 0 16","done":true}}}},{"id":"p040","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"1r1b3r/1p4p1/1N1p1nk1/p1p1p1P1/2B1P1P1/5P2/1P6/2B1K2R w K - 1 25","legal":["b6c8","b6a8","b6d7","b6d5","b6a4","c4g8","c4f7","c4e6","c4a6","c4d5","c4b5","c4d3","c4b3","c4e2","c4a2","c4f1","h1h8","h1h7","h1h6","h1h5","h1h4","h1h3","h1h2","h1g1","h1f1","e1f2","e1e2","e1d2","e1f1","e1d1","c1f4","c1e3","c1d2","e1g1","g5f6","f3f4","b2b3","b2b4"],"solutions":["h1h8"],"lines":{"h1h8":{"san":"Rxh8","after":"1r1b3R/1p4p1/1N1p1nk1/p1p1p1P1/2B1P1P1/5P2/1P6/2B1K3 b - - 0 25","done":true}}}},{"id":"p041","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"r1b1k2r/pp3ppp/2n1pn2/q2p4/1b6/P3PNP1/1P1B1P1P/R2QKB1R b kq - 0 11","legal":["h8g8","h8f8","e8f8","e8d8","e8e7","e8d7","c8d7","a8b8","f6g8","f6d7","f6h5","f6g4","f6e4","c6d8","c6b8","c6e7","c6e5","c6d4","a5d8","a5c7","a5b6","a5a6","a5c5","a5b5","a5a4","a5a3","b4f8","b4e7","b4d6","b4c5","b4c3","b4a3","b4d2","e8g8","h7h6","g7g6","b7b6","a7a6","e6e5","d5d4","h7h5","g7g5","b7b5"],"solutions":["b4d2"],"lines":{"b4d2":{"san":"Bxd2+","after":"r1b1k2r/pp3ppp/2n1pn2/q2p4/8/P3PNP1/1P1b1P1P/R2QKB1R w kq - 0 12","done":true}}}},{"id":"p042","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"r4k2/2p3p1/p1p2p1p/6n1/1P6/P1N2Q2/4R2P/7K b - - 0 31","legal":["f8g8","f8f7","a8e8","a8d8","a8c8","a8b8","a8a7","g5h7","g5f7","g5e6","g5e4","g5h3","g5f3","g7g6","h6h5","f6f5","c6c5","a6a5"],"solutions":["g5f3"],"lines":{"g5f3":{"san":"Nxf3","after":"r4k2/2p3p1/p1p2p1p/8/1P6/P1N2n2/4R2P/7K w - - 0 32","done":true}}}},{"id":"p043","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"r2qk2r/pp2nppp/8/3pp3/5Pb1/1N5P/PPPQ2P1/R3KB1R w KQkq - 1 12","legal":["b3c5","b3a5","b3d4","b3c1","d2d5","d2a5","d2d4","d2b4","d2e3","d2d3","d2c3","d2f2","d2e2","d2d1","d2c1","h1h2","h1g1","f1a6","f1b5","f1c4","f1d3","f1e2","e1f2","a1d1","a1c1","a1b1","f4e5","h3g4","f4f5","h3h4","g2g3","c2c3","a2a3","c2c4","a2a4"],"solutions":["h3g4"],"lines":{"h3g4":{"san":"hxg4","after":"r2qk2r/pp2nppp/8/3pp3/5PP1/1N6/PPPQ2P1/R3KB1R b KQkq - 0 12","done":true}}}},{"id":"p044","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"4rrk1/1p1n1pp1/p2q3p/4p3/P3P1Pb/2P1B3/BP4PP/3R1R1K w - - 0 28","legal":["e3a7","e3h6","e3b6","e3g5","e3c5","e3f4","e3d4","e3f2","e3d2","e3g1","e3c1","a2f7","a2e6","a2d5","a2c4","a2b3","a2b1","h1g1","f1f7","f1f6","f1f5","f1f4","f1f3","f1f2","f1g1","f1e1","d1d6","d1d5","d1d4","d1d3","d1d2","d1e1","d1c1","d1b1","d1a1","g4g5","a4a5","c3c4","h2h3","g2g3","b2b3","b2b4"],"solutions":["d1d6"],"lines":{"d1d6":{"san":"Rxd6","after":"4rrk1/1p1n1pp1/p2R3p/4p3/P3P1Pb/2P1B3/BP4PP/5R1K b - - 0 28","done":true}}}},{"id":"p045","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"2kr1b1r/pppb1pp1/4p2p/4n3/4P3/2NQN1P1/PP3PBP/R1B2RK1 b - - 0 14","legal":["h8g8","h8h7","f8e7","f8d6","f8c5","f8b4","f8a3","d8e8","c8b8","d7e8","d7c6","d7b5","d7a4","e5g6","e5c6","e5g4","e5c4","e5f3","e5d3","g7g6","f7f6","c7c6","b7b6","a7a6","h6h5","g7g5","f7f5","c7c5","b7b5","a7a5"],"solutions":["e5d3"],"lines":{"e5d3":{"san":"Nxd3","after":"2kr1b1r/pppb1pp1/4p2p/8/4P3/2NnN1P1/PP3PBP/R1B2RK1 w - - 0 15","done":true}}}},{"id":"p046","type":"win","motif":"tactic","motifLabel":"Taktik","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"1n4k1/p4r1p/5qpr/p3p3/3p2P1/3R3P/NP3P2/6K1 w - - 2 29","legal":["d3d4","d3g3","d3f3","d3e3","d3c3","d3b3","d3a3","d3d2","d3d1","a2b4","a2c3","a2c1","g1h2","g1g2","g1h1","g1f1","g4g5","h3h4","f2f3","b2b3","f2f4","b2b4"],"solutions":["f2f3"],"lines":{"f2f3":{"san":"f3","after":"1n4k1/p4r1p/5qpr/p3p3/3p2P1/3R1P1P/NP6/6K1 b - - 0 29","done":true}}}},{"id":"p047","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":3,"node":{"fen":"1nrq1rk1/p2bpp1p/p2p2pn/3N4/B3P3/4QN1P/1PP2PP1/R2R2K1 b - - 5 18","legal":["g8h8","g8g7","f8e8","d8e8","d8c7","d8b6","d8a5","c8c7","c8c6","c8c5","c8c4","c8c3","c8c2","b8c6","d7e8","d7e6","d7c6","d7f5","d7b5","d7g4","d7a4","d7h3","h6f5","h6g4","f7f6","e7e6","g6g5","a6a5","f7f5","e7e5"],"solutions":["g8g7"],"lines":{"g8g7":{"san":"Kg7","after":"1nrq1r2/p2bppkp/p2p2pn/3N4/B3P3/4QN1P/1PP2PP1/R2R2K1 w - - 6 19","done":true}}}},{"id":"p048","type":"win","motif":"material","motifLabel":"Menang materi","side":"w","mateIn":null,"difficulty":3,"node":{"fen":"1nrq1rk1/p3pp1p/p2p2pn/3N4/b3P3/4QN1P/1PP2PP1/R2R2K1 w - - 0 19","legal":["d5e7","d5c7","d5f6","d5b6","d5f4","d5b4","d5c3","f3g5","f3e5","f3h4","f3d4","f3h2","f3d2","f3e1","e3a7","e3h6","e3b6","e3g5","e3c5","e3f4","e3d4","e3d3","e3c3","e3b3","e3a3","e3e2","e3d2","e3e1","e3c1","g1h2","g1h1","g1f1","d1d4","d1d3","d1d2","d1f1","d1e1","d1c1","d1b1","a1a4","a1a3","a1a2","a1c1","a1b1","e4e5","h3h4","g2g3","c2c3","b2b3","g2g4","c2c4","b2b4"],"solutions":["e3h6"],"lines":{"e3h6":{"san":"Qxh6","after":"1nrq1rk1/p3pp1p/p2p2pQ/3N4/b3P3/5N1P/1PP2PP1/R2R2K1 b - - 0 19","done":true}}}},{"id":"p049","type":"mate","motif":"mate","motifLabel":"Serangan mat","side":"w","mateIn":2,"difficulty":4,"node":{"fen":"4R3/p4Rp1/kp6/3p4/1PpN4/2P1P2p/P5PP/R5K1 w - - 0 30","legal":["e8h8","e8g8","e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","e8e6","e8e5","e8e4","f7f8","f7g7","f7e7","f7d7","f7c7","f7b7","f7a7","f7f6","f7f5","f7f4","f7f3","f7f2","f7f1","d4e6","d4c6","d4f5","d4b5","d4f3","d4b3","d4e2","d4c2","g1f2","g1h1","g1f1","a1f1","a1e1","a1d1","a1c1","a1b1","g2h3","b4b5","e3e4","g2g3","a2a3","g2g4","a2a4"],"solutions":["e8e7","b4b5"],"lines":{"e8e7":{"san":"Ree7","after":"8/p3RRp1/kp6/3p4/1PpN4/2P1P2p/P5PP/R5K1 b - - 1 30","done":false,"reply":"g7g6","replySan":"g6","afterReply":"8/p3RR2/kp4p1/3p4/1PpN4/2P1P2p/P5PP/R5K1 w - - 0 31","next":{"fen":"8/p3RR2/kp4p1/3p4/1PpN4/2P1P2p/P5PP/R5K1 w - - 0 31","legal":["f7f8","f7h7","f7g7","f7f6","f7f5","f7f4","f7f3","f7f2","f7f1","e7e8","e7d7","e7c7","e7b7","e7a7","e7e6","e7e5","e7e4","d4e6","d4c6","d4f5","d4b5","d4f3","d4b3","d4e2","d4c2","g1f2","g1h1","g1f1","a1f1","a1e1","a1d1","a1c1","a1b1","g2h3","b4b5","e3e4","g2g3","a2a3","g2g4","a2a4"],"solutions":["e7a7"],"lines":{"e7a7":{"san":"Rxa7#","after":"8/R4R2/kp4p1/3p4/1PpN4/2P1P2p/P5PP/R5K1 b - - 0 31","done":true}}}},"b4b5":{"san":"b5+","after":"4R3/p4Rp1/kp6/1P1p4/2pN4/2P1P2p/P5PP/R5K1 b - - 0 30","done":false,"reply":"a6a5","replySan":"Ka5","afterReply":"4R3/p4Rp1/1p6/kP1p4/2pN4/2P1P2p/P5PP/R5K1 w - - 1 31","next":{"fen":"4R3/p4Rp1/1p6/kP1p4/2pN4/2P1P2p/P5PP/R5K1 w - - 1 31","legal":["e8h8","e8g8","e8f8","e8d8","e8c8","e8b8","e8a8","e8e7","e8e6","e8e5","e8e4","f7f8","f7g7","f7e7","f7d7","f7c7","f7b7","f7a7","f7f6","f7f5","f7f4","f7f3","f7f2","f7f1","d4e6","d4c6","d4f5","d4f3","d4b3","d4e2","d4c2","g1f2","g1h1","g1f1","a1f1","a1e1","a1d1","a1c1","a1b1","g2h3","e3e4","g2g3","a2a3","g2g4","a2a4"],"solutions":["f7a7"],"lines":{"f7a7":{"san":"Rxa7#","after":"4R3/R5p1/1p6/kP1p4/2pN4/2P1P2p/P5PP/R5K1 b - - 0 31","done":true}}}}}}},{"id":"p050","type":"mate","motif":"mate","motifLabel":"Serangan mat","side":"w","mateIn":2,"difficulty":4,"node":{"fen":"r1b2nBk/1p6/2p2b2/p2pPp2/3P3P/P1N1Q1R1/1PP2PP1/R3K3 w Q - 1 23","legal":["g8h7","g8f7","g8e6","g8d5","g3g7","g3g6","g3g5","g3g4","g3h3","g3f3","e3h6","e3g5","e3f4","e3e4","e3f3","e3d3","e3e2","e3d2","e3c1","c3d5","c3b5","c3e4","c3a4","c3e2","c3a2","c3d1","c3b1","e1e2","e1d2","e1f1","e1d1","a1a2","a1d1","a1c1","a1b1","e1c1","e5f6","e5e6","h4h5","a3a4","f2f3","b2b3","f2f4","b2b4"],"solutions":["e3h6"],"lines":{"e3h6":{"san":"Qh6+","after":"r1b2nBk/1p6/2p2b1Q/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 b Q - 2 23","done":false,"reply":"f8h7","replySan":"Nh7","afterReply":"r1b3Bk/1p5n/2p2b1Q/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 w Q - 3 24","next":{"fen":"r1b3Bk/1p5n/2p2b1Q/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 w Q - 3 24","legal":["g8h7","g8f7","g8e6","g8d5","h6f8","h6h7","h6g7","h6g6","h6f6","h6h5","h6g5","h6f4","h6e3","h6d2","h6c1","g3g7","g3g6","g3g5","g3g4","g3h3","g3f3","g3e3","g3d3","c3d5","c3b5","c3e4","c3a4","c3e2","c3a2","c3d1","c3b1","e1e2","e1d2","e1f1","e1d1","a1a2","a1d1","a1c1","a1b1","e1c1","e5f6","e5e6","h4h5","a3a4","f2f3","b2b3","f2f4","b2b4"],"solutions":["h6h7"],"lines":{"h6h7":{"san":"Qxh7#","after":"r1b3Bk/1p5Q/2p2b2/p2pPp2/3P3P/P1N3R1/1PP2PP1/R3K3 b Q - 0 24","done":true}}}}}}},{"id":"p051","type":"mate","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":2,"difficulty":4,"node":{"fen":"5k1r/p4p2/p5p1/6P1/P3P3/1Pp4P/2Pr2p1/1b4K1 b - - 1 28","legal":["h8g8","h8h7","h8h6","h8h5","h8h4","h8h3","f8g8","f8e8","f8g7","f8e7","d2d8","d2d7","d2d6","d2d5","d2d4","d2d3","d2f2","d2e2","d2c2","d2d1","b1c2","b1a2","f7f6","a6a5","f7f5"],"solutions":["h8h3"],"lines":{"h8h3":{"san":"Rxh3","after":"5k2/p4p2/p5p1/6P1/P3P3/1Pp4r/2Pr2p1/1b4K1 w - - 0 29","done":false,"reply":"e4e5","replySan":"e5","afterReply":"5k2/p4p2/p5p1/4P1P1/P7/1Pp4r/2Pr2p1/1b4K1 b - - 0 29","next":{"fen":"5k2/p4p2/p5p1/4P1P1/P7/1Pp4r/2Pr2p1/1b4K1 b - - 0 29","legal":["f8g8","f8e8","f8g7","f8e7","h3h8","h3h7","h3h6","h3h5","h3h4","h3g3","h3f3","h3e3","h3d3","h3h2","h3h1","d2d8","d2d7","d2d6","d2d5","d2d4","d2d3","d2f2","d2e2","d2c2","d2d1","b1c2","b1a2","f7f6","a6a5","f7f5"],"solutions":["h3h1"],"lines":{"h3h1":{"san":"Rh1#","after":"5k2/p4p2/p5p1/4P1P1/P7/1Pp5/2Pr2p1/1b4Kr w - - 1 30","done":true}}}}}}},{"id":"p052","type":"mate","motif":"mate","motifLabel":"Serangan mat","side":"w","mateIn":2,"difficulty":4,"node":{"fen":"5Q2/1p1k1p2/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 w - - 3 33","legal":["f8h8","f8g8","f8e8","f8d8","f8c8","f8b8","f8a8","f8g7","f8f7","f8e7","f8h6","f8d6","f8c5","f8b4","f8a3","b6d8","b6c7","b6a7","b6c5","b6a5","d3a6","d3b5","d3e4","d3c4","d3e2","d3c2","d3f1","d3b1","g1f2","g1f1","c1c2","c1f1","c1e1","c1d1","c1b1","c1a1","f5e6","f5f6","d4d5","a4a5","c3c4","h2h3","b2b3","h2h4","b2b4"],"solutions":["f8d8","f8f7","d3b5"],"lines":{"f8d8":{"san":"Qd8+","after":"3Q4/1p1k1p2/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 b - - 4 33","done":false,"reply":"d7c6","replySan":"Kc6","afterReply":"3Q4/1p3p2/1Bk1p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 w - - 5 34","next":{"fen":"3Q4/1p3p2/1Bk1p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 w - - 5 34","legal":["d8h8","d8g8","d8f8","d8e8","d8c8","d8b8","d8a8","d8e7","d8d7","d8c7","d8f6","d8d6","d8g5","d8d5","d8h4","b6c7","b6a7","b6c5","b6a5","d3a6","d3b5","d3e4","d3c4","d3e2","d3c2","d3f1","d3b1","g1f2","g1f1","c1c2","c1f1","c1e1","c1d1","c1b1","c1a1","f5e6","f5f6","d4d5","a4a5","c3c4","h2h3","b2b3","h2h4","b2b4"],"solutions":["d3b5"],"lines":{"d3b5":{"san":"Bb5#","after":"3Q4/1p3p2/1Bk1p3/1B3P2/P2P4/2P2b2/1P5P/2R3K1 b - - 6 34","done":true}}}},"f8f7":{"san":"Qxf7+","after":"8/1p1k1Q2/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 b - - 0 33","done":false,"reply":"d7c8","replySan":"Kc8","afterReply":"2k5/1p3Q2/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 w - - 1 34","next":{"fen":"2k5/1p3Q2/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 w - - 1 34","legal":["f7g8","f7f8","f7e8","f7h7","f7g7","f7e7","f7d7","f7c7","f7b7","f7g6","f7f6","f7e6","f7h5","b6d8","b6c7","b6a7","b6c5","b6a5","d3a6","d3b5","d3e4","d3c4","d3e2","d3c2","d3f1","d3b1","g1f2","g1f1","c1c2","c1f1","c1e1","c1d1","c1b1","c1a1","f5e6","f5f6","d4d5","a4a5","c3c4","h2h3","b2b3","h2h4","b2b4"],"solutions":["f7e8","f7c7"],"lines":{"f7e8":{"san":"Qe8#","after":"2k1Q3/1p6/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 b - - 2 34","done":true},"f7c7":{"san":"Qc7#","after":"2k5/1pQ5/1B2p3/5P2/P2P4/2PB1b2/1P5P/2R3K1 b - - 2 34","done":true}}}},"d3b5":{"san":"Bb5+","after":"5Q2/1p1k1p2/1B2p3/1B3P2/P2P4/2P2b2/1P5P/2R3K1 b - - 4 33","done":false,"reply":"f3c6","replySan":"Bc6","afterReply":"5Q2/1p1k1p2/1Bb1p3/1B3P2/P2P4/2P5/1P5P/2R3K1 w - - 5 34","next":{"fen":"5Q2/1p1k1p2/1Bb1p3/1B3P2/P2P4/2P5/1P5P/2R3K1 w - - 5 34","legal":["f8h8","f8g8","f8e8","f8d8","f8c8","f8b8","f8a8","f8g7","f8f7","f8e7","f8h6","f8d6","f8c5","f8b4","f8a3","b6d8","b6c7","b6a7","b6c5","b6a5","b5c6","b5a6","b5c4","b5d3","b5e2","b5f1","g1f2","g1f1","c1c2","c1f1","c1e1","c1d1","c1b1","c1a1","f5e6","f5f6","d4d5","a4a5","c3c4","h2h3","b2b3","h2h4","b2b4"],"solutions":["f8d8"],"lines":{"f8d8":{"san":"Qd8#","after":"3Q4/1p1k1p2/1Bb1p3/1B3P2/P2P4/2P5/1P5P/2R3K1 b - - 6 34","done":true}}}}}}},{"id":"p053","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"r1b1kbnr/1p3ppp/p1p5/2p5/4P3/2P2N2/PP1P1PqP/RNBQK1R1 b Qkq - 1 8","legal":["g8e7","g8h6","g8f6","f8e7","f8d6","e8d8","e8e7","e8d7","c8d7","c8e6","c8f5","c8g4","c8h3","a8b8","a8a7","g2g6","g2g5","g2g4","g2h3","g2g3","g2f3","g2h2","g2f2","g2h1","g2g1","g2f1","h7h6","g7g6","f7f6","b7b6","a6a5","c5c4","h7h5","g7g5","f7f5","b7b5"],"solutions":["g2h3"],"lines":{"g2h3":{"san":"Qh3","after":"r1b1kbnr/1p3ppp/p1p5/2p5/4P3/2P2N1q/PP1P1P1P/RNBQK1R1 w Qkq - 2 9","done":true}}}},{"id":"p054","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"3rkn1r/pp3p1p/2pPpb2/q6p/3PNB2/8/PPPQBPP1/1K1R4 b - - 1 18","legal":["h8g8","f8d7","f8g6","e8d7","d8c8","d8b8","d8a8","d8d7","d8d6","f6g7","f6e7","f6g5","f6e5","f6h4","f6d4","a5c7","a5b6","a5a6","a5g5","a5f5","a5e5","a5d5","a5c5","a5b5","a5b4","a5a4","a5c3","a5a3","a5d2","a5a2","h7h6","b7b6","a7a6","e6e5","c6c5","h5h4","b7b5"],"solutions":["a5f5"],"lines":{"a5f5":{"san":"Qf5","after":"3rkn1r/pp3p1p/2pPpb2/5q1p/3PNB2/8/PPPQBPP1/1K1R4 w - - 2 19","done":true}}}},{"id":"p055","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"1n1q1rk1/p3pp1p/p2p2pQ/3NP1N1/b1r5/7P/1P3PP1/R2R2K1 b - - 2 21","legal":["g8h8","f8e8","d8e8","d8c8","d8d7","d8c7","d8b6","d8a5","b8d7","b8c6","c4c8","c4c7","c4c6","c4c5","c4h4","c4g4","c4f4","c4e4","c4d4","c4b4","c4c3","c4c2","c4c1","a4e8","a4d7","a4c6","a4b5","a4b3","a4c2","a4d1","d6e5","f7f6","e7e6","a6a5","f7f5"],"solutions":["c4h4"],"lines":{"c4h4":{"san":"Rh4","after":"1n1q1rk1/p3pp1p/p2p2pQ/3NP1N1/b6r/7P/1P3PP1/R2R2K1 w - - 3 22","done":true}}}},{"id":"p056","type":"win","motif":"tactic","motifLabel":"Taktik","side":"w","mateIn":null,"difficulty":4,"node":{"fen":"r2q3k/p2rbRpp/4Q3/6P1/1P2N2P/8/PP1p4/1K5R w - - 0 31","legal":["f7f8","f7g7","f7e7","f7f6","f7f5","f7f4","f7f3","f7f2","f7f1","e6e7","e6d7","e6h6","e6g6","e6f6","e6d6","e6c6","e6b6","e6a6","e6f5","e6e5","e6d5","e6g4","e6c4","e6h3","e6b3","e4f6","e4d6","e4c5","e4g3","e4c3","e4f2","e4d2","h1h3","h1h2","h1g1","h1f1","h1e1","h1d1","h1c1","b1c2","b1a1","g5g6","h4h5","b4b5","b2b3","a2a3","a2a4"],"solutions":["h1d1"],"lines":{"h1d1":{"san":"Rd1","after":"r2q3k/p2rbRpp/4Q3/6P1/1P2N2P/8/PP1p4/1K1R4 b - - 1 31","done":true}}}},{"id":"p057","type":"win","motif":"material","motifLabel":"Menang materi","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"r3kb1r/pp2pppp/8/3N1b2/1n6/1P3N2/1P2BPPP/R1B2RK1 b kq - 0 13","legal":["h8g8","e8d8","e8d7","a8d8","a8c8","a8b8","f5c8","f5d7","f5g6","f5e6","f5g4","f5e4","f5h3","f5d3","f5c2","f5b1","b4c6","b4a6","b4d5","b4d3","b4c2","b4a2","e8c8","h7h6","g7g6","f7f6","e7e6","b7b6","a7a6","h7h5","g7g5","e7e5","b7b5","a7a5"],"solutions":["b4d5"],"lines":{"b4d5":{"san":"Nxd5","after":"r3kb1r/pp2pppp/8/3n1b2/8/1P3N2/1P2BPPP/R1B2RK1 w kq - 0 14","done":true}}}},{"id":"p058","type":"win","motif":"fork","motifLabel":"Garpu","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"r3k2r/ppp1nppp/8/1N1pn3/3P2b1/3B4/PPP2PPR/R1B1K3 b Qkq - 1 11","legal":["h8g8","h8f8","e8f8","e8d8","e8d7","a8d8","a8c8","a8b8","e7g8","e7c8","e7g6","e7c6","e7f5","e5d7","e5g6","e5c6","e5c4","e5f3","e5d3","g4c8","g4d7","g4e6","g4h5","g4f5","g4h3","g4f3","g4e2","g4d1","e8g8","e8c8","h7h6","g7g6","f7f6","c7c6","b7b6","a7a6","h7h5","g7g5","f7f5","c7c5","a7a5"],"solutions":["e5d3"],"lines":{"e5d3":{"san":"Nxd3+","after":"r3k2r/ppp1nppp/8/1N1p4/3P2b1/3n4/PPP2PPR/R1B1K3 w Qkq - 0 12","done":true}}}},{"id":"p059","type":"win","motif":"tactic","motifLabel":"Taktik","side":"b","mateIn":null,"difficulty":4,"node":{"fen":"rnb1kb1r/5p2/p2p2pp/1p1QP1q1/3N4/8/PPP1BPPP/R3K2R b KQkq - 0 13","legal":["h8g8","h8h7","f8g7","f8e7","e8d8","e8e7","e8d7","c8d7","c8b7","c8e6","c8f5","c8g4","c8h3","b8d7","b8c6","a8a7","g5d8","g5e7","g5f6","g5h5","g5f5","g5e5","g5h4","g5g4","g5f4","g5g3","g5e3","g5g2","g5d2","g5c1","d6e5","f7f6","h6h5","a6a5","b5b4","f7f5"],"solutions":["a8a7"],"lines":{"a8a7":{"san":"Ra7","after":"1nb1kb1r/r4p2/p2p2pp/1p1QP1q1/3N4/8/PPP1BPPP/R3K2R w KQk - 1 14","done":true}}}},{"id":"p060","type":"win","motif":"fork","motifLabel":"Garpu","side":"b","mateIn":null,"difficulty":5,"node":{"fen":"2kr1b2/ppq4p/4bp2/3n1p2/2QP3B/2PB1N1P/PP3Pr1/R4KR1 b - - 7 20","legal":["f8g7","f8e7","f8h6","f8d6","f8c5","f8b4","f8a3","d8e8","d8d7","d8d6","c8b8","c8d7","c7c6","c7c5","c7c4","e6g8","e6f7","e6d7","d5e7","d5b6","d5f4","d5b4","d5e3","d5c3","g2g8","g2g7","g2g6","g2g5","g2g4","g2g3","g2h2","g2f2","g2g1","h7h6","b7b6","a7a6","f5f4","h7h5","b7b5","a7a5"],"solutions":["d5e3"],"lines":{"d5e3":{"san":"Ne3+","after":"2kr1b2/ppq4p/4bp2/5p2/2QP3B/2PBnN1P/PP3Pr1/R4KR1 w - - 8 21","done":true}}}}];
+
+/* ══ penyimpanan: artifact → localStorage → memori ══ */
+const Store = (() => {
+  const KEY = "rtgm.tactic.v1";
+  const mem = {};
+  const hasArtifact = typeof window !== "undefined" && window.storage && window.storage.get;
+  return {
+    async load() {
+      try {
+        if (hasArtifact) {
+          const r = await window.storage.get(KEY);
+          return r && r.value ? JSON.parse(r.value) : null;
+        }
+        const raw = localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return mem[KEY] ? JSON.parse(mem[KEY]) : null; }
+    },
+    async save(obj) {
+      const s = JSON.stringify(obj);
+      mem[KEY] = s;
+      try {
+        if (hasArtifact) { await window.storage.set(KEY, s); return; }
+        localStorage.setItem(KEY, s);
+      } catch (e) { /* memori saja */ }
+    },
+    async clear() {
+      delete mem[KEY];
+      try {
+        if (hasArtifact) { await window.storage.delete(KEY); return; }
+        localStorage.removeItem(KEY);
+      } catch (e) {}
+    }
+  };
+})();
+
+/* ══ pengulangan berjarak (Leitner) ══ */
+const MIN = 60000, DAY = 1440 * MIN;
+const BOXES = [10 * MIN, 1 * DAY, 3 * DAY, 7 * DAY, 16 * DAY, 35 * DAY, 90 * DAY];
+const boxLabel = b => ["baru", "10 mnt", "1 hari", "3 hari", "7 hari", "16 hari", "35 hari", "90 hari"][b] || "—";
+const fmtNext = ms => ms < 90 * MIN ? Math.round(ms / MIN) + "m"
+                  : ms < DAY ? Math.round(ms / (60 * MIN)) + "j"
+                  : Math.round(ms / DAY) + "h";
+
+let S = { cards: {}, log: [], days: [], seen: 0, right: 0 };
+
+function card(id) {
+  if (!S.cards[id]) S.cards[id] = { box: 0, due: 0, hits: 0, miss: 0 };
+  return S.cards[id];
+}
+function schedule(id, correct) {
+  const c = card(id);
+  c.box = correct ? Math.min(BOXES.length, c.box + 1) : 0;
+  correct ? c.hits++ : c.miss++;
+  const gap = correct ? BOXES[c.box - 1] : 10 * MIN;
+  c.due = Date.now() + gap;
+  c.last = Date.now();
+  return gap;
+}
+function dueCount() {
+  const now = Date.now();
+  return PUZZLES.filter(p => { const c = S.cards[p.id]; return c && c.due <= now; }).length;
+}
+function mastered() {
+  return Object.values(S.cards).filter(c => c.box >= 4).length;
+}
+function pick() {
+  const now = Date.now();
+  const due = PUZZLES.filter(p => S.cards[p.id] && S.cards[p.id].due <= now)
+                     .sort((a, b) => S.cards[a.id].due - S.cards[b.id].due);
+  if (due.length) return due[0];
+  const fresh = PUZZLES.filter(p => !S.cards[p.id]);
+  if (fresh.length) return fresh[0];
+  return null;
+}
+function nextDueIn() {
+  const t = Math.min(...PUZZLES.map(p => (S.cards[p.id] || {}).due || Infinity));
+  return t === Infinity ? null : t - Date.now();
+}
+
+/* ══ papan ══ */
+const FILES = "abcdefgh";
+const GLYPH = { k: "\u265A", q: "\u265B", r: "\u265C", b: "\u265D", n: "\u265E", p: "\u265F" };
+const boardEl = document.getElementById("board");
+const stampEl = document.getElementById("stamp");
+const promoEl = document.getElementById("promo");
+
+function parseFen(fen) {
+  const rows = fen.split(" ")[0].split("/");
+  const m = {};
+  rows.forEach((row, r) => {
+    let f = 0;
+    for (const ch of row) {
+      if (/\d/.test(ch)) { f += +ch; continue; }
+      m[FILES[f] + (8 - r)] = ch;
+      f++;
+    }
+  });
+  return m;
+}
+
+let view = { flip: false, pos: {}, legal: [], sel: null, marks: [], locked: true, pending: null };
+
+function drawBoard() {
+  boardEl.innerHTML = "";
+  const ranks = view.flip ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+  const files = view.flip ? [...FILES].reverse() : [...FILES];
+  ranks.forEach((rank, ri) => files.forEach((file, fi) => {
+    const sq = file + rank;
+    const el = document.createElement("button");
+    el.className = "sq" + (((ri + fi) % 2) ? " d" : "");
+    el.dataset.sq = sq;
+    el.setAttribute("aria-label", sq);
+    const pc = view.pos[sq];
+    if (pc) {
+      const s = document.createElement("span");
+      s.className = "p " + (pc === pc.toUpperCase() ? "w" : "b");
+      s.textContent = GLYPH[pc.toLowerCase()];
+      el.appendChild(s);
+    }
+    if (view.marks.includes(sq)) el.classList.add(view.marks[0] === sq ? "from" : "to");
+    if (view.sel === sq) el.classList.add("sel");
+    if (view.sel) {
+      const targets = view.legal.filter(m => m.slice(0, 2) === view.sel).map(m => m.slice(2, 4));
+      if (targets.includes(sq)) {
+        const d = document.createElement("span");
+        d.className = view.pos[sq] ? "ring" : "dot";
+        el.appendChild(d);
+      }
+    }
+    if (fi === 0) { const c = document.createElement("span"); c.className = "co r"; c.textContent = rank; el.appendChild(c); }
+    if (ri === 7) { const c = document.createElement("span"); c.className = "co f"; c.textContent = file; el.appendChild(c); }
+    el.addEventListener("click", () => onSquare(sq));
+    boardEl.appendChild(el);
+  }));
+}
+
+function shake(sq) {
+  const el = boardEl.querySelector(`[data-sq="${sq}"]`);
+  if (el) { el.classList.add("bad"); setTimeout(() => el.classList.remove("bad"), 320); }
+}
+
+/* ══ alur permainan ══ */
+let P = null, node = null, solved = false, usedHint = false, firstTry = true;
+const $ = id => document.getElementById(id);
+
+function setVerdict(text, kind) {
+  const v = $("cVerdict");
+  v.textContent = text;
+  v.className = "verdict" + (kind ? " " + kind : "");
+  $("live").textContent = text;
+}
+function showStamp(ok, text) {
+  stampEl.className = "stamp on " + (ok ? "ok" : "no");
+  stampEl.querySelector("b").textContent = text;
+}
+function hideStamp() { stampEl.className = "stamp"; }
+
+function loadCard() {
+  hideStamp();
+  P = pick();
+  if (!P) return renderDone();
+  node = P.node;
+  solved = false; usedHint = false; firstTry = true;
+  view.flip = P.side === "b";
+  view.pos = parseFen(node.fen);
+  view.legal = node.legal;
+  view.sel = null; view.marks = []; view.locked = false;
+  drawBoard();
+
+  const c = card(P.id);
+  $("cMotif").textContent = P.motifLabel + (P.type === "mate" ? ` (mat ${P.mateIn})` : "");
+  $("cDiff").textContent = "\u25A0".repeat(P.difficulty) + "\u25A1".repeat(5 - P.difficulty);
+  $("cBox").textContent = boxLabel(c.box);
+  $("cTurn").textContent = (P.side === "w" ? "PUTIH" : "HITAM") + " JALAN";
+  setVerdict(P.type === "mate" ? `Temukan mat dalam ${P.mateIn}.` : "Temukan langkah terkuat.", null);
+  $("bHint").disabled = false;
+  $("bNext").textContent = "Lewati";
+  refreshMeters();
+}
+
+function renderDone() {
+  const ms = nextDueIn();
+  document.querySelector(".grid").innerHTML =
+    `<div class="done" style="grid-column:1/-1">
+       <b>SESI SELESAI</b>
+       <p>Tidak ada kartu yang jatuh tempo.<br>
+       ${ms && ms > 0 ? "Kartu berikutnya siap dalam <b style='display:inline'>" + fmtNext(ms) + "</b>." : "Semua kartu sudah dikuasai."}<br>
+       Kembali besok. Konsistensi mengalahkan volume.</p>
+       <button class="btn go" onclick="location.reload()">Muat ulang</button>
+     </div>`;
+  refreshMeters();
+}
+
+function onSquare(sq) {
+  if (view.locked) return;
+  if (view.sel) {
+    const cands = view.legal.filter(m => m.slice(0, 2) === view.sel && m.slice(2, 4) === sq);
+    if (cands.length === 1) { play(cands[0]); return; }
+    if (cands.length > 1) { askPromotion(cands); return; }
+  }
+  const has = view.legal.some(m => m.slice(0, 2) === sq);
+  view.sel = has && view.sel !== sq ? sq : null;
+  drawBoard();
+}
+
+function askPromotion(cands) {
+  const box = promoEl.firstElementChild;
+  box.innerHTML = "";
+  const white = P.side === "w";
+  cands.forEach(m => {
+    const p = m[4];
+    const b = document.createElement("button");
+    b.innerHTML = `<span class="p ${white ? "w" : "b"}" style="${white ? "color:#FBFBF7;-webkit-text-stroke:1.3px var(--ink)" : ""}">${GLYPH[p]}</span>`;
+    b.onclick = () => { promoEl.classList.remove("on"); play(m); };
+    box.appendChild(b);
+  });
+  promoEl.classList.add("on");
+}
+
+function play(uci) {
+  view.sel = null;
+  if (!node.solutions.includes(uci)) {
+    firstTry = false;
+    shake(uci.slice(2, 4));
+    drawBoard();
+    wrong(uci);
+    return;
+  }
+  const line = node.lines[uci];
+  view.pos = parseFen(line.after);
+  view.marks = [uci.slice(0, 2), uci.slice(2, 4)];
+  view.locked = true;
+  drawBoard();
+
+  if (line.done) { right(line.san); return; }
+
+  setVerdict(`${line.san} — benar. Lawan menjawab...`, "ok");
+  setTimeout(() => {
+    view.pos = parseFen(line.afterReply);
+    view.marks = [line.reply.slice(0, 2), line.reply.slice(2, 4)];
+    node = line.next;
+    view.legal = node.legal;
+    view.locked = false;
+    drawBoard();
+    setVerdict(`${line.san} ${line.replySan} — lanjutkan, mat masih ada.`, "ok");
+  }, 750);
+}
+
+function right(san) {
+  solved = true;
+  const ok = firstTry && !usedHint;
+  const gap = schedule(P.id, ok);
+  S.seen++; if (ok) S.right++;
+  markDay();
+  showStamp(true, ok ? "BENAR" : "SELESAI");
+  setVerdict(ok ? `${san} — benar. Ulang dalam ${fmtNext(gap)}.`
+                : `${san} — benar, tapi tidak sekali jadi. Ulang dalam ${fmtNext(gap)}.`, "ok");
+  addLog(san, ok ? "ok" : "half", fmtNext(gap));
+  $("bHint").disabled = true;
+  $("bNext").textContent = "Kartu berikut";
+  persist();
+}
+
+function wrong(uci) {
+  const sol = node.solutions[0];
+  const san = node.lines[sol].san;
+  view.locked = true;
+  solved = true;
+  const gap = schedule(P.id, false);
+  S.seen++;
+  markDay();
+  showStamp(false, "SALAH");
+  view.marks = [sol.slice(0, 2), sol.slice(2, 4)];
+  drawBoard();
+  setVerdict(`Salah. Yang benar: ${san}. Ulang dalam ${fmtNext(gap)}.`, "no");
+  addLog(san, "no", fmtNext(gap));
+  $("bHint").disabled = true;
+  $("bNext").textContent = "Kartu berikut";
+  persist();
+}
+
+function hint() {
+  if (view.locked || usedHint) return;
+  usedHint = true; firstTry = false;
+  const sol = node.solutions[0];
+  view.sel = sol.slice(0, 2);
+  drawBoard();
+  setVerdict("Bidak yang harus jalan sudah ditandai. Kartu ini tidak dihitung sekali jadi.", null);
+  $("bHint").disabled = true;
+}
+
+function skip() {
+  if (solved) { loadCard(); return; }
+  const sol = node.solutions[0];
+  const san = node.lines[sol].san;
+  schedule(P.id, false);
+  S.seen++;
+  markDay();
+  view.marks = [sol.slice(0, 2), sol.slice(2, 4)];
+  view.locked = true; solved = true;
+  drawBoard();
+  showStamp(false, "LEWAT");
+  setVerdict(`Dilewati. Yang benar: ${san}.`, "no");
+  addLog(san, "no", "10m");
+  $("bNext").textContent = "Kartu berikut";
+  persist();
+}
+
+/* ══ kertas skor ══ */
+function addLog(san, res, next) {
+  S.log.unshift({ san, res, next, t: Date.now(), id: P.id });
+  S.log = S.log.slice(0, 60);
+  renderLog();
+}
+function renderLog() {
+  const ol = $("log");
+  if (!S.log.length) {
+    ol.innerHTML = `<li class="empty" style="display:block">Belum ada langkah tercatat.<br>Setiap percobaan masuk ke sini.</li>`;
+    return;
+  }
+  ol.innerHTML = S.log.map((e, i) => {
+    const cls = e.res === "no" ? "no" : "ok";
+    const mark = e.res === "ok" ? "\u2713" : e.res === "half" ? "\u00BD" : "\u2717";
+    return `<li class="${cls}"><span class="n">${S.log.length - i}.</span>
+            <span class="mv">${e.san}</span>
+            <span class="rs">${mark}</span>
+            <span class="nx">+${e.next}</span></li>`;
+  }).join("");
+}
+
+/* ══ meter ══ */
+function markDay() {
+  const d = new Date().toISOString().slice(0, 10);
+  if (!S.days.includes(d)) S.days.push(d);
+}
+function streak() {
+  if (!S.days.length) return 0;
+  const set = new Set(S.days);
+  let n = 0, d = new Date();
+  for (;;) {
+    const k = d.toISOString().slice(0, 10);
+    if (set.has(k)) { n++; d.setDate(d.getDate() - 1); }
+    else if (n === 0) { d.setDate(d.getDate() - 1);
+      if (!set.has(d.toISOString().slice(0, 10))) return 0;
+    } else return n;
+  }
+}
+function refreshMeters() {
+  $("mDue").textContent = dueCount();
+  $("mStreak").textContent = streak();
+  $("mAcc").textContent = S.seen ? Math.round(100 * S.right / S.seen) + "%" : "\u2014";
+  $("mLearn").textContent = mastered();
+}
+
+async function persist() { await Store.save(S); refreshMeters(); }
+
+/* ══ mulai ══ */
+$("bHint").onclick = hint;
+$("bNext").onclick = () => solved ? loadCard() : skip();
+$("bReset").onclick = async () => {
+  if (!confirm("Hapus seluruh progres latihan? Tidak bisa dibatalkan.")) return;
+  await Store.clear();
+  S = { cards: {}, log: [], days: [], seen: 0, right: 0 };
+  location.reload();
+};
+document.addEventListener("keydown", e => {
+  if (e.key === "h") hint();
+  if (e.key === "Enter") $("bNext").click();
+});
+
+(async () => {
+  const saved = await Store.load();
+  if (saved) S = Object.assign(S, saved);
+  $("fInfo").textContent = `${PUZZLES.length} kartu \u00B7 progres tersimpan di perangkat ini`;
+  renderLog();
+  loadCard();
+})();
+</script>
+</body>
+</html>
