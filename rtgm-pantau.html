@@ -343,16 +343,44 @@ async function getJSON(u){
   if(!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
+/* Log hanya ada di tab Pengaturan. Kalau tidak ada, jangan meledak —
+   simpan ke S.fetchLog supaya bisa dilihat saat tab itu dibuka.
+   Versi sebelumnya melempar TypeError di sini dan MEMBUNUH seluruh
+   pengambilan data tanpa pesan apa pun. */
 function logLine(msg, kind){
+  S.fetchLog = S.fetchLog || [];
+  S.fetchLog.push({ msg, kind, t: Date.now() });
   const el = $("#fetchLog");
+  if(!el) return;
   const d = document.createElement("div");
   d.className = "alert-row " + (kind||"");
   d.innerHTML = `<b>${kind==="no"?"GAGAL":kind==="warn"?"SEBAGIAN":"OK"}</b><span>${msg}</span>`;
   el.appendChild(d);
 }
+function logClear(){ S.fetchLog = []; const el = $("#fetchLog"); if(el) el.innerHTML = ""; }
+function logShow(){
+  const el = $("#fetchLog"); if(!el) return;
+  el.innerHTML = (S.fetchLog||[]).map(x =>
+    `<div class="alert-row ${x.kind||""}"><b>${x.kind==="no"?"GAGAL":x.kind==="warn"?"SEBAGIAN":"OK"}</b><span>${x.msg}</span></div>`
+  ).join("") || `<div class="empty" style="padding:0">Belum ada percobaan tarik data.</div>`;
+}
+/* Menerjemahkan kegagalan jaringan jadi sebab yang bisa ditindak.
+   "Failed to fetch" tidak memberi tahu apa pun kepada orang tua. */
+function sebab(e, situs){
+  const m = String(e && e.message || e);
+  if(/^HTTP 404/.test(m)) return `username "${situs}" tidak ditemukan. Periksa ejaannya.`;
+  if(/^HTTP 429/.test(m)) return "terlalu banyak permintaan (429). Tunggu satu menit.";
+  if(/^HTTP 403/.test(m)) return "diblokir server (403).";
+  if(/^HTTP 5\d\d/.test(m)) return m + " — server sedang bermasalah, bukan kesalahanmu.";
+  if(/Failed to fetch|NetworkError|Load failed|TypeError/i.test(m))
+    return "permintaan diblokir browser. Dua penyebab paling sering: (1) file dibuka lewat file:// — harus lewat http:// atau GitHub Pages; (2) CORS. Isi kolom Proxy CORS kalau (1) sudah benar.";
+  return m;
+}
 
 async function fetchAll(){
-  $("#fetchLog").innerHTML = `<div class="alert-row"><b>…</b><span><span class="spin"></span> menarik data…</span></div>`;
+  logClear();
+  const _el = $("#fetchLog");
+  if(_el) _el.innerHTML = `<div class="alert-row"><b>\u2026</b><span><span class="spin"></span> menarik data\u2026</span></div>`;
   const out = { chess:null, lichess:null, errors:[] };
 
   // Sumber utama: Apps Script. Ia sudah punya SELURUH riwayat harian —
@@ -400,12 +428,9 @@ async function fetchAll(){
     }catch(e){ out.errors.push(["Lichess", e.message]); }
   }
 
-  $("#fetchLog").innerHTML = "";
+  if(_el) _el.innerHTML = "";
   if(!S.cfg.chess && !S.cfg.lichess && !S.cfg.gs){ logLine("Belum ada username yang diisi.", "no"); return; }
-  out.errors.forEach(([site,msg])=>{
-    const cors = /Failed to fetch|NetworkError|Load failed/i.test(msg);
-    logLine(`${site}: ${msg}${cors?" — kemungkinan besar diblokir CORS. Isi kolom Proxy CORS di atas, atau buka file ini lewat http:// bukan file://":""}`, "no");
-  });
+  out.errors.forEach(([site,msg])=> logLine(`${site}: ${sebab(msg, site==="Lichess"?S.cfg.lichess:S.cfg.chess)}`, "no"));
   if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${out.chess.games.length} partai + ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
   else if(out.chess) logLine(`Chess.com langsung: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip`, out.chess.games.length ? "" : "warn");
   if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
@@ -668,6 +693,60 @@ function akurasiTren(){
   return G.map(x=>({t:x.t, v:x.r.acc}));
 }
 
+/* ═══════════ DIAGNOSIS ═══════════
+   Menguji setiap endpoint sendiri-sendiri. "Lichess tidak bisa" bukan diagnosis —
+   yang berguna adalah tahu endpoint MANA dan gagal KENAPA. */
+async function ujiKoneksi(){
+  const el = $("#testLog");
+  el.innerHTML = `<div class="alert-row"><b>\u2026</b><span><span class="spin"></span> menguji\u2026</span></div>`;
+  const hasil = [];
+  const uji = async (nama, u, wajib) => {
+    const t0 = performance.now();
+    try{
+      const r = await fetch(url(u), { headers:{ "Accept":"application/json" } });
+      const ms2 = Math.round(performance.now()-t0);
+      if(!r.ok){ hasil.push(["no", nama, `HTTP ${r.status} — ${sebab(new Error("HTTP "+r.status), "")}`]); return null; }
+      const d = await r.json();
+      const isi = Array.isArray(d) ? `${d.length} entri` : "objek JSON";
+      hasil.push(["ok", nama, `${r.status} \u00b7 ${isi} \u00b7 ${ms2}ms`]);
+      return d;
+    }catch(e){
+      hasil.push([wajib?"no":"warn", nama, sebab(e, "")]);
+      return null;
+    }
+  };
+
+  if(S.cfg.lichess){
+    const u = S.cfg.lichess.trim();
+    const prof = await uji("Lichess / profil", `https://lichess.org/api/user/${u}`, true);
+    await uji("Lichess / aktivitas", `https://lichess.org/api/user/${u}/activity`, false);
+    await uji("Lichess / riwayat rating", `https://lichess.org/api/user/${u}/rating-history`, false);
+    if(prof){
+      const p = prof.perfs || {};
+      const pz = p.puzzle ? `${p.puzzle.games} puzzle, rating ${p.puzzle.rating}` : "belum ada puzzle";
+      hasil.push([p.puzzle && p.puzzle.games ? "ok" : "warn", "Lichess / isi akun",
+        `${prof.username} \u00b7 ${pz}. ` + (p.puzzle && p.puzzle.games ? "" :
+        "Akun BERHASIL dibaca tapi kosong \u2014 anak belum mengerjakan satu puzzle pun. Ini bukan kesalahan aplikasi.")]);
+    }
+  } else hasil.push(["warn","Lichess","username kosong."]);
+
+  if(S.cfg.chess){
+    const u = S.cfg.chess.trim().toLowerCase();
+    await uji("Chess.com / statistik", `https://api.chess.com/pub/player/${u}/stats`, true);
+    await uji("Chess.com / arsip", `https://api.chess.com/pub/player/${u}/games/archives`, false);
+  } else hasil.push(["warn","Chess.com","username kosong."]);
+
+  if(S.cfg.gs) await uji("Apps Script", S.cfg.gs.trim(), false);
+
+  const gagalSemua = hasil.filter(h=>h[0]==="no").length === hasil.filter(h=>h[0]!=="warn").length && hasil.some(h=>h[0]==="no");
+  if(gagalSemua) hasil.push(["no","KESIMPULAN",
+    "SEMUA endpoint gagal \u2014 masalahnya bukan di Lichess atau Chess.com, tapi di cara file ini dibuka. " +
+    "Kalau alamat di bilah browser dimulai dengan file:// , browser memblokir semua permintaan keluar. Sajikan lewat http:// atau GitHub Pages."]);
+
+  el.innerHTML = hasil.map(([k,n,m])=>
+    `<div class="alert-row ${k}"><b>${n}</b><span>${m}</span></div>`).join("");
+}
+
 /* ═══════════ TAMPILAN: ANAK ═══════════ */
 function viewMisi(){
   const dk = todayKey(), T = targets();
@@ -927,11 +1006,16 @@ function viewAtur(){
       <input id="cProxy" autocapitalize="off">
       <div class="btnrow">
         <button class="btn go" id="bFetch">Tarik data</button>
+        <button class="btn" id="bTest">Uji koneksi</button>
         <button class="btn" id="bExport">Ekspor JSON</button>
         <button class="btn" id="bReset" style="color:var(--no)">Hapus semua</button>
       </div>
       <div id="fetchLog" style="margin-top:12px"></div>
     </div>
+  </section>
+  <section class="box st1">
+    <h2>Diagnosis <em>uji tiap endpoint terpisah</em></h2>
+    <div id="testLog"><div class="empty">Tekan "Uji koneksi" untuk memeriksa setiap alamat satu per satu.</div></div>
   </section>
   <section class="box st1">
     <h2>Batas kejujuran alat ini</h2>
@@ -1178,6 +1262,14 @@ function renderAtur(){
     if(!confirm("Hapus semua pengaturan, catatan, dan data? Tidak bisa dibatalkan.")) return;
     await Store.clear(); location.reload();
   };
+  $("#bTest").onclick = () => {
+    S.cfg.lichess = $("#cLichess").value.trim();
+    S.cfg.chess = $("#cChess").value.trim();
+    S.cfg.gs = $("#cGs").value.trim();
+    S.cfg.proxy = $("#cProxy").value.trim();
+    persist(); ujiKoneksi();
+  };
+  logShow();
 }
 
 /* ═══════════ ORKESTRA ═══════════ */
