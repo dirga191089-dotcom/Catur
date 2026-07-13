@@ -31,8 +31,9 @@
 
 // ═══════════════════ KONFIG ═══════════════════
 const KONFIG = {
-  chessUsername: 'VarishaArbas',   // username Chess.com anak
-  namaAnak:      'Varisha',
+  chessUsername:   'VarishaArbas',   // username Chess.com anak (partai)
+  lichessUsername: 'VarishaChess',   // username Lichess anak (puzzle)
+  namaAnak:        'Varisha',
 
   // Email penerima laporan harian. Kosongkan array untuk mematikan email.
   emailOrangTua: ['ganti@email-anda.com'],
@@ -44,11 +45,12 @@ const KONFIG = {
 
   // Target harian. Harus sama dengan yang di dasbor HTML.
   target: {
-    rushPercobaan: 20,   // minimal puzzle dicoba di Puzzle Rush
-    rushSkor:      12,   // target skor Puzzle Rush
-    rapid:          2,   // partai rapid per hari
-    bulletMaks:     0,   // batas partai bullet (pagar, bukan target)
-    partaiMaks:     6,   // batas total partai per hari (anti-tilt)
+    puzzle:         30,  // puzzle per hari di Lichess — SATU-SATUNYA hitungan puzzle
+    rapid:           2,  // partai rapid per hari         yang bisa diverifikasi API
+    bulletMaks:      0,  // batas partai bullet (pagar, bukan target)
+    partaiMaks:      6,  // batas total partai per hari (anti-tilt)
+    rushPercobaan:   0,  // Puzzle Rush Chess.com — 0 = tidak dipakai
+    rushSkor:        0,
   },
 
   jamCatat: 23,          // jam trigger harian (0-23), waktu spreadsheet
@@ -79,8 +81,10 @@ function hapusTriggerLama_() {
 function siapkanSheet_() {
   const ss = SpreadsheetApp.getActive();
   mk_(ss, SHEET_HARIAN, [
-    'Tanggal', 'Status ambil', 'Rush percobaan', 'Rush skor', 'Rush terbaik',
-    'Taktik tertinggi', 'Rekor baru?', 'Rating rapid', 'Rating blitz',
+    'Tanggal', 'Status ambil',
+    'Puzzle (Lichess)', 'Puzzle benar', 'Puzzle salah', 'Rating puzzle',
+    'Rush percobaan', 'Rush skor',
+    'Taktik tertinggi (CC)', 'Rekor baru?', 'Rating rapid', 'Rating blitz',
     'Partai hari ini', 'Rapid', 'Blitz', 'Bullet', 'Menang', 'Kalah', 'Seri',
     'Kalah beruntun', 'Akurasi rata2', 'Kepatuhan %', 'Pelanggaran',
   ]);
@@ -131,6 +135,48 @@ function ambil_(url) {
 }
 
 const BASE = () => 'https://api.chess.com/pub/player/' + KONFIG.chessUsername.toLowerCase();
+const LI   = () => 'https://lichess.org/api/user/' + KONFIG.lichessUsername;
+
+/**
+ * Lichess: SATU-SATUNYA sumber jumlah puzzle harian yang bisa diverifikasi.
+ * PENTING: timestamp Lichess dalam MILIDETIK, Chess.com dalam DETIK.
+ * Menyamakan keduanya adalah bug klasik yang membuat angka puzzle jadi nol
+ * tanpa error apa pun — dan orang tua menghukum anak atas kesalahan kode.
+ */
+function ambilLichess_(tanggal, tz) {
+  const hasil = { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', partai: 0, status: 'OK' };
+  if (!KONFIG.lichessUsername) { hasil.status = 'MATI'; return hasil; }
+  try {
+    const prof = ambil_(LI_URL_());
+    if (prof && prof.perfs && prof.perfs.puzzle) hasil.ratingPuzzle = prof.perfs.puzzle.rating;
+
+    const act = ambil_(LI() + '/activity');
+    (act || []).forEach(a => {
+      if (!a.interval) return;
+      const akhir = new Date(msLi_(a.interval.end));
+      if (Utilities.formatDate(akhir, tz, 'yyyy-MM-dd') !== tanggal) return;
+      if (a.puzzles && a.puzzles.score) {
+        const sc = a.puzzles.score;
+        hasil.benar = sc.win || 0;
+        hasil.salah = sc.loss || 0;
+        hasil.puzzle = hasil.benar + hasil.salah + (sc.draw || 0);
+      }
+      if (a.games) {
+        Object.keys(a.games).forEach(k => {
+          const v = a.games[k];
+          hasil.partai += (v.win || 0) + (v.loss || 0) + (v.draw || 0);
+        });
+      }
+    });
+  } catch (e) {
+    hasil.status = 'GAGAL: ' + e.message;
+    log_('PERINGATAN', 'Lichess: ' + e.message);
+  }
+  return hasil;
+}
+function LI_URL_() { return LI(); }
+/** Lichess kirim milidetik. Kalau angkanya kecil, itu detik — jangan asal kali 1000. */
+function msLi_(t) { return t < 1e11 ? t * 1000 : t; }
 
 function ambilStats_()    { return ambil_(BASE() + '/stats'); }
 function ambilArsip_()    { return ambil_(BASE() + '/games/archives').archives || []; }
@@ -146,12 +192,15 @@ function catatHarian() {
   try {
     stats = ambilStats_();
   } catch (e) {
-    log_('GAGAL', 'Ambil stats: ' + e.message);
-    tulisBaris_(hariIni, 'GAGAL: ' + e.message, null, []);
-    kirimEmail_('[RTGM] GAGAL menarik data ' + KONFIG.namaAnak,
-      'Skrip tidak bisa menarik data hari ini.\n\n' + e.message +
-      '\n\nTIDAK ADA data untuk ' + hariIni + '. Jangan anggap anak tidak berlatih — ' +
-      'yang gagal adalah pengambilan datanya, bukan latihannya.');
+    // Chess.com gagal TIDAK boleh membuang data Lichess. Puzzle tetap dicatat.
+    log_('GAGAL', 'Ambil stats Chess.com: ' + e.message);
+    const liSaja = ambilLichess_(hariIni, tz);
+    tulisBaris_(hariIni, 'GAGAL Chess.com: ' + e.message, null, [], liSaja);
+    kirimEmail_('[RTGM] Chess.com GAGAL — ' + KONFIG.namaAnak + ' ' + hariIni,
+      'Data Chess.com tidak bisa ditarik hari ini.\n\n' + e.message +
+      '\n\nData Lichess TETAP tercatat: ' + liSaja.puzzle + ' puzzle.' +
+      '\n\nAngka partai untuk ' + hariIni + ' KOSONG karena pengambilannya gagal — ' +
+      'bukan karena anak tidak bermain. Jangan menghukum atas kesalahan kode.');
     return;
   }
 
@@ -169,11 +218,15 @@ function catatHarian() {
     log_('PERINGATAN', 'Arsip gagal: ' + e.message);
   }
 
-  const baris = tulisBaris_(hariIni, status, stats, partaiHariIni);
+  const li = ambilLichess_(hariIni, tz);
+  if (li.status !== 'OK' && li.status !== 'MATI') status += ' | Lichess ' + li.status;
+
+  const baris = tulisBaris_(hariIni, status, stats, partaiHariIni, li);
   kirimLaporan_(hariIni, baris);
 }
 
-function tulisBaris_(tanggal, status, stats, partai) {
+function tulisBaris_(tanggal, status, stats, partai, li) {
+  li = li || { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', partai: 0 };
   const ss = SpreadsheetApp.getActive();
   const tz = ss.getSpreadsheetTimeZone();
   const sh = ss.getSheetByName(SHEET_HARIAN);
@@ -192,15 +245,16 @@ function tulisBaris_(tanggal, status, stats, partai) {
 
   // Kepatuhan: hanya menghitung yang BISA diverifikasi. Tugas manual tidak
   // ikut dihitung di sini — kalau ikut, angkanya bohong.
-  const cek = [
-    rushPercobaan >= T.rushPercobaan,
-    r.rapid >= T.rapid,
-    r.bullet <= T.bulletMaks,
-    r.total <= T.partaiMaks,
-  ];
-  const kepatuhan = Math.round(100 * cek.filter(Boolean).length / cek.length);
+  const cek = [];
+  if (T.puzzle > 0)        cek.push(li.puzzle >= T.puzzle);
+  if (T.rushPercobaan > 0) cek.push(rushPercobaan >= T.rushPercobaan);
+  cek.push(r.rapid >= T.rapid);
+  cek.push(r.bullet <= T.bulletMaks);
+  cek.push(r.total <= T.partaiMaks);
+  const kepatuhan = cek.length ? Math.round(100 * cek.filter(Boolean).length / cek.length) : 0;
 
   const langgar = [];
+  if (T.puzzle > 0 && li.puzzle < T.puzzle) langgar.push('puzzle ' + li.puzzle + '/' + T.puzzle);
   if (r.bullet > T.bulletMaks)      langgar.push('bullet ' + r.bullet);
   if (r.total > T.partaiMaks)       langgar.push('volume ' + r.total);
   if (r.kalahBeruntun >= 3)         langgar.push('tilt ' + r.kalahBeruntun + ' kalah beruntun');
@@ -208,7 +262,9 @@ function tulisBaris_(tanggal, status, stats, partai) {
   if (rushPercobaan > 0 && rushSkor < T.rushSkor) langgar.push('skor Rush ' + rushSkor + ' < ' + T.rushSkor);
 
   const row = [
-    tanggal, status, rushPercobaan, rushSkor, rBest ? rBest.score : '',
+    tanggal, status,
+    li.puzzle, li.benar, li.salah, li.ratingPuzzle,
+    rushPercobaan, rushSkor,
     taktikTinggi, rekorBaru ? 'YA' : '',
     stats && stats.chess_rapid && stats.chess_rapid.last ? stats.chess_rapid.last.rating : '',
     stats && stats.chess_blitz && stats.chess_blitz.last ? stats.chess_blitz.last.rating : '',
@@ -223,7 +279,7 @@ function tulisBaris_(tanggal, status, stats, partai) {
   if (idx > 0) sh.getRange(idx, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
 
-  return { tanggal, rushPercobaan, rushSkor, rekorBaru, kepatuhan, langgar, r, status };
+  return { tanggal, li, rushPercobaan, rushSkor, rekorBaru, kepatuhan, langgar, r, status };
 }
 
 function ringkasPartai_(partai) {
@@ -313,8 +369,15 @@ function kirimLaporan_(tanggal, b) {
     '',
     'Kepatuhan terverifikasi: ' + b.kepatuhan + '%',
     '',
-    lulus(b.rushPercobaan >= T.rushPercobaan) + ' Puzzle Rush: ' + b.rushPercobaan + '/' + T.rushPercobaan +
-      ' percobaan (skor ' + b.rushSkor + ', target ' + T.rushSkor + ')',
+    T.puzzle > 0
+      ? lulus(b.li.puzzle >= T.puzzle) + ' Puzzle (Lichess): ' + b.li.puzzle + '/' + T.puzzle +
+        '  (' + b.li.benar + ' benar, ' + b.li.salah + ' salah' +
+        (b.li.ratingPuzzle ? ', rating ' + b.li.ratingPuzzle : '') + ')'
+      : '',
+    T.rushPercobaan > 0
+      ? lulus(b.rushPercobaan >= T.rushPercobaan) + ' Puzzle Rush: ' + b.rushPercobaan + '/' + T.rushPercobaan +
+        ' (skor ' + b.rushSkor + ', target ' + T.rushSkor + ')'
+      : '',
     lulus(b.r.rapid >= T.rapid) + ' Partai rapid: ' + b.r.rapid + '/' + T.rapid,
     lulus(b.r.bullet <= T.bulletMaks) + ' Bullet: ' + b.r.bullet + ' (batas ' + T.bulletMaks + ')',
     lulus(b.r.total <= T.partaiMaks) + ' Total partai: ' + b.r.total + ' (batas ' + T.partaiMaks + ')',
@@ -331,8 +394,8 @@ function kirimLaporan_(tanggal, b) {
       : '',
     '',
     '--',
-    'Angka di atas HANYA mencakup yang bisa diverifikasi API Chess.com.',
-    'Puzzle di menu Puzzles biasa, pelajaran, dan latihan papan fisik TIDAK terlihat di sini.',
+    'Puzzle dihitung dari Lichess. Partai dihitung dari Chess.com + Lichess.',
+    'Pelajaran, video, dan latihan papan fisik TIDAK terlihat di sini sama sekali.',
     'Untuk itu, tanya anaknya. Dasbor tidak menggantikan percakapan.',
   ].filter(x => x !== '').join('\n');
 
@@ -373,43 +436,67 @@ function doGet() {
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
     snaps[r[0]] = {
-      rushAttempts: r[2] || 0, rushScore: r[3] || 0,
-      tacticsHigh: r[5] || null, rapid: r[7] || null, blitz: r[8] || null,
-      status: r[1], kepatuhan: r[18], langgar: r[19],
+      puzzles: r[2] || 0, puzzleWin: r[3] || 0, puzzleLoss: r[4] || 0, puzzleRating: r[5] || null,
+      rushAttempts: r[6] || 0, rushScore: r[7] || 0,
+      tacticsHigh: r[8] || null, rapid: r[10] || null, blitz: r[11] || null,
+      status: r[1], kepatuhan: r[21], langgar: r[22],
     };
   }
-  let stats = null, games = [];
+  let stats = null, games = [], lichess = null;
   try { stats = ambilStats_(); } catch (e) { /* pakai catatan saja */ }
   try {
     const arsip = ambilArsip_();
     if (arsip.length) games = ambilBulan_(arsip[arsip.length - 1]);
   } catch (e) { /* abaikan */ }
+  if (KONFIG.lichessUsername) {
+    try {
+      lichess = {
+        user: KONFIG.lichessUsername,
+        prof: ambil_(LI()),
+        act:  ambil_(LI() + '/activity'),
+        hist: ambil_(LI() + '/rating-history'),
+      };
+    } catch (e) { /* abaikan */ }
+  }
 
   return ContentService
     .createTextOutput(JSON.stringify({
       user: KONFIG.chessUsername.toLowerCase(),
       nama: KONFIG.namaAnak,
-      stats: stats, games: games, snaps: snaps,
+      stats: stats, games: games, lichess: lichess, snaps: snaps,
       diambil: new Date().toISOString(),
     }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ═══════════════════ UJI MANUAL ═══════════════════
-/** Jalankan ini dulu sebelum pasang(), untuk memastikan API bisa diakses. */
+/** Jalankan ini dulu sebelum pasang(). Menguji KEDUA API. */
 function ujiKoneksi() {
+  let pesan = '';
+  // ── Lichess (sumber puzzle — yang paling penting) ──
+  try {
+    const p = ambil_(LI());
+    const a = ambil_(LI() + '/activity');
+    pesan += 'LICHESS BERHASIL.\n' +
+      '  Rating puzzle: ' + (p.perfs && p.perfs.puzzle ? p.perfs.puzzle.rating : '-') + '\n' +
+      '  Total puzzle : ' + (p.perfs && p.perfs.puzzle ? p.perfs.puzzle.games : 0) + '\n' +
+      '  Hari aktif   : ' + ((a && a.length) || 0) + '\n\n';
+  } catch (e) {
+    pesan += 'LICHESS GAGAL: ' + e.message + '\n\n';
+  }
+  // ── Chess.com (sumber partai) ──
   try {
     const s = ambilStats_();
     const rush = s.puzzle_rush && s.puzzle_rush.daily ? s.puzzle_rush.daily : null;
-    const msg = 'BERHASIL.\n' +
-      'Rapid: ' + (s.chess_rapid && s.chess_rapid.last ? s.chess_rapid.last.rating : '-') + '\n' +
-      'Taktik tertinggi: ' + (s.tactics && s.tactics.highest ? s.tactics.highest.rating : '-') + '\n' +
-      'Puzzle Rush hari ini: ' + (rush ? rush.total_attempts + ' percobaan, skor ' + rush.score : 'belum ada') + '\n' +
-      'Puzzle Rush terbaik: ' + (s.puzzle_rush && s.puzzle_rush.best ? s.puzzle_rush.best.score : '-');
-    console.log(msg);
-    return msg;
+    pesan += 'CHESS.COM BERHASIL.\n' +
+      '  Rapid           : ' + (s.chess_rapid && s.chess_rapid.last ? s.chess_rapid.last.rating : '-') + '\n' +
+      '  Taktik tertinggi: ' + (s.tactics && s.tactics.highest ? s.tactics.highest.rating : '-') + '\n' +
+      '  Puzzle Rush kini: ' + (rush ? rush.total_attempts + ' percobaan, skor ' + rush.score : 'belum ada');
   } catch (e) {
-    console.log('GAGAL: ' + e.message);
-    return 'GAGAL: ' + e.message;
+    pesan += 'CHESS.COM GAGAL: ' + e.message + '\n' +
+      '  Kalau ini 403, Cloudflare memblokir IP Google. Puzzle tetap tercatat lewat Lichess,\n' +
+      '  tapi partai tidak. Pakai dasbor browser untuk data partai.';
   }
+  console.log(pesan);
+  return pesan;
 }

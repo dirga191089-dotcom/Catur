@@ -6,79 +6,153 @@
 <meta name="theme-color" content="#E6E7DF">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="RTGM Pantau">
 <title>RTGM · Pantau</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#E6E7DF; --card:#F1F2EB; --ink:#1B2130; --soft:#5D6473;
-    --rule:#C3C7BA; --carbon:#5B4E8C; --ok:#2F6B4F; --no:#A8372A; --warn:#B07A1E;
+    --paper:#E6E7DF; --card:#F1F2EB; --ink:#1B2130; --soft:#5D6473; --rule:#C3C7BA;
+    --carbon:#5B4E8C; --ok:#2F8055; --warn:#C98A1E; --no:#BE4032;
+    --teal:#1E8C7F; --coral:#E2673B; --gold:#D4A017; --sky:#3A78C2;
+    --accent:var(--carbon);
     --mono:"Space Mono",ui-monospace,Menlo,monospace;
     --sans:"Archivo",system-ui,-apple-system,sans-serif;
+    --dur:.45s;
   }
+  /* Tema per peran: warna membawa arti, bukan hiasan. */
+  body[data-role="anak"]   { --accent:var(--coral); --paper:#F0EBE2; }
+  body[data-role="ortu"]   { --accent:var(--sky); }
+  body[data-role="pelatih"]{ --accent:var(--carbon); }
+
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
-  body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);padding:18px 14px 50px;
-    background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 28px;background-position:0 -1px}
+  body{
+    background:var(--paper);color:var(--ink);font-family:var(--sans);
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    padding:18px 14px 50px;transition:background var(--dur);
+    background-image:linear-gradient(var(--rule) 1px,transparent 1px);
+    background-size:100% 28px;background-position:0 -1px;
+  }
   .sheet{max-width:1080px;margin:0 auto}
+
   header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;
     border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:16px;background:var(--paper)}
   .brand{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:.14em}
-  .brand span{color:var(--carbon)}
+  .brand span{color:var(--accent);transition:color var(--dur)}
   .tagline{font-family:var(--mono);font-size:10px;color:var(--soft);letter-spacing:.14em;margin-top:2px}
-  .who{display:flex;gap:0;font-family:var(--mono);font-size:10px;letter-spacing:.1em}
-  .who button{background:var(--card);border:1px solid var(--ink);border-right:0;padding:7px 12px;cursor:pointer;
-    text-transform:uppercase;font-family:inherit;font-size:inherit;color:var(--ink)}
+  .who{display:flex;font-family:var(--mono);font-size:10px;letter-spacing:.1em}
+  .who button{background:var(--card);border:1px solid var(--ink);border-right:0;padding:8px 13px;cursor:pointer;
+    text-transform:uppercase;font-family:inherit;font-size:inherit;color:var(--ink);
+    transition:background .18s,color .18s;min-height:40px}
   .who button:last-child{border-right:1px solid var(--ink)}
   .who button.on{background:var(--ink);color:var(--card)}
+  body[data-role="anak"] .who button.on{background:var(--coral);border-color:var(--coral);color:#fff}
+  body[data-role="ortu"] .who button.on{background:var(--sky);border-color:var(--sky);color:#fff}
 
-  nav{display:flex;gap:0;margin-bottom:18px;flex-wrap:wrap}
+  nav{display:flex;margin-bottom:18px;flex-wrap:wrap}
   nav button{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-    background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;cursor:pointer;color:var(--soft)}
-  nav button.on{color:var(--ink);border-bottom-color:var(--carbon)}
+    background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;cursor:pointer;color:var(--soft);
+    transition:color .18s,border-color .18s;min-height:42px}
+  nav button.on{color:var(--ink);border-bottom-color:var(--accent)}
 
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
-  .kpi{background:var(--card);border:1px solid var(--ink);padding:10px 12px}
-  .kpi b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15;font-weight:700}
-  .kpi i{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
-  .kpi.alert{border-color:var(--no);box-shadow:3px 3px 0 rgba(168,55,42,.2)}
-  .kpi.alert b{color:var(--no)}
-  .kpi small{display:block;font-family:var(--mono);font-size:10px;color:var(--carbon);margin-top:3px}
-
-  section.box{background:var(--card);border:1px solid var(--ink);margin-bottom:16px}
+  section.box{background:var(--card);border:1px solid var(--ink);margin-bottom:16px;
+    animation:rise var(--dur) both}
   section.box>h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;
-    padding:8px 12px;background:var(--ink);color:var(--card);display:flex;justify-content:space-between;align-items:center}
-  section.box>h2 em{font-style:normal;font-size:9px;opacity:.7;letter-spacing:.08em}
+    padding:8px 12px;background:var(--ink);color:var(--card);display:flex;justify-content:space-between;
+    align-items:center;gap:8px}
+  section.box>h2 em{font-style:normal;font-size:9px;opacity:.72;letter-spacing:.06em;text-align:right}
   .pad{padding:12px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .st1{animation-delay:.04s} .st2{animation-delay:.09s} .st3{animation-delay:.14s} .st4{animation-delay:.19s}
 
-  /* tugas harian */
-  .task{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;
-    padding:9px 12px;border-bottom:1px solid var(--rule)}
-  .task:last-child{border-bottom:0}
-  .task .mark{width:20px;height:20px;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;
-    font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;background:var(--card)}
-  .task .mark[aria-disabled="true"]{cursor:default}
-  .task.done .mark{background:var(--ok);color:#fff;border-color:var(--ok)}
-  .task.auto .mark{background:var(--carbon);color:#fff;border-color:var(--carbon)}
-  .task .t{font-size:13.5px;line-height:1.35}
-  .task .t small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:2px}
-  .task .t small.src{color:var(--carbon)}
-  .task .prog{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
-  .task.done .t{opacity:.65}
-  .bar{height:4px;background:var(--rule);margin-top:5px;max-width:180px}
-  .bar i{display:block;height:100%;background:var(--carbon)}
+  /* ══ KPI ══ */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+  .kpi{background:var(--card);border:1px solid var(--ink);padding:10px 12px;position:relative;overflow:hidden;
+    animation:rise var(--dur) both}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tone,var(--rule))}
+  .kpi b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15;font-weight:700;color:var(--tone,var(--ink))}
+  .kpi i{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+  .kpi small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:3px}
 
-  .alerts{padding:0}
-  .alert-row{display:flex;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);font-size:13px;align-items:flex-start}
+  /* ══ cincin progres (tampilan anak) ══ */
+  .rings{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:12px;padding:14px 12px}
+  .ring{text-align:center;animation:rise var(--dur) both}
+  .ring svg{width:96px;height:96px;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+  .ring .bg{stroke:var(--rule)}
+  .ring .fg{stroke:var(--tone);stroke-dasharray:264;stroke-dashoffset:264;
+    transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)}
+  .ring .num{position:relative;margin-top:-62px;margin-bottom:26px;
+    font-family:var(--mono);font-weight:700;font-size:19px;color:var(--tone)}
+  .ring .num span{display:block;font-size:9px;color:var(--soft);letter-spacing:.08em}
+  .ring p{font-size:12px;font-weight:600;line-height:1.3}
+  .ring.done .lbl::after{content:" \u2713";color:var(--ok);font-weight:800}
+
+  /* ══ misi anak ══ */
+  .mission{border:2px solid var(--ink);background:var(--card);padding:0;margin-bottom:16px;overflow:hidden}
+  .mission .top{background:var(--coral);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+  .mission .top b{font-family:var(--mono);font-size:13px;letter-spacing:.14em}
+  .mission .top .pct{font-family:var(--mono);font-weight:700;font-size:26px}
+  .mission .track{height:8px;background:rgba(0,0,0,.14)}
+  .mission .track i{display:block;height:100%;background:#fff;width:0;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+  .flame{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-weight:700}
+  .flame svg{width:17px;height:17px;animation:flick 1.6s ease-in-out infinite}
+  @keyframes flick{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.14) rotate(2deg)}}
+
+  .todo{display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;
+    padding:13px 14px;border-bottom:1px solid var(--rule);animation:rise .4s both}
+  .todo:last-child{border-bottom:0}
+  .todo .mark{width:30px;height:30px;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:16px;font-weight:700;background:var(--card);cursor:pointer;
+    transition:background .25s,transform .25s,border-color .25s}
+  .todo .mark[aria-disabled="true"]{cursor:default}
+  .todo.done .mark{background:var(--ok);border-color:var(--ok);color:#fff;animation:pop .35s}
+  .todo.auto.done .mark{background:var(--teal);border-color:var(--teal)}
+  @keyframes pop{0%{transform:scale(.6)}55%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .todo .t{font-size:14px;line-height:1.35}
+  .todo .t small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:2px}
+  .todo .t small.src{color:var(--accent)}
+  .todo.done .t{opacity:.6;text-decoration:line-through;text-decoration-thickness:1px}
+  .todo .prog{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
+  .bar{height:5px;background:var(--rule);margin-top:6px;max-width:190px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+
+  .golinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:12px}
+  a.go{display:block;text-decoration:none;color:#fff;padding:14px;border:2px solid var(--ink);
+    box-shadow:4px 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+  a.go:active{transform:translate(4px,4px);box-shadow:0 0 0}
+  a.go b{display:block;font-family:var(--mono);font-size:13px;letter-spacing:.06em}
+  a.go span{font-size:11.5px;opacity:.9}
+  a.go.p{background:var(--teal)} a.go.g{background:var(--sky)} a.go.d{background:var(--carbon)}
+
+  /* ══ peringatan ══ */
+  .alert-row{display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--rule);font-size:13px;
+    align-items:flex-start;animation:rise .4s both}
   .alert-row:last-child{border-bottom:0}
-  .alert-row b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:2px 6px;white-space:nowrap;
-    border:1px solid currentColor}
-  .alert-row.no b{color:var(--no)} .alert-row.warn b{color:var(--warn)} .alert-row.ok b{color:var(--ok)}
+  .alert-row b{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;padding:3px 7px;white-space:nowrap;
+    border:1px solid currentColor;flex:0 0 auto}
+  .alert-row.no{background:rgba(190,64,50,.07)} .alert-row.no b{color:var(--no)}
+  .alert-row.warn{background:rgba(201,138,30,.07)} .alert-row.warn b{color:var(--warn)}
+  .alert-row.ok b{color:var(--ok)}
+  .alert-row.no b{animation:blink 1.4s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 
+  /* ══ rapor mingguan ══ */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:12px}
+  .week div{text-align:center;font-family:var(--mono);font-size:9px;color:var(--soft)}
+  .week .box{height:46px;border:1px solid var(--rule);margin-bottom:4px;display:flex;flex-direction:column;
+    justify-content:flex-end;background:#fff;position:relative;overflow:hidden}
+  .week .box i{display:block;background:var(--tone);width:100%;height:0;
+    transition:height .8s cubic-bezier(.2,.8,.2,1)}
+  .week .box em{position:absolute;top:2px;left:0;right:0;font-style:normal;font-size:8.5px;font-weight:700;color:var(--ink)}
+  .talk{border-left:3px solid var(--accent);background:rgba(58,120,194,.07);padding:10px 12px;font-size:13.5px;
+    line-height:1.5;margin:0 12px 10px;animation:rise .4s both}
+  .talk b{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--soft);
+    text-transform:uppercase;margin-bottom:4px}
+
+  /* ══ tabel ══ */
   table{width:100%;border-collapse:collapse;font-size:12.5px}
   th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);
     text-align:left;padding:7px 12px;border-bottom:1px solid var(--ink)}
@@ -87,236 +161,118 @@
   tr:last-child td{border-bottom:0}
   .empty{padding:16px 12px;font-family:var(--mono);font-size:11px;color:var(--soft);line-height:1.7}
 
-  input,select,textarea{font-family:var(--mono);font-size:12px;padding:7px 9px;border:1px solid var(--ink);
+  /* ══ batang analisis pelatih ══ */
+  .hbars{padding:12px}
+  .hbar{display:grid;grid-template-columns:110px 1fr 46px;gap:9px;align-items:center;margin-bottom:7px;font-size:12px}
+  .hbar .n{font-family:var(--mono);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar .t{height:16px;background:var(--rule)}
+  .hbar .t i{display:block;height:100%;background:var(--tone,var(--carbon));width:0;
+    transition:width .8s cubic-bezier(.2,.8,.2,1)}
+  .hbar .v{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right}
+
+  /* ══ formulir ══ */
+  input,select,textarea{font-family:var(--mono);font-size:12px;padding:8px 9px;border:1px solid var(--ink);
     background:#fff;color:var(--ink);width:100%}
   textarea{font-family:var(--sans);font-size:13px;min-height:70px;resize:vertical}
   label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--soft);margin-bottom:4px;margin-top:10px}
+    color:var(--soft);margin:10px 0 4px}
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-  @media(max-width:640px){.fields{grid-template-columns:1fr}}
   .btn{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-    padding:9px 14px;cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--ink);
-    box-shadow:2px 2px 0 var(--ink);width:auto}
+    padding:10px 14px;cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--ink);
+    box-shadow:2px 2px 0 var(--ink);width:auto;min-height:42px;transition:transform .07s,box-shadow .07s}
   .btn:active{transform:translate(2px,2px);box-shadow:none}
   .btn.go{background:var(--ink);color:var(--card)}
-  .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
   .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
-  .chart{width:100%;height:190px;display:block}
+  .chart{width:100%;height:200px;display:block}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;padding:0 12px 10px}
   .legend i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
-
   .strip{display:flex;gap:3px;padding:12px;overflow-x:auto}
   .strip div{flex:0 0 auto;width:26px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--soft)}
-  .strip .cell{width:26px;height:26px;border:1px solid var(--rule);margin-bottom:3px;background:#fff}
-  .strip .cell.l1{background:#D7D3E6} .strip .cell.l2{background:#B0A7CE}
-  .strip .cell.l3{background:#877BB5} .strip .cell.l4{background:var(--carbon)}
+  .strip .cell{width:26px;height:26px;border:1px solid var(--rule);margin-bottom:3px;background:#fff;
+    transition:background .5s}
+  .strip .cell.l1{background:#CFE3DC} .strip .cell.l2{background:#8FC7B8}
+  .strip .cell.l3{background:#4EA893} .strip .cell.l4{background:var(--teal)}
 
-  .note{border-left:3px solid var(--carbon);background:rgba(91,78,140,.07);padding:9px 11px;font-size:13px;line-height:1.5;margin-bottom:8px}
-  .note b{font-family:var(--mono);font-size:10px;letter-spacing:.08em;display:block;color:var(--soft);margin-bottom:3px}
-
-  .warnbox{border:2px dashed var(--warn);background:rgba(176,122,30,.08);padding:11px 13px;font-size:12.5px;line-height:1.55;margin-bottom:16px}
-  .warnbox b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);display:block;margin-bottom:4px}
-  .warnbox code{font-family:var(--mono);font-size:11px;background:rgba(27,33,48,.07);padding:1px 4px}
+  .note{border-left:3px solid var(--accent);background:rgba(91,78,140,.07);padding:10px 12px;font-size:13.5px;
+    line-height:1.5;margin-bottom:8px;animation:rise .4s both}
+  .note b{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;display:block;color:var(--soft);margin-bottom:3px}
+  .warnbox{border:2px dashed var(--warn);background:rgba(201,138,30,.09);padding:11px 13px;font-size:12.5px;
+    line-height:1.55;margin-bottom:16px}
+  .warnbox b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);
+    display:block;margin-bottom:4px}
 
   footer{margin-top:22px;border-top:1px solid var(--rule);padding-top:10px;
     font-family:var(--mono);font-size:10px;color:var(--soft);line-height:1.7}
   .hide{display:none!important}
-  .spin{display:inline-block;width:9px;height:9px;border:2px solid var(--carbon);border-top-color:transparent;
+  .spin{display:inline-block;width:9px;height:9px;border:2px solid var(--accent);border-top-color:transparent;
     border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
   @keyframes sp{to{transform:rotate(360deg)}}
-  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 
-  /* ══════════════ MOBILE ══════════════ */
+  /* ══ konfeti: hanya untuk anak, hanya saat semua misi selesai ══ */
+  .conf{position:fixed;inset:0;pointer-events:none;z-index:99;overflow:hidden}
+  .conf i{position:absolute;width:9px;height:14px;opacity:0;animation:fall 1.9s ease-in forwards}
+  @keyframes fall{
+    0%{opacity:1;transform:translateY(-12vh) rotate(0)}
+    100%{opacity:0;transform:translateY(104vh) rotate(680deg)}
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .ring .fg{stroke-dashoffset:var(--off,0)!important}
+  }
+
+  /* ══════════ MOBILE ══════════ */
   @media(max-width:700px){
     body{padding:12px 10px calc(36px + env(safe-area-inset-bottom));background-size:100% 26px}
-    header{margin-bottom:10px}
     .brand{font-size:17px}
     .who{width:100%}
-    .who button{flex:1;min-height:44px;padding:10px 4px}
-
-    /* tab jadi satu baris yang bisa digeser, dan menempel di atas saat di-scroll */
-    nav{position:sticky;top:0;z-index:19;background:var(--paper);
-        flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
-        margin:0 -10px 14px;padding:0 10px;scrollbar-width:none}
+    .who button{flex:1;min-height:46px;padding:10px 4px}
+    nav{position:sticky;top:0;z-index:19;background:var(--paper);flex-wrap:nowrap;overflow-x:auto;
+      -webkit-overflow-scrolling:touch;margin:0 -10px 14px;padding:0 10px;scrollbar-width:none}
     nav::-webkit-scrollbar{display:none}
-    nav button{white-space:nowrap;min-height:44px;padding:10px 13px}
-
-    .cards{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    nav button{white-space:nowrap;min-height:46px;padding:11px 13px}
+    .cards{grid-template-columns:1fr 1fr;gap:8px}
     .kpi b{font-size:20px}
-
-    /* sasaran sentuh: 20px terlalu kecil untuk jempol */
-    .task{padding:13px 12px;grid-template-columns:30px 1fr auto;gap:11px}
-    .task .mark{width:30px;height:30px;font-size:16px}
-    .task .t{font-size:14px}
-    .bar{max-width:none}
-
-    /* tabel partai: digeser mendatar, bukan dipaksa muat lalu tak terbaca */
-    #games{overflow-x:auto;-webkit-overflow-scrolling:touch}
-    #games table{min-width:560px}
-
-    /* 16px mencegah iOS otomatis men-zoom saat kolom disentuh */
-    input,select,textarea{font-size:16px;padding:10px}
+    .rings{grid-template-columns:1fr 1fr;gap:6px}
+    .ring svg{width:88px;height:88px}
+    .ring .num{margin-top:-58px;margin-bottom:24px}
+    .todo{padding:14px 12px}
+    input,select,textarea{font-size:16px;padding:11px}
     .btn{min-height:46px;flex:1}
-    .btnrow{gap:8px}
     .fields{grid-template-columns:1fr}
-    .chart{height:200px}
-    .alert-row{font-size:12.5px}
-    footer{font-size:9.5px}
-  }
-  @media(max-width:380px){
-    .cards{grid-template-columns:1fr}
-    .who button{font-size:9px;letter-spacing:.04em}
+    #games,#gamesC{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    #games table,#gamesC table{min-width:560px}
+    .hbar{grid-template-columns:88px 1fr 40px}
+    .week{gap:3px}
+    .week .box{height:40px}
   }
 </style>
 </head>
-<body>
+<body data-role="ortu">
 <div class="sheet">
 
 <header>
   <div>
     <div class="brand">RTGM <span>/</span> PANTAU</div>
-    <div class="tagline" id="sub">DASBOR ORANG TUA &amp; PELATIH &middot; v0.1</div>
+    <div class="tagline" id="sub">MEMUAT…</div>
   </div>
   <div class="who">
+    <button data-role="anak">Anak</button>
     <button data-role="ortu" class="on">Orang tua</button>
     <button data-role="pelatih">Pelatih</button>
-    <button data-role="anak">Anak</button>
   </div>
 </header>
 
-<nav>
-  <button data-tab="hari" class="on">Hari ini</button>
-  <button data-tab="perkembangan">Perkembangan</button>
-  <button data-tab="partai">Partai</button>
-  <button data-tab="rencana">Rencana &amp; kurikulum</button>
-  <button data-tab="atur">Pengaturan</button>
-</nav>
-
-<!-- ══ HARI INI ══ -->
-<div id="tab-hari">
-  <div id="setupHint" class="warnbox hide">
-    <b>Belum tersambung</b>
-    Isi username Chess.com dan/atau Lichess anak di tab <b style="display:inline;color:var(--ink)">Pengaturan</b>, lalu tekan Tarik data.
-  </div>
-
-  <div class="cards" id="kpis"></div>
-
-  <section class="box">
-    <h2>Tugas hari ini <em id="questDate"></em></h2>
-    <div id="quests"><div class="empty">Belum ada data.</div></div>
-  </section>
-
-  <section class="box">
-    <h2>Peringatan otomatis</h2>
-    <div class="alerts" id="alerts"><div class="empty">Belum ada data.</div></div>
-  </section>
-
-  <section class="box" id="noteBox">
-    <h2>Catatan pelatih hari ini</h2>
-    <div class="pad">
-      <div id="noteList"></div>
-      <textarea id="noteInput" placeholder="Catatan untuk anak & orang tua…"></textarea>
-      <div class="btnrow"><button class="btn go" id="bNote">Simpan catatan</button></div>
-    </div>
-  </section>
-</div>
-
-<!-- ══ PERKEMBANGAN ══ -->
-<div id="tab-perkembangan" class="hide">
-  <section class="box">
-    <h2>Riwayat rating <em>Lichess: dari API &middot; Chess.com: direkonstruksi dari arsip partai</em></h2>
-    <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
-    <div class="legend" id="legend"></div>
-  </section>
-
-  <section class="box">
-    <h2>Aktivitas 21 hari terakhir <em>hanya hari saat aplikasi dibuka yang tercatat</em></h2>
-    <div class="strip" id="strip"></div>
-  </section>
-
-  <section class="box">
-    <h2>Ringkasan</h2>
-    <div id="summary"><div class="empty">Belum ada data.</div></div>
-  </section>
-</div>
-
-<!-- ══ PARTAI ══ -->
-<div id="tab-partai" class="hide">
-  <section class="box">
-    <h2>Partai terakhir <em>klik untuk buka di situs aslinya</em></h2>
-    <div id="games"><div class="empty">Belum ada data.</div></div>
-  </section>
-</div>
-
-<!-- ══ RENCANA ══ -->
-<div id="tab-rencana" class="hide">
-  <section class="box">
-    <h2>Tier kurikulum</h2>
-    <div class="pad">
-      <label>Tier saat ini</label>
-      <select id="tier"></select>
-      <div id="tierInfo" style="margin-top:12px"></div>
-    </div>
-  </section>
-  <section class="box">
-    <h2>Target harian <em>dipakai untuk verifikasi otomatis</em></h2>
-    <div class="pad">
-      <div class="fields">
-        <div><label>Puzzle Rush / hari — percobaan (Chess.com)</label><input type="number" id="tRush" min="0"></div>
-        <div><label>Target skor Puzzle Rush</label><input type="number" id="tRushScore" min="0"></div>
-        <div><label>Puzzle / hari (Lichess — kosongkan jika tak dipakai)</label><input type="number" id="tPuzzle" min="0"></div>
-        <div><label>Partai rapid / hari</label><input type="number" id="tRapid" min="0"></div>
-        <div><label>Batas partai bullet / hari</label><input type="number" id="tBulletMax" min="0"></div>
-        <div><label>Batas total partai / hari (anti-tilt)</label><input type="number" id="tGameMax" min="0"></div>
-      </div>
-      <label>Tugas manual (satu per baris — dicentang pelatih/orang tua)</label>
-      <textarea id="tManual" style="font-family:var(--mono);font-size:12px"></textarea>
-      <div class="btnrow"><button class="btn go" id="bTargets">Simpan target</button></div>
-    </div>
-  </section>
-</div>
-
-<!-- ══ PENGATURAN ══ -->
-<div id="tab-atur" class="hide">
-  <section class="box">
-    <h2>Sambungan</h2>
-    <div class="pad">
-      <div class="fields">
-        <div><label>Nama anak</label><input id="cName" placeholder="mis. Arka"></div>
-        <div><label>Zona waktu</label><input id="cTz" disabled></div>
-        <div><label>Username Chess.com</label><input id="cChess" placeholder="mis. arkachess" autocapitalize="off"></div>
-        <div><label>Username Lichess</label><input id="cLichess" placeholder="mis. arka_id" autocapitalize="off"></div>
-      </div>
-      <label>URL Web App Apps Script (disarankan — hilangkan CORS + riwayat lengkap)</label>
-      <input id="cGs" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off">
-      <label>Proxy CORS (opsional — hanya jika tidak pakai Apps Script dan tarik langsung gagal)</label>
-      <input id="cProxy" placeholder="https://proxy-anda.workers.dev/?url=" autocapitalize="off">
-      <div class="btnrow">
-        <button class="btn go" id="bFetch">Tarik data</button>
-        <button class="btn" id="bExport">Ekspor JSON</button>
-        <button class="btn" id="bReset" style="color:var(--no)">Hapus semua</button>
-      </div>
-      <div id="fetchLog" style="margin-top:12px"></div>
-    </div>
-  </section>
-
-  <section class="box">
-    <h2>Yang bisa dan tidak bisa dipantau di Chess.com</h2>
-    <div class="pad" style="font-size:13px;line-height:1.6">
-      <p style="margin-bottom:8px"><b>Terverifikasi otomatis:</b> Puzzle Rush hari ini (jumlah percobaan + skor), rekor rating taktik baru, semua partai + hasil + rating + akurasi, deret kekalahan, volume bermain.</p>
-      <p style="margin-bottom:8px"><b>TIDAK tersedia di API Chess.com:</b> jumlah puzzle harian di menu <b style="display:inline">Puzzles</b> biasa. Chess.com hanya memberi rating taktik <em>tertinggi</em> dan <em>terendah</em> — bukan rating saat ini, bukan jumlah harian. Karena itu tugas "kerjakan 30 puzzle" berada di daftar manual: hanya sekuat kejujuran anak.</p>
-      <p style="margin-bottom:8px"><b>Juga tidak tersedia:</b> pelajaran/video yang ditonton, waktu layar, latihan di papan fisik, penggunaan bantuan mesin.</p>
-      <p><b>Catatan penting:</b> Chess.com tidak menyimpan riwayat rating taktik maupun riwayat Puzzle Rush. Aplikasi ini yang mencatatnya — satu foto keadaan setiap kali kamu tekan Tarik data. <b style="display:inline">Hari yang aplikasinya tidak dibuka sama sekali tidak akan punya catatan.</b> Buka minimal sekali sehari, di malam hari.</p>
-    </div>
-  </section>
-</div>
+<nav id="nav"></nav>
+<div id="view"></div>
 
 <footer>
-  <div>Data ditarik langsung dari API publik Chess.com &amp; Lichess. Tidak ada server, tidak ada database. Semua tersimpan di perangkat ini.</div>
-  <div style="margin-top:6px">Anak sebaiknya tahu bahwa aktivitasnya dipantau. Pengawasan yang disembunyikan merusak kepercayaan, dan data ini toh publik — siapa pun bisa melihatnya.</div>
+  <div>Data dari API publik Chess.com &amp; Lichess. Tidak ada server. Semua tersimpan di perangkat ini.</div>
+  <div style="margin-top:6px">Anak tahu bahwa aktivitasnya dipantau — itu syaratnya, bukan pilihannya.</div>
 </footer>
 </div>
+<div class="conf" id="conf"></div>
 
 <script>
 /* ═══════════ penyimpanan ═══════════ */
@@ -337,28 +293,28 @@ const TIERS = [
   { id:1, nama:"Tier 1 — Fondasi", rating:"1200–1500", usia:"8–9 th",
     fokus:"Fork, Pin, Skewer, Double Check, Mat baris belakang, visi geometris",
     evaluasi:"Review akurasi puzzle mingguan",
-    target:{rush:20,rushScore:12,puzzle:30,rapid:2,bulletMax:0,gameMax:6},
-    manual:["Kerjakan 30 puzzle di menu Puzzles (bukan Rush)","Drill endgame 15 menit (Raja+Pion vs Raja, oposisi)","Ulang 3 pola mat dasar di papan fisik"] },
+    target:{puzzle:30,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0},
+    manual:["Drill endgame 15 menit (Raja+Pion vs Raja, oposisi)","Ulang 3 pola mat dasar di papan fisik","Baca 1 partai juara dunia bersama orang tua"] },
   { id:2, nama:"Tier 2 — Kompetisi", rating:"1500–1800", usia:"9–10 th",
     fokus:"Strategi posisional, lajur terbuka, outpost kuda, repertoar 1.e4 / Sicilian / KID",
     evaluasi:"Pemeriksaan anotasi mandiri anak; filter opening via API",
-    target:{rush:25,rushScore:18,puzzle:40,rapid:2,bulletMax:0,gameMax:6},
-    manual:["Kerjakan 40 puzzle di menu Puzzles (bukan Rush)","Anotasi 1 partai sendiri SEBELUM buka engine","Drill endgame benteng 20 menit"] },
+    target:{puzzle:40,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0},
+    manual:["Anotasi 1 partai sendiri SEBELUM buka engine","Drill endgame benteng 20 menit","Review repertoar pembukaan 15 menit"] },
   { id:3, nama:"Tier 3 — Master", rating:"2000–2200", usia:"10–12 th",
     fokus:"Candidate moves (Kotov), kalkulasi 4–6 langkah, prophylaxis, Lucena & Philidor",
     evaluasi:"Uji visualisasi buta; skor kelulusan modul endgame",
-    target:{rush:30,rushScore:25,puzzle:50,rapid:2,bulletMax:0,gameMax:5},
-    manual:["Kerjakan 50 puzzle di menu Puzzles (bukan Rush)","Kalkulasi 5 posisi tanpa menggeser bidak","Analisis 1 partai kalah bersama pelatih"] },
+    target:{puzzle:50,rapid:2,bulletMax:0,gameMax:5,rush:0,rushScore:0},
+    manual:["Kalkulasi 5 posisi tanpa menggeser bidak","Analisis 1 partai kalah bersama pelatih","Drill endgame teoretis 30 menit"] },
   { id:4, nama:"Tier 4 — Elite", rating:"2300+", usia:"13–15 th",
     fokus:"Deep prep anti-database, novelty langkah 15+, manajemen krisis waktu",
     evaluasi:"Simulasi tekanan waktu; persiapan lawan spesifik",
-    target:{rush:30,rushScore:30,puzzle:40,rapid:1,bulletMax:0,gameMax:4},
+    target:{puzzle:40,rapid:1,bulletMax:0,gameMax:4,rush:0,rushScore:0},
     manual:["Persiapan lawan turnamen 45 menit","Analisis mendalam 1 partai klasik","Latihan blitz-drill krisis waktu"] },
 ];
 
 /* ═══════════ status ═══════════ */
 let S = {
-  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"", proxy:"", gs:"https://script.google.com/macros/s/AKfycbyl6T5hbyNThNeJShu_4gpbxkHl5jibfFyoy1AWX9PKM3K423qUJfdkrqWZegbvBr1MYQ/exec" },
+  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"VarishaChess", proxy:"", gs:"https://script.google.com/macros/s/AKfycbyl6T5hbyNThNeJShu_4gpbxkHl5jibfFyoy1AWX9PKM3K423qUJfdkrqWZegbvBr1MYQ/exec" },
   tier:1,
   targets:null,
   manual:null,
@@ -408,6 +364,7 @@ async function fetchAll(){
       const d = await r.json();
       if(d.error) throw new Error(d.error);
       out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
+      if(d.lichess) out.lichess = d.lichess;
       if(!d.stats) out.errors.push(["Apps Script", "Endpoint hidup, tapi stats kosong \u2014 kemungkinan besar Chess.com memblokir IP Google (403). Riwayat dari Sheet tetap dipakai, tapi angka hari ini tidak akan terisi. Kalau ini menetap, hapus URL Web App dan biarkan dasbor menarik langsung dari browser."]);
       if(d.snaps) S.snaps = Object.assign({}, d.snaps, S.snaps);
       if(d.nama && !S.cfg.name) S.cfg.name = d.nama;
@@ -431,7 +388,7 @@ async function fetchAll(){
       out.chess = { user:u, stats, games:batches.flat(), months:months.length };
     }catch(e){ out.errors.push(["Chess.com", e.message]); }
   }
-  if(S.cfg.lichess){
+  if(S.cfg.lichess && !out.lichess){
     const u = S.cfg.lichess.trim();
     try{
       const [prof, act, hist] = await Promise.all([
@@ -505,7 +462,9 @@ function chessResultFor(g){
 function lichessDay(dk){
   const act = (S.data && S.data.lichess) ? (S.data.lichess.act||[]) : [];
   // interval.end adalah akhir hari aktivitas (detik)
-  return act.find(a => dayKey(ms(a.interval.end)) === dk || dayKey(ms(a.interval.start)) === dk) || null;
+  // Hanya cocokkan pada hari BERAKHIRNYA aktivitas. Kalau start juga dicocokkan,
+  // aktivitas yang melewati tengah malam terhitung dua kali di dua hari berbeda.
+  return act.find(a => dayKey(ms(a.interval.end)) === dk) || null;
 }
 function puzzlesOn(dk){
   const a = lichessDay(dk);
@@ -572,309 +531,720 @@ function buildQuests(){
   return q;
 }
 
-function renderQuests(){
-  const dk = todayKey();
-  $("#questDate").textContent = new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"});
+/* ═══════════════════════════════════════════════════════════════
+   LAPISAN PERAN
+   Tiga peran, tiga pertanyaan berbeda:
+     ANAK    — "apa yang harus kukerjakan sekarang?"     → dorongan
+     ORTU    — "anak saya latihan atau tidak hari ini?"  → sinyal cepat
+     PELATIH — "apa yang salah dan harus diperbaiki?"    → alat analisis
+   Warna dan animasi mengikuti pertanyaan itu, bukan selera.
+   ═══════════════════════════════════════════════════════════════ */
+
+const TABS = {
+  anak:    [["misi","Misi hari ini"], ["progres","Perkembanganku"]],
+  ortu:    [["hari","Hari ini"], ["minggu","Rapor mingguan"], ["partai","Partai"], ["atur","Pengaturan"]],
+  pelatih: [["hari","Hari ini"], ["analisis","Analisis"], ["partai","Partai"], ["rencana","Rencana"], ["atur","Pengaturan"]],
+};
+const TONE = { ok:"var(--ok)", warn:"var(--warn)", no:"var(--no)", teal:"var(--teal)",
+               coral:"var(--coral)", sky:"var(--sky)", gold:"var(--gold)", carbon:"var(--carbon)" };
+
+/* ── util animasi ── */
+function countUp(el, to, suffix){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches){ el.textContent = to + (suffix||""); return; }
+  const t0 = performance.now(), dur = 700, from = 0;
+  const step = t => {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(from + (to - from) * e) + (suffix || "");
+    if(k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function konfeti(){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  const c = $("#conf"); c.innerHTML = "";
+  const warna = ["var(--coral)","var(--teal)","var(--gold)","var(--sky)","var(--carbon)"];
+  for(let i=0;i<44;i++){
+    const p = document.createElement("i");
+    p.style.left = Math.random()*100 + "vw";
+    p.style.background = warna[i % warna.length];
+    p.style.animationDelay = (Math.random()*.5) + "s";
+    p.style.animationDuration = (1.4 + Math.random()*1.1) + "s";
+    c.appendChild(p);
+  }
+  setTimeout(()=>c.innerHTML="", 3200);
+}
+const FLAME = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.4-2-.4-2 2 1.4 3.4 3.5 3.4 6a6 6 0 0 1-12 0c0-5 6-6 6-13z"/></svg>`;
+
+function ring(pct, tone, big, small, label, done){
+  const off = 264 - 264 * Math.min(1, pct);
+  return `<div class="ring ${done?"done":""}" style="--tone:${tone};--off:${off}">
+    <svg viewBox="0 0 96 96"><circle class="bg" cx="48" cy="48" r="42"/>
+      <circle class="fg" cx="48" cy="48" r="42" data-off="${off}"/></svg>
+    <div class="num">${big}<span>${small}</span></div>
+    <p class="lbl">${label}</p></div>`;
+}
+function animateRings(){
+  requestAnimationFrame(()=> $$(".ring .fg").forEach(c => c.style.strokeDashoffset = c.dataset.off));
+  $$(".bar i, .mission .track i, .week .box i, .hbar .t i").forEach(b =>
+    requestAnimationFrame(()=> b.style.width = b.dataset.w || b.style.width, b.style.height = b.dataset.h || b.style.height));
+}
+
+/* ── analitik tambahan ── */
+function last7(){
+  const out = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const dk = dayKey(d);
+    const g = gamesOn(dk), pz = puzzlesOn(dk);
+    const T = targets();
+    const cek = [];
+    if(T.puzzle>0) cek.push(pz >= T.puzzle);
+    cek.push((g.byClass.rapid||0) >= T.rapid);
+    cek.push((g.byClass.bullet||0) <= T.bulletMax);
+    cek.push(g.total <= T.gameMax);
+    const patuh = Math.round(100*cek.filter(Boolean).length/cek.length);
+    out.push({ dk, d, pz, games:g.total, bullet:g.byClass.bullet||0, patuh,
+               aktif: pz>0 || g.total>0 || (S.snaps[dk]&&S.snaps[dk].rushAttempts>0) });
+  }
+  return out;
+}
+function streakHari(){
+  let n = 0;
+  for(let i=0;i<120;i++){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const dk = dayKey(d);
+    const aktif = puzzlesOn(dk) > 0 || gamesOn(dk).total > 0;
+    if(aktif) n++;
+    else if(i > 0) break;      // hari ini boleh kosong, kemarin tidak
+  }
+  return n;
+}
+function bahanObrolan(){
+  const W = last7(), T = targets(), out = [];
+  const kurang = W.filter(w => T.puzzle>0 && w.pz < T.puzzle && w.aktif).length;
+  if(kurang >= 3) out.push(["Target puzzle meleset " + kurang + " dari 7 hari",
+    "Tanyakan apakah targetnya kebanyakan, atau ada yang mengganggu waktu latihannya. Target yang terus meleset bukan tanda anak malas — sering kali tandanya target itu salah."]);
+  const sepi = W.filter(w => !w.aktif).length;
+  if(sepi >= 3) out.push([sepi + " hari tanpa aktivitas sama sekali",
+    "Sebelum menegur: cek apakah ia sakit, sibuk sekolah, atau justru sedang jenuh. Jenuh adalah masalah paling umum dan paling sering salah diobati dengan tambahan target."]);
+  const bul = W.reduce((a,b)=>a+b.bullet,0);
+  if(bul > 0) out.push([bul + " partai bullet minggu ini",
+    "Bullet menyenangkan dan melatih refleks, tapi merusak kebiasaan kalkulasi. Sepakati batas bersama — jangan larang sepihak."]);
+  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor).filter(x=>x.acc!=null).slice(-10);
+  if(G.length >= 5){
+    const avg = G.reduce((a,b)=>a+b.acc,0)/G.length;
+    if(avg < 70) out.push(["Akurasi 10 partai terakhir " + avg.toFixed(1) + "%",
+      "Di bawah 70% biasanya berarti bermain terlalu cepat untuk kontrol waktunya. Tanyakan: apakah ia menghabiskan waktu berpikirnya, atau langsung menjawab?"]);
+  }
+  const s = streakHari();
+  if(s >= 5) out.push([s + " hari berturut-turut aktif",
+    "Puji konsistensinya, bukan hasilnya. Rating naik-turun; kebiasaan tidak."]);
+  if(!out.length) out.push(["Belum cukup data",
+    "Rapor ini butuh beberapa hari aktivitas sebelum bisa memberi bahan obrolan yang berguna."]);
+  return out.slice(0,4);
+}
+function pembukaan(){
+  const G = S.data && S.data.chess ? S.data.chess.games : [];
+  const map = {};
+  G.forEach(g => {
+    const m = (g.pgn||"").match(/\[ECOUrl "https?:\/\/[^"]*\/openings\/([^"]+)"\]/);
+    const nama = m ? decodeURIComponent(m[1]).replace(/-/g," ").replace(/\.\.\..*$/,"").trim() : null;
+    if(!nama) return;
+    // 2 kata: "Scandinavian Defense Mieses Kotroc" dan "Scandinavian Defense"
+    // adalah pembukaan yang sama. Memecahnya jadi baris terpisah menyesatkan pelatih.
+    const kunci = nama.split(" ").slice(0,2).join(" ");
+    const r = chessResultFor(g);
+    (map[kunci] = map[kunci] || {n:0,m:0,k:0});
+    map[kunci].n++;
+    if(r.res==="M") map[kunci].m++; if(r.res==="K") map[kunci].k++;
+  });
+  return Object.entries(map).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
+}
+function akurasiTren(){
+  const G = (S.data && S.data.chess ? S.data.chess.games : [])
+    .map(g=>({t:ms(g.end_time), r:chessResultFor(g)}))
+    .filter(x=>x.r.acc!=null).sort((a,b)=>a.t-b.t).slice(-25);
+  return G.map(x=>({t:x.t, v:x.r.acc}));
+}
+
+/* ═══════════ TAMPILAN: ANAK ═══════════ */
+function viewMisi(){
+  const dk = todayKey(), T = targets();
   const q = buildQuests();
-  const el = $("#quests");
-  if(!S.cfg.chess && !S.cfg.lichess){ el.innerHTML = `<div class="empty">Sambungkan akun dulu di Pengaturan.</div>`; return; }
-  el.innerHTML = q.map(x => {
+  const auto = q.filter(x=>x.auto), man = q.filter(x=>!x.auto);
+  const done = q.filter(x=>x.ok).length;
+  const pct = q.length ? done/q.length : 0;
+  const pz = puzzlesOn(dk), g = gamesOn(dk);
+  const s = streakHari();
+  const semuaAuto = auto.length && auto.every(x=>x.ok);
+
+  const cincin = [
+    ring(T.puzzle ? pz/T.puzzle : 1, "var(--teal)", pz, "/ " + T.puzzle, "Puzzle", T.puzzle ? pz>=T.puzzle : true),
+    ring(T.rapid ? (g.byClass.rapid||0)/T.rapid : 1, "var(--sky)", g.byClass.rapid||0, "/ " + T.rapid, "Partai rapid", (g.byClass.rapid||0)>=T.rapid),
+    ring(Math.min(1, g.total/Math.max(1,T.gameMax)), g.total>T.gameMax?"var(--no)":"var(--gold)", g.total, "maks " + T.gameMax, "Total partai", g.total<=T.gameMax),
+    ring(Math.min(1, s/7), "var(--coral)", s, "hari", "Runtun", s>=7),
+  ].join("");
+
+  return `
+  <div class="mission">
+    <div class="top">
+      <div><b>MISI HARI INI</b><div style="font-size:12px;opacity:.9;margin-top:3px">
+        ${new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"})}</div></div>
+      <div style="text-align:right">
+        <div class="pct" id="misiPct">0%</div>
+        <div class="flame" style="font-size:11px;justify-content:flex-end">${FLAME} ${s} hari</div>
+      </div>
+    </div>
+    <div class="track"><i data-w="${Math.round(pct*100)}%"></i></div>
+    <div class="rings">${cincin}</div>
+  </div>
+
+  <section class="box st1">
+    <h2>Yang harus kamu kerjakan</h2>
+    <div id="todos"></div>
+  </section>
+
+  <section class="box st2">
+    <h2>Mulai sekarang</h2>
+    <div class="golinks">
+      <a class="go p" href="https://lichess.org/training" target="_blank" rel="noopener">
+        <b>PUZZLE \u2192</b><span>Lichess &middot; target ${T.puzzle} hari ini</span></a>
+      <a class="go g" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
+        <b>MAIN RAPID \u2192</b><span>Chess.com &middot; ${T.rapid} partai</span></a>
+      <a class="go d" href="rtgm-taktik.html">
+        <b>LATIHAN POLA \u2192</b><span>60 puzzle, tanpa internet</span></a>
+    </div>
+  </section>
+
+  <section class="box st3">
+    <h2>Pesan pelatih</h2>
+    <div class="pad" id="noteAnak"></div>
+  </section>`;
+}
+
+function viewProgres(){
+  return `
+  <section class="box">
+    <h2>Ratingmu</h2>
+    <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
+    <div class="legend" id="legend"></div>
+  </section>
+  <section class="box st1">
+    <h2>21 hari terakhir <em>makin gelap = makin banyak latihan</em></h2>
+    <div class="strip" id="strip"></div>
+  </section>
+  <section class="box st2">
+    <h2>Angkamu</h2>
+    <div id="summary"></div>
+  </section>`;
+}
+
+/* ═══════════ TAMPILAN: ORANG TUA ═══════════ */
+function viewHariOrtu(){
+  return `
+  <div id="setupHint" class="warnbox hide"><b>Belum tersambung</b>
+    Isi username di tab Pengaturan, lalu tekan Tarik data.</div>
+  <div class="cards" id="kpis"></div>
+  <section class="box st1">
+    <h2>Tugas hari ini <em id="questDate"></em></h2>
+    <div id="todos"></div>
+  </section>
+  <section class="box st2">
+    <h2>Perlu perhatian</h2>
+    <div id="alerts"></div>
+  </section>
+  <section class="box st3">
+    <h2>Catatan pelatih hari ini</h2>
+    <div class="pad" id="noteList"></div>
+  </section>`;
+}
+
+function viewMinggu(){
+  const W = last7();
+  const T = targets();
+  const maxPz = Math.max(T.puzzle || 1, ...W.map(w=>w.pz));
+  const bar = W.map(w => {
+    const tone = w.patuh >= 75 ? "var(--ok)" : w.patuh >= 40 ? "var(--warn)" : "var(--no)";
+    const h = Math.round(100 * w.pz / maxPz);
+    return `<div><div class="box" style="--tone:${tone}"><em>${w.pz||""}</em><i data-h="${h}%"></i></div>
+      ${["Min","Sen","Sel","Rab","Kam","Jum","Sab"][w.d.getDay()]}</div>`;
+  }).join("");
+  const rata = Math.round(W.reduce((a,b)=>a+b.patuh,0)/7);
+  const aktif = W.filter(w=>w.aktif).length;
+  const tone = rata >= 75 ? "var(--ok)" : rata >= 40 ? "var(--warn)" : "var(--no)";
+
+  return `
+  <div class="cards">
+    <div class="kpi" style="--tone:${tone}"><b id="wPatuh">0%</b><i>kepatuhan rata-rata</i><small>7 hari terakhir</small></div>
+    <div class="kpi" style="--tone:var(--teal)"><b id="wAktif">0</b><i>hari aktif</i><small>dari 7</small></div>
+    <div class="kpi" style="--tone:var(--coral)"><b id="wStreak">0</b><i>runtun hari</i><small>berturut-turut</small></div>
+    <div class="kpi" style="--tone:var(--sky)"><b id="wPz">0</b><i>total puzzle</i><small>minggu ini</small></div>
+  </div>
+  <section class="box st1">
+    <h2>Puzzle per hari <em>warna = kepatuhan hari itu</em></h2>
+    <div class="week">${bar}</div>
+  </section>
+  <section class="box st2">
+    <h2>Bahan obrolan <em>bukan bahan hukuman</em></h2>
+    <div style="padding-top:10px">${bahanObrolan().map(([t,p],i)=>
+      `<div class="talk" style="animation-delay:${.05*i}s"><b>${t}</b>${p}</div>`).join("")}</div>
+  </section>
+  <section class="box st3">
+    <h2>Perlu perhatian hari ini</h2>
+    <div id="alerts"></div>
+  </section>`;
+}
+
+/* ═══════════ TAMPILAN: PELATIH ═══════════ */
+function viewHariPelatih(){
+  return `
+  <div id="setupHint" class="warnbox hide"><b>Belum tersambung</b>
+    Isi username di tab Pengaturan, lalu tekan Tarik data.</div>
+  <div class="cards" id="kpis"></div>
+  <section class="box st1">
+    <h2>Tugas hari ini <em id="questDate"></em></h2>
+    <div id="todos"></div>
+  </section>
+  <section class="box st2">
+    <h2>Peringatan otomatis</h2>
+    <div id="alerts"></div>
+  </section>
+  <section class="box st3">
+    <h2>Catatan pelatih</h2>
+    <div class="pad">
+      <div id="noteList"></div>
+      <textarea id="noteInput" placeholder="Catatan untuk anak &amp; orang tua…"></textarea>
+      <div class="btnrow"><button class="btn go" id="bNote">Simpan catatan</button></div>
+    </div>
+  </section>`;
+}
+
+function viewAnalisis(){
+  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor);
+  const acc = akurasiTren();
+  const rataAcc = acc.length ? (acc.reduce((a,b)=>a+b.v,0)/acc.length) : 0;
+  const buka = pembukaan();
+  const maxN = Math.max(1, ...buka.map(b=>b[1].n));
+
+  const kelas = {};
+  (S.data && S.data.chess ? S.data.chess.games : []).forEach(g => kelas[g.time_class] = (kelas[g.time_class]||0)+1);
+  const maxK = Math.max(1, ...Object.values(kelas));
+
+  const putih = G.filter(x=>x.side && x.side.username && true);
+  const m = G.filter(x=>x.res==="M").length, k = G.filter(x=>x.res==="K").length, r = G.filter(x=>x.res==="R").length;
+
+  return `
+  <div class="cards">
+    <div class="kpi" style="--tone:${rataAcc>=75?"var(--ok)":rataAcc>=68?"var(--warn)":"var(--no)"}">
+      <b>${rataAcc?rataAcc.toFixed(1)+"%":"\u2014"}</b><i>akurasi rata-rata</i><small>${acc.length} partai dianalisis</small></div>
+    <div class="kpi" style="--tone:var(--ok)"><b>${G.length?Math.round(100*m/G.length)+"%":"\u2014"}</b>
+      <i>persentase menang</i><small>${m}M / ${r}R / ${k}K</small></div>
+    <div class="kpi" style="--tone:var(--carbon)"><b>${G.length}</b><i>partai terarsip</i><small>seluruh riwayat</small></div>
+    <div class="kpi" style="--tone:var(--gold)"><b>${buka.length}</b><i>pembukaan berbeda</i><small>repertoar terdeteksi</small></div>
+  </div>
+
+  <section class="box st1">
+    <h2>Tren akurasi <em>25 partai terakhir yang dianalisis</em></h2>
+    <svg class="chart" id="accChart" role="img" aria-label="Tren akurasi"></svg>
+  </section>
+
+  <section class="box st2">
+    <h2>Repertoar pembukaan <em>dari ECO di PGN Chess.com</em></h2>
+    ${buka.length ? `<div class="hbars">${buka.map(([n,v])=>{
+      const menangPct = Math.round(100*v.m/v.n);
+      const tone = menangPct>=55?"var(--ok)":menangPct>=40?"var(--warn)":"var(--no)";
+      return `<div class="hbar" style="--tone:${tone}">
+        <span class="n" title="${n}">${n}</span>
+        <span class="t"><i data-w="${Math.round(100*v.n/maxN)}%"></i></span>
+        <span class="v">${v.n}\u00d7</span></div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--soft);margin:-4px 0 8px 119px">
+        menang ${menangPct}% (${v.m}M / ${v.k}K)</div>`;
+    }).join("")}</div>` : `<div class="empty">Belum ada partai dengan data pembukaan.</div>`}
+  </section>
+
+  <section class="box st3">
+    <h2>Distribusi kontrol waktu <em>bullet = alarm</em></h2>
+    <div class="hbars">${Object.entries(kelas).sort((a,b)=>b[1]-a[1]).map(([n,v])=>
+      `<div class="hbar" style="--tone:${n==="bullet"?"var(--no)":n==="rapid"?"var(--ok)":"var(--carbon)"}">
+        <span class="n">${n}</span><span class="t"><i data-w="${Math.round(100*v/maxK)}%"></i></span>
+        <span class="v">${v}</span></div>`).join("") || `<div class="empty">Belum ada partai.</div>`}</div>
+  </section>
+
+  <section class="box st4">
+    <h2>Riwayat rating</h2>
+    <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
+    <div class="legend" id="legend"></div>
+  </section>`;
+}
+
+function viewRencana(){
+  return `
+  <section class="box">
+    <h2>Tier kurikulum</h2>
+    <div class="pad">
+      <label>Tier saat ini</label>
+      <select id="tier"></select>
+      <div id="tierInfo" style="margin-top:12px"></div>
+    </div>
+  </section>
+  <section class="box st1">
+    <h2>Target harian <em>dipakai untuk verifikasi otomatis</em></h2>
+    <div class="pad">
+      <div class="fields">
+        <div><label>Puzzle / hari (Lichess — terverifikasi)</label><input type="number" id="tPuzzle" min="0"></div>
+        <div><label>Puzzle Rush / hari (Chess.com — 0 = mati)</label><input type="number" id="tRush" min="0"></div>
+        <div><label>Target skor Puzzle Rush</label><input type="number" id="tRushScore" min="0"></div>
+        <div><label>Partai rapid / hari</label><input type="number" id="tRapid" min="0"></div>
+        <div><label>Batas partai bullet / hari</label><input type="number" id="tBulletMax" min="0"></div>
+        <div><label>Batas total partai / hari (anti-tilt)</label><input type="number" id="tGameMax" min="0"></div>
+      </div>
+      <label>Tugas manual (satu per baris — dicentang pelatih/orang tua)</label>
+      <textarea id="tManual" style="font-family:var(--mono);font-size:12px"></textarea>
+      <div class="btnrow"><button class="btn go" id="bTargets">Simpan target</button></div>
+    </div>
+  </section>`;
+}
+
+function viewPartai(){
+  return `<section class="box"><h2>Partai terakhir <em>Chess.com</em></h2><div id="games"></div></section>`;
+}
+
+function viewAtur(){
+  return `
+  <section class="box">
+    <h2>Sambungan</h2>
+    <div class="pad">
+      <div class="fields">
+        <div><label>Nama anak</label><input id="cName"></div>
+        <div><label>Zona waktu</label><input id="cTz" disabled></div>
+        <div><label>Username Chess.com (partai)</label><input id="cChess" autocapitalize="off"></div>
+        <div><label>Username Lichess (puzzle)</label><input id="cLichess" autocapitalize="off"></div>
+      </div>
+      <label>URL Web App Apps Script (pencatat harian otomatis)</label>
+      <input id="cGs" autocapitalize="off" placeholder="https://script.google.com/macros/s/…/exec">
+      <label>Proxy CORS (hanya jika tarik langsung gagal)</label>
+      <input id="cProxy" autocapitalize="off">
+      <div class="btnrow">
+        <button class="btn go" id="bFetch">Tarik data</button>
+        <button class="btn" id="bExport">Ekspor JSON</button>
+        <button class="btn" id="bReset" style="color:var(--no)">Hapus semua</button>
+      </div>
+      <div id="fetchLog" style="margin-top:12px"></div>
+    </div>
+  </section>
+  <section class="box st1">
+    <h2>Batas kejujuran alat ini</h2>
+    <div class="pad" style="font-size:13px;line-height:1.6">
+      <p style="margin-bottom:8px"><b>Terverifikasi:</b> jumlah puzzle harian (Lichess), semua partai + hasil + rating + akurasi (Chess.com), deret kekalahan, volume bermain.</p>
+      <p style="margin-bottom:8px"><b>Tidak terlihat sama sekali:</b> pelajaran/video, waktu layar, latihan papan fisik, apakah anak dibantu mesin. Tugas manual ada untuk menutup celah ini — dan hanya sekuat kejujuran anak.</p>
+      <p><b>Chess.com tidak menyimpan riwayat</b> rating taktik maupun Puzzle Rush. Aplikasi ini yang mencatatnya. Hari yang tidak dibuka, tidak tercatat — kecuali Apps Script terpasang.</p>
+    </div>
+  </section>`;
+}
+
+/* ═══════════ RENDER BERSAMA ═══════════ */
+function renderTodos(){
+  const dk = todayKey();
+  const el = $("#todos"); if(!el) return;
+  const q = buildQuests();
+  if(!S.cfg.chess && !S.cfg.lichess && !S.cfg.gs){ el.innerHTML = `<div class="empty">Sambungkan akun dulu di Pengaturan.</div>`; return; }
+  el.innerHTML = q.map((x,i) => {
     const pct = x.goal ? Math.min(100, Math.round(100 * (x.invert ? (x.ok?1:0) : x.now/x.goal))) : 0;
-    const prog = x.auto ? (x.invert ? `${x.now}/${x.goal}` : `${x.now}/${x.goal}`) : "";
-    return `<div class="task ${x.ok?"done":""} ${x.auto&&x.ok?"auto":""}" data-m="${x.auto?"":x.idx}">
-      <span class="mark" role="checkbox" aria-checked="${x.ok}" aria-disabled="${x.auto}"
-        ${x.auto?"":`tabindex="0" data-toggle="${x.idx}"`}>${x.ok?"\u2713":""}</span>
-      <span class="t">${x.t}
-        <small class="${x.auto?"src":""}">${x.src}</small>
-        ${x.auto && !x.invert ? `<span class="bar"><i style="width:${pct}%"></i></span>` : ""}
-      </span>
-      <span class="prog" style="color:${x.ok?"var(--ok)":"var(--soft)"}">${prog}</span>
+    return `<div class="todo ${x.ok?"done":""} ${x.auto?"auto":""}" style="animation-delay:${.04*i}s">
+      <span class="mark" role="checkbox" aria-checked="${x.ok}" aria-disabled="${x.auto || S.role==='anak'}"
+        ${(x.auto || S.role==='anak')?"":`tabindex="0" data-toggle="${x.idx}"`}>${x.ok?"\u2713":""}</span>
+      <span class="t">${x.t}<small class="${x.auto?"src":""}">${x.src}</small>
+        ${x.auto && !x.invert ? `<span class="bar"><i data-w="${pct}%"></i></span>` : ""}</span>
+      <span class="prog" style="color:${x.ok?"var(--ok)":"var(--soft)"}">${x.auto?`${x.now}/${x.goal}`:""}</span>
     </div>`;
   }).join("");
   $$("[data-toggle]").forEach(b => {
     const go = () => {
-      const i = b.dataset.toggle;
       S.checks[dk] = S.checks[dk] || {};
-      S.checks[dk]["m"+i] = !S.checks[dk]["m"+i];
-      persist(); renderQuests(); renderKPIs();
+      S.checks[dk]["m"+b.dataset.toggle] = !S.checks[dk]["m"+b.dataset.toggle];
+      persist(); render();
     };
     b.onclick = go;
     b.onkeydown = e => { if(e.key===" "||e.key==="Enter"){ e.preventDefault(); go(); } };
   });
-  // anak & ortu tidak boleh mencentang tugas manual? -> ortu boleh, anak tidak
-  if(S.role === "anak") $$("[data-toggle]").forEach(b => { b.onclick=null; b.style.cursor="default"; b.setAttribute("aria-disabled","true"); });
 }
 
 function renderKPIs(){
-  const dk = todayKey();
-  const q = buildQuests();
-  const done = q.filter(x=>x.ok).length;
+  const el = $("#kpis"); if(!el) return;
+  const dk = todayKey(), T = targets();
+  const q = buildQuests(), done = q.filter(x=>x.ok).length;
   const pct = q.length ? Math.round(100*done/q.length) : 0;
-  const pz = puzzlesOn(dk), g = gamesOn(dk);
-  const ls = losingStreakToday();
-  const R = rushToday();
-
+  const pz = puzzlesOn(dk), g = gamesOn(dk), ls = losingStreakToday(), R = rushToday();
   const L = S.data && S.data.lichess ? S.data.lichess.prof : null;
   const C = S.data && S.data.chess ? S.data.chess.stats : null;
-  const lrapid = L && L.perfs && L.perfs.rapid ? L.perfs.rapid.rating : null;
-  const lpuz  = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
+  const lpuz = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
   const crapid = C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : null;
-  const ctac   = C && C.tactics && C.tactics.highest ? C.tactics.highest.rating : null;
+  const lrapid = L && L.perfs && L.perfs.rapid ? L.perfs.rapid.rating : null;
 
   const cards = [
-    { b: pct + "%", i:"kepatuhan hari ini", small: `${done}/${q.length} tugas`, alert: pct < 60 },
-    { b: R.attempts, i:"puzzle rush hari ini", small: R.attempts ? `skor ${R.score}` : "belum dikerjakan", alert: R.attempts === 0 },
-    { b: g.total, i:"partai hari ini", small: Object.entries(g.byClass).map(([k,v])=>`${k} ${v}`).join(" · ") || "—" },
-    { b: ls, i:"deret kalah beruntun", small: ls>=3?"hentikan sesi":"aman", alert: ls>=3 },
-    { b: crapid || lrapid || "—", i:"rating rapid", small: crapid?"Chess.com":(lrapid?"Lichess":"—") },
-    { b: ctac || lpuz || "\u2014", i:"rating taktik tertinggi",
-      small: newTacticsRecordToday() ? "REKOR BARU HARI INI" : (ctac?"Chess.com":(lpuz?"Lichess":"\u2014")) },
+    { v:pct, suf:"%", i:"kepatuhan hari ini", s:`${done}/${q.length} tugas`,
+      tone: pct>=75?TONE.ok : pct>=40?TONE.warn : TONE.no },
+    { v:pz, i:"puzzle hari ini", s: S.cfg.lichess ? `target ${T.puzzle}` : "butuh Lichess",
+      tone: T.puzzle && pz>=T.puzzle ? TONE.ok : TONE.warn },
+    { v:g.total, i:"partai hari ini", s: Object.entries(g.byClass).map(([k,v])=>`${k} ${v}`).join(" \u00b7 ") || "\u2014",
+      tone: g.total>T.gameMax ? TONE.no : TONE.teal },
+    { v:ls, i:"kalah beruntun", s: ls>=3?"HENTIKAN SESI":"aman", tone: ls>=3?TONE.no:TONE.ok },
+    { v:crapid||lrapid||0, i:"rating rapid", s: crapid?"Chess.com":(lrapid?"Lichess":"\u2014"), tone:TONE.sky, raw:!crapid&&!lrapid },
+    { v:lpuz||0, i:"rating puzzle", s: lpuz?"Lichess":"\u2014", tone:TONE.carbon, raw:!lpuz },
   ];
-  $("#kpis").innerHTML = cards.map(c=>`
-    <div class="kpi ${c.alert?"alert":""}"><b>${c.b}</b><i>${c.i}</i>${c.small?`<small>${c.small}</small>`:""}</div>`).join("");
+  if(T.rush > 0 || R.attempts > 0)
+    cards.splice(2, 0, { v:R.attempts, i:"puzzle rush", s:R.attempts?`skor ${R.score}`:"belum", tone:TONE.gold });
+
+  el.innerHTML = cards.map((c,i)=>`<div class="kpi" style="--tone:${c.tone};animation-delay:${.04*i}s">
+    <b data-to="${c.v}" data-suf="${c.suf||""}">${c.raw?"\u2014":"0"}</b><i>${c.i}</i><small>${c.s}</small></div>`).join("");
+  $$("#kpis b[data-to]").forEach(b => { if(b.textContent !== "\u2014") countUp(b, +b.dataset.to, b.dataset.suf); });
 }
 
 function renderAlerts(){
+  const el = $("#alerts"); if(!el) return;
   const dk = todayKey(), T = targets();
-  const g = gamesOn(dk), pz = puzzlesOn(dk), ls = losingStreakToday();
+  const g = gamesOn(dk), pz = puzzlesOn(dk), ls = losingStreakToday(), R = rushToday();
   const A = [];
+  const jam = new Date().getHours();
 
-  if(ls >= 3) A.push(["no","TILT", `Kalah ${ls} partai beruntun hari ini. Hentikan sesi. Bermain terus setelah 3 kekalahan hampir selalu memperburuk rating dan mood.`]);
-  if(g.byClass.bullet > T.bulletMax) A.push(["no","BULLET", `${g.byClass.bullet} partai bullet hari ini (batas ${T.bulletMax}). Bullet melatih refleks, bukan kalkulasi — bertentangan dengan target tier ini.`]);
-  if(g.total > T.gameMax) A.push(["warn","VOLUME", `${g.total} partai hari ini, melewati batas ${T.gameMax}. Kuantitas tanpa analisis tidak menaikkan rating.`]);
-  const R = rushToday();
-  if(S.cfg.chess && R.attempts === 0 && new Date().getHours() >= 19) A.push(["warn","PUZZLE RUSH", "Puzzle Rush belum dikerjakan hari ini dan sudah lewat jam 19."]);
-  if(S.cfg.chess && R.attempts > 0 && T.rushScore && R.score < T.rushScore) A.push(["warn","SKOR RUSH", `Skor Puzzle Rush hari ini ${R.score}, di bawah target ${T.rushScore}. Skor turun biasanya berarti mengerjakan sambil terburu-buru atau lelah.`]);
-  if(newTacticsRecordToday()) A.push(["ok","REKOR", "Rekor rating taktik baru tercatat hari ini."]);
-  if(S.cfg.lichess && pz === 0 && new Date().getHours() >= 19) A.push(["warn","PUZZLE", "Belum ada puzzle Lichess hari ini dan sudah lewat jam 19."]);
-  if(g.total === 0 && pz === 0 && R.attempts === 0) A.push(["warn","SEPI", "Tidak ada aktivitas terdeteksi hari ini sama sekali."]);
+  if(ls >= 3) A.push(["no","TILT",`Kalah ${ls} partai beruntun hari ini. Hentikan sesi. Bermain terus setelah tiga kekalahan hampir selalu memperburuk rating dan suasana hati.`]);
+  if(g.byClass.bullet > T.bulletMax) A.push(["no","BULLET",`${g.byClass.bullet} partai bullet (batas ${T.bulletMax}). Bullet melatih refleks, bukan kalkulasi.`]);
+  if(g.total > T.gameMax) A.push(["warn","VOLUME",`${g.total} partai hari ini, melewati batas ${T.gameMax}. Kuantitas tanpa analisis tidak menaikkan rating.`]);
+  if(S.cfg.lichess && T.puzzle>0 && pz < T.puzzle && jam >= 19)
+    A.push([pz===0?"no":"warn","PUZZLE",`Puzzle hari ini ${pz}/${T.puzzle} dan sudah lewat jam 19.`]);
+  if(S.cfg.chess && T.rush>0 && R.attempts===0 && jam >= 19) A.push(["warn","RUSH","Puzzle Rush belum dikerjakan dan sudah lewat jam 19."]);
+  if(newTacticsRecordToday()) A.push(["ok","REKOR","Rekor rating taktik baru tercatat hari ini."]);
+  if(g.total===0 && pz===0 && R.attempts===0) A.push(["warn","SEPI","Tidak ada aktivitas terdeteksi hari ini."]);
 
-  // akurasi turun (chess.com)
-  const recent = (S.data&&S.data.chess?S.data.chess.games:[]).slice(-10).map(chessResultFor).filter(x=>x.acc!=null);
-  if(recent.length >= 5){
-    const avg = recent.reduce((a,b)=>a+b.acc,0)/recent.length;
-    if(avg < 70) A.push(["warn","AKURASI", `Akurasi rata-rata 10 partai terakhir: ${avg.toFixed(1)}%. Di bawah 70% biasanya berarti bermain terlalu cepat untuk kontrol waktunya.`]);
-    else A.push(["ok","AKURASI", `Akurasi rata-rata 10 partai terakhir: ${avg.toFixed(1)}%.`]);
+  const G = (S.data && S.data.chess ? S.data.chess.games : []).map(chessResultFor).filter(x=>x.acc!=null).slice(-10);
+  if(G.length >= 5){
+    const avg = G.reduce((a,b)=>a+b.acc,0)/G.length;
+    A.push([avg<70?"warn":"ok","AKURASI",`Rata-rata 10 partai terakhir: ${avg.toFixed(1)}%.` +
+      (avg<70?" Di bawah 70% biasanya berarti bermain terlalu cepat untuk kontrol waktunya.":"")]);
   }
   if(!A.length) A.push(["ok","AMAN","Tidak ada tanda bahaya hari ini."]);
-
-  $("#alerts").innerHTML = A.map(([k,tag,msg])=>`
-    <div class="alert-row ${k}"><b>${tag}</b><span>${msg}</span></div>`).join("");
+  el.innerHTML = A.map(([k,t,m],i)=>`<div class="alert-row ${k}" style="animation-delay:${.04*i}s">
+    <b>${t}</b><span>${m}</span></div>`).join("");
 }
 
-/* ═══════════ perkembangan ═══════════ */
-function ratingSeries(){
-  const out = [];
-  const L = S.data && S.data.lichess;
-  if(L && L.hist){
-    L.hist.filter(h=>["Rapid","Blitz","Puzzles"].includes(h.name) && h.points.length)
-      .forEach((h,i)=>{
-        out.push({ name:"Lichess "+h.name, color:["#5B4E8C","#2F6B4F","#B07A1E"][i%3],
-          pts: h.points.map(p=>({ t: Date.UTC(p[0], p[1], p[2]), v: p[3] })) });
-      });
-  }
-  const snapDays = Object.keys(S.snaps).sort();
-  if(snapDays.length > 1){
-    const tac = snapDays.filter(d=>S.snaps[d].tacticsHigh).map(d=>({t:new Date(d).getTime(), v:S.snaps[d].tacticsHigh}));
-    if(tac.length > 1) out.push({ name:"Chess.com taktik (tertinggi)", color:"#B07A1E", pts:tac });
-  }
-  const C = S.data && S.data.chess;
-  if(C && C.games.length){
-    const byClass = {};
-    C.games.forEach(g=>{
-      const r = chessResultFor(g);
-      (byClass[g.time_class] = byClass[g.time_class] || []).push({ t:ms(g.end_time), v:r.rating });
-    });
-    Object.entries(byClass).filter(([k,v])=>["rapid","blitz"].includes(k) && v.length>1)
-      .forEach(([k,v],i)=> out.push({ name:"Chess.com "+k, color:["#A8372A","#1B2130"][i%2], pts:v }));
-  }
-  return out;
+function renderNotes(){
+  const dk = todayKey();
+  const list = S.notes[dk] || [];
+  const isi = list.length
+    ? list.map((n,i)=>`<div class="note" style="animation-delay:${.05*i}s"><b>${new Date(n.t).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</b>${n.text.replace(/</g,"&lt;")}</div>`).join("")
+    : `<div class="empty" style="padding:0">Belum ada catatan hari ini.</div>`;
+  const a = $("#noteList"), b = $("#noteAnak");
+  if(a) a.innerHTML = isi;
+  if(b) b.innerHTML = isi;
+  const bn = $("#bNote");
+  if(bn) bn.onclick = async () => {
+    const v = $("#noteInput").value.trim(); if(!v) return;
+    (S.notes[dk] = S.notes[dk] || []).push({ t:Date.now(), text:v });
+    $("#noteInput").value = ""; await persist(); renderNotes();
+  };
 }
-function renderChart(){
-  const series = ratingSeries();
-  const svg = $("#chart"), H=190, P=34;
-  // Lebar mengikuti layar. Kalau dipaksa 760px lalu diregangkan, teks dan garis
-  // ikut gepeng di HP. Ini bukan soal estetika: angka rating jadi tak terbaca.
-  const W = Math.max(300, Math.round(svg.getBoundingClientRect().width) || 760);
+
+function renderChart(id, series, sumbuPersen){
+  const svg = $("#"+id); if(!svg) return;
+  const H = 200, P = 36;
+  const W = Math.max(300, Math.round(svg.getBoundingClientRect().width) || 700);
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-  if(!series.length){ svg.innerHTML = `<text x="20" y="100" font-family="Space Mono" font-size="12" fill="#5D6473">Belum ada data rating.</text>`; $("#legend").innerHTML=""; return; }
+  if(!series.length){
+    svg.innerHTML = `<text x="16" y="${H/2}" font-family="Space Mono" font-size="12" fill="#5D6473">Belum ada data.</text>`;
+    const lg = $("#legend"); if(lg) lg.innerHTML = ""; return;
+  }
   const all = series.flatMap(s=>s.pts);
   const t0 = Math.min(...all.map(p=>p.t)), t1 = Math.max(...all.map(p=>p.t));
-  const v0 = Math.min(...all.map(p=>p.v)) - 20, v1 = Math.max(...all.map(p=>p.v)) + 20;
-  const X = t => P + (W-P-8) * (t1===t0 ? .5 : (t-t0)/(t1-t0));
-  const Y = v => H-22 - (H-22-10) * (v1===v0 ? .5 : (v-v0)/(v1-v0));
+  let v0 = Math.min(...all.map(p=>p.v)), v1 = Math.max(...all.map(p=>p.v));
+  const pad = Math.max(15, (v1-v0)*0.15); v0 -= pad; v1 += pad;
+  if(sumbuPersen){ v0 = Math.max(0, v0); v1 = Math.min(100, v1); }
+  const X = t => P + (W-P-10) * (t1===t0 ? .5 : (t-t0)/(t1-t0));
+  const Y = v => H-24 - (H-24-12) * (v1===v0 ? .5 : (v-v0)/(v1-v0));
   let g = "";
   for(let i=0;i<4;i++){
     const v = v0 + (v1-v0)*i/3;
-    g += `<line x1="${P}" y1="${Y(v)}" x2="${W-8}" y2="${Y(v)}" stroke="#C3C7BA" stroke-width="1"/>
-          <text x="2" y="${Y(v)+3}" font-family="Space Mono" font-size="9" fill="#5D6473">${Math.round(v)}</text>`;
+    g += `<line x1="${P}" y1="${Y(v).toFixed(1)}" x2="${W-10}" y2="${Y(v).toFixed(1)}" stroke="#C3C7BA"/>
+          <text x="2" y="${(Y(v)+3).toFixed(1)}" font-family="Space Mono" font-size="9" fill="#5D6473">${Math.round(v)}${sumbuPersen?"%":""}</text>`;
   }
-  series.forEach(s=>{
+  series.forEach((s,si)=>{
     const pts = s.pts.slice().sort((a,b)=>a.t-b.t);
     const d = pts.map((p,i)=>`${i?"L":"M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
-    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    const len = 3000;
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"
+            stroke-dasharray="${len}" stroke-dashoffset="${len}">
+            <animate attributeName="stroke-dashoffset" from="${len}" to="0" dur="1.1s" begin="${si*.15}s" fill="freeze"/>
+          </path>`;
+    const last = pts[pts.length-1];
+    g += `<circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.v).toFixed(1)}" r="4" fill="${s.color}"/>`;
   });
   g += `<text x="${P}" y="${H-6}" font-family="Space Mono" font-size="9" fill="#5D6473">${new Date(t0).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</text>
-        <text x="${W-8}" y="${H-6}" text-anchor="end" font-family="Space Mono" font-size="9" fill="#5D6473">${new Date(t1).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</text>`;
+        <text x="${W-10}" y="${H-6}" text-anchor="end" font-family="Space Mono" font-size="9" fill="#5D6473">${new Date(t1).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</text>`;
   svg.innerHTML = g;
-  $("#legend").innerHTML = series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+  const lg = $("#legend");
+  if(lg) lg.innerHTML = series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
 }
+
 function renderStrip(){
+  const el = $("#strip"); if(!el) return;
   const days = [];
   for(let i=20;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dayKey(d)); }
   const rush = dk => (S.snaps[dk] ? S.snaps[dk].rushAttempts : 0);
   const vals = days.map(dk => puzzlesOn(dk) + rush(dk) + gamesOn(dk).total*3);
   const max = Math.max(1, ...vals);
-  $("#strip").innerHTML = days.map((dk,i)=>{
+  el.innerHTML = days.map((dk,i)=>{
     const lv = vals[i]===0 ? 0 : Math.ceil(4*vals[i]/max);
-    const d = new Date(dk);
-    return `<div><div class="cell l${lv}" title="${dk}: ${rush(dk)} rush, ${puzzlesOn(dk)} puzzle Lichess, ${gamesOn(dk).total} partai"></div>${d.getDate()}</div>`;
+    return `<div><div class="cell l${lv}" title="${dk}: ${puzzlesOn(dk)} puzzle, ${gamesOn(dk).total} partai"></div>${new Date(dk).getDate()}</div>`;
   }).join("");
 }
+
 function renderSummary(){
+  const el = $("#summary"); if(!el) return;
   const C = S.data && S.data.chess, L = S.data && S.data.lichess;
   const rows = [];
+  if(L && L.prof){
+    const p = L.prof.perfs || {};
+    if(p.puzzle) rows.push(["Rating puzzle (Lichess)", `${p.puzzle.rating} \u00b7 ${p.puzzle.games} puzzle`]);
+    if(p.rapid)  rows.push(["Rapid (Lichess)", `${p.rapid.rating} \u00b7 ${p.rapid.games} partai`]);
+  }
   if(C){
     const R = C.games.map(chessResultFor);
-    const w = R.filter(r=>r.res==="M").length, l = R.filter(r=>r.res==="K").length, d = R.filter(r=>r.res==="R").length;
-    const acc = R.filter(r=>r.acc!=null);
-    rows.push(["Chess.com — total partai terarsip", `${R.length} (${w}M / ${d}R / ${l}K)`]);
-    if(acc.length) rows.push(["Chess.com — akurasi rata-rata", (acc.reduce((a,b)=>a+b.acc,0)/acc.length).toFixed(1)+"%"]);
-    if(C.stats.puzzle_rush && C.stats.puzzle_rush.best) rows.push(["Puzzle Rush terbaik", C.stats.puzzle_rush.best.score]);
-    if(C.stats.tactics && C.stats.tactics.highest) rows.push(["Rating taktik tertinggi", C.stats.tactics.highest.rating]);
+    const w = R.filter(x=>x.res==="M").length, l = R.filter(x=>x.res==="K").length, d = R.filter(x=>x.res==="R").length;
+    if(R.length) rows.push(["Partai (Chess.com)", `${R.length} \u00b7 ${w}M / ${d}R / ${l}K`]);
+    if(C.stats && C.stats.chess_rapid && C.stats.chess_rapid.last) rows.push(["Rapid (Chess.com)", C.stats.chess_rapid.last.rating]);
+    if(C.stats && C.stats.tactics && C.stats.tactics.highest) rows.push(["Taktik tertinggi (Chess.com)", C.stats.tactics.highest.rating]);
   }
-  if(L){
-    const p = L.prof.perfs || {};
-    if(p.puzzle) rows.push(["Lichess — rating puzzle", `${p.puzzle.rating} (${p.puzzle.games} puzzle total)`]);
-    if(p.rapid)  rows.push(["Lichess — rapid", `${p.rapid.rating} (${p.rapid.games} partai)`]);
-    if(L.prof.playTime) rows.push(["Lichess — total waktu main", (L.prof.playTime.total/3600).toFixed(1)+" jam"]);
-    const days = (L.act||[]).length;
-    rows.push(["Lichess — hari aktif tercatat", days]);
-  }
-  if(!rows.length){ $("#summary").innerHTML = `<div class="empty">Belum ada data.</div>`; return; }
-  $("#summary").innerHTML = `<table>${rows.map(([a,b])=>`<tr><td style="font-family:var(--sans);font-size:13px">${a}</td><td style="text-align:right;font-weight:700">${b}</td></tr>`).join("")}</table>`;
+  rows.push(["Runtun hari aktif", streakHari()]);
+  el.innerHTML = rows.length
+    ? `<table>${rows.map(([a,b])=>`<tr><td style="font-family:var(--sans);font-size:13px">${a}</td><td style="text-align:right;font-weight:700">${b}</td></tr>`).join("")}</table>`
+    : `<div class="empty">Belum ada data.</div>`;
 }
 
-/* ═══════════ partai ═══════════ */
 function renderGames(){
+  const el = $("#games"); if(!el) return;
   const C = S.data && S.data.chess;
-  if(!C || !C.games.length){ $("#games").innerHTML = `<div class="empty">Belum ada partai Chess.com. (Riwayat partai per-partai hanya tersedia dari Chess.com; Lichess di sini hanya diringkas per hari.)</div>`; return; }
+  if(!C || !C.games.length){ el.innerHTML = `<div class="empty">Belum ada partai Chess.com.</div>`; return; }
   const rows = C.games.slice().sort((a,b)=>b.end_time-a.end_time).slice(0,50).map(g=>{
     const r = chessResultFor(g);
     const cls = r.res==="M"?"w":r.res==="K"?"l":"d";
     return `<tr>
       <td>${new Date(ms(g.end_time)).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"})}</td>
-      <td>${g.time_class}</td>
-      <td>${r.opp.username} <span style="color:var(--soft)">${r.opp.rating}</span></td>
-      <td class="${cls}">${r.res}</td>
-      <td>${r.rating}</td>
-      <td>${r.acc!=null?r.acc.toFixed(1)+"%":"—"}</td>
-      <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--carbon)">buka</a></td>
-    </tr>`;
+      <td>${g.time_class}</td><td>${r.opp.username} <span style="color:var(--soft)">${r.opp.rating}</span></td>
+      <td class="${cls}">${r.res}</td><td>${r.rating}</td>
+      <td>${r.acc!=null?r.acc.toFixed(1)+"%":"\u2014"}</td>
+      <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">buka</a></td></tr>`;
   }).join("");
-  $("#games").innerHTML = `<table>
-    <tr><th>Tgl</th><th>Kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
+  el.innerHTML = `<table><tr><th>Tgl</th><th>Kontrol</th><th>Lawan</th><th>Hasil</th><th>Rating</th><th>Akurasi</th><th></th></tr>${rows}</table>`;
 }
 
-/* ═══════════ catatan ═══════════ */
-function renderNotes(){
-  const dk = todayKey();
-  const list = S.notes[dk] || [];
-  $("#noteList").innerHTML = list.length
-    ? list.map(n=>`<div class="note"><b>${new Date(n.t).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</b>${n.text.replace(/</g,"&lt;")}</div>`).join("")
-    : `<div class="empty" style="padding:0 0 8px">Belum ada catatan hari ini.</div>`;
-  const editable = S.role !== "anak";
-  $("#noteInput").classList.toggle("hide", !editable);
-  $("#bNote").classList.toggle("hide", !editable);
-}
-
-/* ═══════════ rencana ═══════════ */
 function renderPlan(){
-  $("#tier").innerHTML = TIERS.map(t=>`<option value="${t.id}" ${t.id===S.tier?"selected":""}>${t.nama} · ${t.rating} · ${t.usia}</option>`).join("");
+  const sel = $("#tier"); if(!sel) return;
+  sel.innerHTML = TIERS.map(t=>`<option value="${t.id}" ${t.id===S.tier?"selected":""}>${t.nama} \u00b7 ${t.rating} \u00b7 ${t.usia}</option>`).join("");
   const t = tier();
-  $("#tierInfo").innerHTML = `
-    <div class="note"><b>Fokus latihan</b>${t.fokus}</div>
-    <div class="note"><b>Metode evaluasi pelatih</b>${t.evaluasi}</div>`;
+  $("#tierInfo").innerHTML = `<div class="note"><b>Fokus latihan</b>${t.fokus}</div>
+    <div class="note" style="animation-delay:.05s"><b>Metode evaluasi pelatih</b>${t.evaluasi}</div>`;
   const T = targets();
-  $("#tRush").value = T.rush || 0; $("#tRushScore").value = T.rushScore || 0;
-  $("#tPuzzle").value = T.puzzle; $("#tRapid").value = T.rapid;
-  $("#tBulletMax").value = T.bulletMax; $("#tGameMax").value = T.gameMax;
+  $("#tPuzzle").value = T.puzzle; $("#tRush").value = T.rush||0; $("#tRushScore").value = T.rushScore||0;
+  $("#tRapid").value = T.rapid; $("#tBulletMax").value = T.bulletMax; $("#tGameMax").value = T.gameMax;
   $("#tManual").value = manualTasks().join("\n");
+  sel.onchange = async e => { S.tier = +e.target.value; S.targets = null; S.manual = null; await persist(); render(); };
+  $("#bTargets").onclick = async () => {
+    S.targets = { puzzle:+$("#tPuzzle").value||0, rush:+$("#tRush").value||0, rushScore:+$("#tRushScore").value||0,
+      rapid:+$("#tRapid").value||0, bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0 };
+    S.manual = $("#tManual").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    await persist(); render();
+  };
 }
 
-/* ═══════════ render utama ═══════════ */
-function renderAll(){
-  $("#sub").textContent = (S.cfg.name ? S.cfg.name.toUpperCase() + " · " : "") +
-    (S.fetchedAt ? "DATA " + new Date(S.fetchedAt).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "BELUM ADA DATA");
-  $("#setupHint").classList.toggle("hide", !!(S.cfg.chess || S.cfg.lichess));
-  renderKPIs(); renderQuests(); renderAlerts();
-  renderChart(); renderStrip(); renderSummary(); renderGames(); renderNotes(); renderPlan();
-  $("#noteBox").classList.toggle("hide", S.role === "anak" && !(S.notes[todayKey()]||[]).length);
-}
-
-/* ═══════════ event ═══════════ */
-$$("nav button").forEach(b => b.onclick = () => {
-  S.tab = b.dataset.tab;
-  $$("nav button").forEach(x=>x.classList.toggle("on", x===b));
-  ["hari","perkembangan","partai","rencana","atur"].forEach(t =>
-    $("#tab-"+t).classList.toggle("hide", t !== S.tab));
-});
-$$(".who button").forEach(b => b.onclick = () => {
-  S.role = b.dataset.role;
-  $$(".who button").forEach(x=>x.classList.toggle("on", x===b));
-  persist(); renderAll();
-});
-$("#bFetch").onclick = async () => {
-  S.cfg.name = $("#cName").value.trim();
-  S.cfg.chess = $("#cChess").value.trim();
-  S.cfg.lichess = $("#cLichess").value.trim();
-  S.cfg.proxy = $("#cProxy").value.trim();
-  S.cfg.gs = $("#cGs").value.trim();
-  await persist();
-  await fetchAll();
-};
-$("#bTargets").onclick = async () => {
-  S.targets = { rush:+$("#tRush").value||0, rushScore:+$("#tRushScore").value||0,
-                puzzle:+$("#tPuzzle").value||0, rapid:+$("#tRapid").value||0,
-                bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0 };
-  S.manual = $("#tManual").value.split("\n").map(s=>s.trim()).filter(Boolean);
-  await persist(); renderAll();
-};
-$("#tier").onchange = async e => {
-  S.tier = +e.target.value; S.targets = null; S.manual = null;
-  await persist(); renderAll();
-};
-$("#bNote").onclick = async () => {
-  const v = $("#noteInput").value.trim(); if(!v) return;
-  const dk = todayKey();
-  (S.notes[dk] = S.notes[dk] || []).push({ t:Date.now(), text:v });
-  $("#noteInput").value = "";
-  await persist(); renderNotes();
-};
-$("#bExport").onclick = () => {
-  const blob = new Blob([JSON.stringify(S,null,1)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = `rtgm-pantau-${todayKey()}.json`; a.click();
-};
-$("#bReset").onclick = async () => {
-  if(!confirm("Hapus semua pengaturan, catatan, dan data? Tidak bisa dibatalkan.")) return;
-  await Store.clear(); location.reload();
-};
-async function persist(){ await Store.save(S); }
-
-let _rz; addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(renderChart, 200); });
-
-(async () => {
-  const saved = await Store.load();
-  if(saved) S = Object.assign(S, saved);
+function renderAtur(){
+  if(!$("#cName")) return;
   $("#cName").value = S.cfg.name; $("#cChess").value = S.cfg.chess;
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  $("#bFetch").onclick = async () => {
+    S.cfg.name = $("#cName").value.trim(); S.cfg.chess = $("#cChess").value.trim();
+    S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
+    S.cfg.gs = $("#cGs").value.trim();
+    await persist(); await fetchAll();
+  };
+  $("#bExport").onclick = () => {
+    const b = new Blob([JSON.stringify(S,null,1)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b); a.download = `rtgm-pantau-${todayKey()}.json`; a.click();
+  };
+  $("#bReset").onclick = async () => {
+    if(!confirm("Hapus semua pengaturan, catatan, dan data? Tidak bisa dibatalkan.")) return;
+    await Store.clear(); location.reload();
+  };
+}
+
+/* ═══════════ ORKESTRA ═══════════ */
+let sudahKonfeti = "";
+function render(){
+  document.body.dataset.role = S.role;
+  const tabs = TABS[S.role];
+  if(!tabs.some(t=>t[0]===S.tab)) S.tab = tabs[0][0];
+  $("#nav").innerHTML = tabs.map(([id,label])=>
+    `<button data-tab="${id}" class="${id===S.tab?"on":""}">${label}</button>`).join("");
+  $$("#nav button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; persist(); render(); });
+
+  const V = {
+    misi: viewMisi, progres: viewProgres,
+    hari: S.role==="pelatih" ? viewHariPelatih : viewHariOrtu,
+    minggu: viewMinggu, analisis: viewAnalisis, rencana: viewRencana,
+    partai: viewPartai, atur: viewAtur,
+  };
+  $("#view").innerHTML = V[S.tab]();
+
+  $("#sub").textContent = (S.cfg.name ? S.cfg.name.toUpperCase() + " \u00b7 " : "") +
+    (S.fetchedAt ? "DATA " + new Date(S.fetchedAt).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "BELUM ADA DATA");
+  const hint = $("#setupHint");
+  if(hint) hint.classList.toggle("hide", !!(S.cfg.chess || S.cfg.lichess || S.cfg.gs));
+  const qd = $("#questDate");
+  if(qd) qd.textContent = new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"});
+
+  renderTodos(); renderKPIs(); renderAlerts(); renderNotes();
+  renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur();
+  if($("#chart")) renderChart("chart", ratingSeries(), false);
+  if($("#accChart")) renderChart("accChart",
+    akurasiTren().length ? [{name:"Akurasi", color:"#1E8C7F", pts:akurasiTren()}] : [], true);
+
+  // rapor mingguan: angka menghitung naik
+  if(S.tab === "minggu"){
+    const W = last7();
+    countUp($("#wPatuh"), Math.round(W.reduce((a,b)=>a+b.patuh,0)/7), "%");
+    countUp($("#wAktif"), W.filter(w=>w.aktif).length);
+    countUp($("#wStreak"), streakHari());
+    countUp($("#wPz"), W.reduce((a,b)=>a+b.pz,0));
+  }
+  if(S.tab === "misi"){
+    const q = buildQuests(), done = q.filter(x=>x.ok).length;
+    const pct = q.length ? Math.round(100*done/q.length) : 0;
+    countUp($("#misiPct"), pct, "%");
+    const auto = q.filter(x=>x.auto);
+    const kunci = todayKey() + ":" + auto.filter(x=>x.ok).length;
+    if(auto.length && auto.every(x=>x.ok) && sudahKonfeti !== kunci){ sudahKonfeti = kunci; setTimeout(konfeti, 400); }
+  }
+  animateRings();
+}
+
+$$(".who button").forEach(b => b.onclick = () => {
+  S.role = b.dataset.role;
+  $$(".who button").forEach(x=>x.classList.toggle("on", x===b));
+  persist(); render();
+});
+async function persist(){ await Store.save(S); }
+let _rz; addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(render, 250); });
+
+function renderAll(){ render(); }   // dipanggil oleh fetchAll()
+
+(async () => {
+  const saved = await Store.load();
+  if(saved) S = Object.assign(S, saved);
   $$(".who button").forEach(x=>x.classList.toggle("on", x.dataset.role===S.role));
-  renderAll();
-  // auto-refresh kalau data lebih tua dari 15 menit
+  render();
   if((S.cfg.chess||S.cfg.lichess||S.cfg.gs) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
 })();
 </script>
