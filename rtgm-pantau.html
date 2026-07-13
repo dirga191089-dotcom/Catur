@@ -314,7 +314,7 @@ const TIERS = [
 
 /* ═══════════ status ═══════════ */
 let S = {
-  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"VarishaChess", proxy:"", gs:"https://script.google.com/macros/s/AKfycbyl6T5hbyNThNeJShu_4gpbxkHl5jibfFyoy1AWX9PKM3K423qUJfdkrqWZegbvBr1MYQ/exec" },
+  cfg:{ name:"Varisha", chess:"VarishaArbas", lichess:"VarishaChess", proxy:"", csv:"", gs:"https://script.google.com/macros/s/AKfycbyl6T5hbyNThNeJShu_4gpbxkHl5jibfFyoy1AWX9PKM3K423qUJfdkrqWZegbvBr1MYQ/exec" },
   tier:1,
   targets:null,
   manual:null,
@@ -385,11 +385,75 @@ function sebab(e, situs){
   return m;
 }
 
+/* Sheet yang diterbitkan lewat File > Share > Publish to web > CSV
+   disajikan Google dengan header CORS terbuka. Ia TIDAK PERNAH diblokir browser,
+   berbeda dengan endpoint /exec Apps Script yang mengalihkan ke halaman login
+   kalau aksesnya bukan "Anyone".
+
+   Pemetaan kolom memakai NAMA HEADER, bukan nomor kolom. Kalau saya menambah
+   kolom baru di Kode.gs nanti, ini tidak akan diam-diam salah baca. */
+function parseCSV(teks){
+  const baris = [];
+  let f = "", row = [], q = false;
+  for(let i=0;i<teks.length;i++){
+    const c = teks[i];
+    if(q){
+      if(c === '"'){ if(teks[i+1] === '"'){ f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if(c === '"') q = true;
+    else if(c === ","){ row.push(f); f = ""; }
+    else if(c === "\n"){ row.push(f); baris.push(row); row = []; f = ""; }
+    else if(c !== "\r") f += c;
+  }
+  if(f || row.length){ row.push(f); baris.push(row); }
+  return baris.filter(r => r.some(x => x !== ""));
+}
+function snapsDariCSV(teks){
+  const baris = parseCSV(teks);
+  if(baris.length < 2) return {};
+  const H = baris[0].map(x => x.trim().toLowerCase());
+  const kol = nama => H.findIndex(h => h.indexOf(nama) === 0);
+  const iTgl   = kol("tanggal"),
+        iPz    = kol("puzzle (lichess)"), iTot = kol("puzzle total"),
+        iRate  = kol("rating puzzle"),
+        iRushA = kol("rush percobaan"), iRushS = kol("rush skor"),
+        iTac   = kol("taktik tertinggi"), iRapid = kol("rating rapid"), iBlitz = kol("rating blitz"),
+        iPatuh = kol("kepatuhan"), iLang = kol("pelanggaran"), iStat = kol("status");
+  if(iTgl < 0) return {};
+  const n = (r,i) => (i >= 0 && r[i] !== "" && r[i] != null) ? Number(r[i]) : null;
+  const out = {};
+  baris.slice(1).forEach(r => {
+    const dk = (r[iTgl]||"").trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return;
+    out[dk] = {
+      puzzles: n(r,iPz) || 0, puzTotal: n(r,iTot), puzRating: n(r,iRate),
+      rushAttempts: n(r,iRushA) || 0, rushScore: n(r,iRushS) || 0,
+      tacticsHigh: n(r,iTac), rapid: n(r,iRapid), blitz: n(r,iBlitz),
+      kepatuhan: n(r,iPatuh), langgar: iLang >= 0 ? r[iLang] : "",
+      status: iStat >= 0 ? r[iStat] : "",
+    };
+  });
+  return out;
+}
+
 async function fetchAll(){
   logClear();
   const _el = $("#fetchLog");
   if(_el) _el.innerHTML = `<div class="alert-row"><b>\u2026</b><span><span class="spin"></span> menarik data\u2026</span></div>`;
   const out = { chess:null, lichess:null, errors:[] };
+
+  // Riwayat harian dari Sheet yang diterbitkan sebagai CSV. Tidak pernah kena CORS.
+  if(S.cfg.csv){
+    try{
+      const r = await fetch(S.cfg.csv.trim());
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const snaps = snapsDariCSV(await r.text());
+      const n = Object.keys(snaps).length;
+      if(!n) throw new Error("CSV terbaca tapi tidak ada baris tanggal yang sah. Pastikan yang diterbitkan adalah sheet 'Harian'.");
+      S.snaps = Object.assign({}, snaps, S.snaps);
+      logLine(`Sheet CSV: ${n} hari riwayat`, "");
+    }catch(e){ out.errors.push(["Sheet CSV", e.message]); }
+  }
 
   // Sumber utama: Apps Script. Ia sudah punya SELURUH riwayat harian —
   // termasuk hari-hari saat dasbor ini tidak pernah dibuka.
@@ -439,8 +503,17 @@ async function fetchAll(){
   }
 
   if(_el) _el.innerHTML = "";
-  if(!S.cfg.chess && !S.cfg.lichess && !S.cfg.gs){ logLine("Belum ada username yang diisi.", "no"); return; }
-  out.errors.forEach(([site,msg])=> logLine(`${site}: ${sebab(msg, site==="Lichess"?S.cfg.lichess:S.cfg.chess)}`, "no"));
+  if(!S.cfg.chess && !S.cfg.lichess && !S.cfg.gs && !S.cfg.csv){ logLine("Belum ada username yang diisi.", "no"); return; }
+  out.errors.forEach(([site,msg])=>{
+    if(site === "Apps Script" && /Failed to fetch|NetworkError|Load failed/i.test(String(msg))){
+      logLine("Apps Script: diblokir browser. Ini HAMPIR SELALU berarti deployment-nya belum " +
+        "\"Anyone\" \u2014 Google mengalihkan ke halaman login dan browser memblokir pengalihan itu. " +
+        "Perbaiki: Deploy \u2192 Manage deployments \u2192 \u270f\ufe0f \u2192 Who has access: Anyone. " +
+        "CATATAN: trigger harian & email TETAP jalan walau ini gagal \u2014 keduanya berjalan di server Google, bukan di browser.", "no");
+      return;
+    }
+    logLine(`${site}: ${sebab(msg, site==="Lichess"?S.cfg.lichess:S.cfg.chess)}`, "no");
+  });
   if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${out.chess.games.length} partai + ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
   else if(out.chess) logLine(`Chess.com langsung: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip`, out.chess.games.length ? "" : "warn");
   if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
@@ -851,6 +924,25 @@ async function ujiKoneksi(){
       hasil.push(["ok", nama, `${r.status} \u00b7 ${isi} \u00b7 ${ms2}ms`]);
       return d;
     }catch(e){
+      const m = String(e && e.message || e);
+      const diblokir = /Failed to fetch|NetworkError|Load failed/i.test(m);
+      if(nama === "Apps Script" && diblokir){
+        hasil.push(["no", nama,
+          "Diblokir browser. Karena Lichess dan Chess.com BERHASIL, ini bukan file:// dan bukan CORS umum \u2014 " +
+          "penyebabnya spesifik ke Apps Script. Hampir selalu: deployment-nya belum \"Anyone\". " +
+          "Google mengalihkan permintaan ke halaman login, dan browser memblokir pengalihan lintas-domain itu. " +
+          "Perbaiki: Deploy \u2192 Manage deployments \u2192 \u270f\ufe0f \u2192 Who has access: Anyone (BUKAN \"Anyone with Google account\"). " +
+          "Atau lewati sama sekali: terbitkan Sheet sebagai CSV dan isi kolom URL Sheet CSV di atas. " +
+          "CATATAN PENTING: trigger harian 23:00 dan email laporan TETAP BERJALAN walau ini gagal \u2014 " +
+          "keduanya jalan di server Google, bukan di browser."]);
+        return null;
+      }
+      if(nama === "Sheet CSV" && diblokir){
+        hasil.push(["no", nama,
+          "Diblokir. Pastikan Sheet benar-benar diterbitkan: File \u2192 Share \u2192 Publish to web \u2192 pilih sheet " +
+          "\"Harian\" \u2192 format CSV \u2192 Publish. URL-nya harus mengandung /pub? dan output=csv."]);
+        return null;
+      }
       hasil.push([wajib?"no":"warn", nama, sebab(e, "")]);
       return null;
     }
@@ -877,6 +969,11 @@ async function ujiKoneksi(){
             `Jumlah puzzle harian baru bisa dihitung mulai besok. Ini batas nyata alat ini, bukan bug \u2014 ` +
             `Lichess tidak menyimpan "berapa puzzle hari ini", hanya total seumur hidup.`]);
       const feed = puzzlesFromActivity(dk);
+      if(feed > total) hasil.push(["warn", "Angka tidak cocok",
+        `Feed melaporkan ${feed} puzzle hari ini, tapi penghitung total profil hanya ${total} seumur hidup. ` +
+        `Kedua angka ini jelas mengukur hal yang berbeda \u2014 kemungkinan besar penghitung profil hanya ` +
+        `mencatat puzzle yang mengubah rating. Aplikasi memakai angka yang LEBIH BESAR (${Math.max(feed,total)}), ` +
+        `jadi jumlah harian tetap benar. Tapi "total puzzle" di ringkasan akan terlihat terlalu kecil.`]);
       hasil.push([feed ? "ok" : "warn", "Feed aktivitas hari ini",
         feed ? `${feed} puzzle terbaca dari feed.` :
         "Feed melaporkan 0 puzzle hari ini. Lichess kadang terlambat memperbarui feed aktivitas \u2014 " +
@@ -890,6 +987,7 @@ async function ujiKoneksi(){
     await uji("Chess.com / arsip", `https://api.chess.com/pub/player/${u}/games/archives`, false);
   } else hasil.push(["warn","Chess.com","username kosong."]);
 
+  if(S.cfg.csv) await uji("Sheet CSV", S.cfg.csv.trim(), false);
   if(S.cfg.gs) await uji("Apps Script", S.cfg.gs.trim(), false);
 
   const gagalSemua = hasil.filter(h=>h[0]==="no").length === hasil.filter(h=>h[0]!=="warn").length && hasil.some(h=>h[0]==="no");
@@ -1152,7 +1250,9 @@ function viewAtur(){
         <div><label>Username Chess.com (partai)</label><input id="cChess" autocapitalize="off"></div>
         <div><label>Username Lichess (puzzle)</label><input id="cLichess" autocapitalize="off"></div>
       </div>
-      <label>URL Web App Apps Script (pencatat harian otomatis)</label>
+      <label>URL Sheet CSV (File \u2192 Share \u2192 Publish to web \u2192 sheet "Harian" \u2192 CSV)</label>
+      <input id="cCsv" autocapitalize="off" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&single=true&output=csv">
+      <label>URL Web App Apps Script (opsional \u2014 butuh akses "Anyone")</label>
       <input id="cGs" autocapitalize="off" placeholder="https://script.google.com/macros/s/…/exec">
       <label>Proxy CORS (hanya jika tarik langsung gagal)</label>
       <input id="cProxy" autocapitalize="off">
@@ -1402,11 +1502,12 @@ function renderAtur(){
   $("#cName").value = S.cfg.name; $("#cChess").value = S.cfg.chess;
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
+  $("#cCsv").value = S.cfg.csv || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $("#bFetch").onclick = async () => {
     S.cfg.name = $("#cName").value.trim(); S.cfg.chess = $("#cChess").value.trim();
     S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
-    S.cfg.gs = $("#cGs").value.trim();
+    S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
     await persist(); await fetchAll();
   };
   $("#bExport").onclick = () => {
@@ -1421,7 +1522,7 @@ function renderAtur(){
   $("#bTest").onclick = () => {
     S.cfg.lichess = $("#cLichess").value.trim();
     S.cfg.chess = $("#cChess").value.trim();
-    S.cfg.gs = $("#cGs").value.trim();
+    S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
     S.cfg.proxy = $("#cProxy").value.trim();
     persist(); ujiKoneksi();
   };
@@ -1493,7 +1594,7 @@ function renderAll(){ render(); }   // dipanggil oleh fetchAll()
   if(saved) S = Object.assign(S, saved);
   $$(".who button").forEach(x=>x.classList.toggle("on", x.dataset.role===S.role));
   render();
-  if((S.cfg.chess||S.cfg.lichess||S.cfg.gs) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
+  if((S.cfg.chess||S.cfg.lichess||S.cfg.gs||S.cfg.csv) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
 })();
 </script>
 </body>
