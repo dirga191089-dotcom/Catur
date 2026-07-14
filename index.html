@@ -120,22 +120,57 @@
     transition:color .18s,border-color .18s;min-height:42px}
   nav button.on{color:var(--ink);border-bottom-color:var(--gold);font-weight:700}
 
-  section.box{background:var(--card);border:1px solid var(--ink);margin-bottom:16px;
+  /* SKALA JARAK. Semua padding/margin kelipatan 4px. Ketidakrapian yang kamu
+     rasakan hampir selalu ini: jarak yang dipilih satu-satu, bukan dari skala. */
+  :root{ --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; }
+
+  /* Kartu: TANPA bingkai penuh. Satu garis tipis di atas, sisanya ruang kosong.
+     Bingkai di sekeliling segalanya adalah sumber utama rasa "ramai". */
+  section.box{
+    background:transparent;border:0;margin-bottom:var(--s6);
     animation:rise var(--dur) both}
+  /* Judul: teks di atas kertas, bukan palang gelap. Ikon memberi tanda,
+     garis emas tipis memberi batas. Itu cukup. */
   section.box>h2{
-    font-family:var(--serif);font-size:13.5px;letter-spacing:.02em;font-weight:600;
-    padding:10px 14px;background:var(--ink);color:var(--card);display:flex;justify-content:space-between;
-    align-items:center;gap:8px;border-bottom:2px solid var(--gold)}
-  section.box>h2 em{font-family:var(--mono);font-style:normal;font-size:9.5px;opacity:.62;letter-spacing:.04em;text-align:right;font-weight:400}
-  .pad{padding:12px}
+    display:flex;align-items:center;gap:var(--s2);
+    font-family:var(--serif);font-size:17px;letter-spacing:.005em;font-weight:600;
+    color:var(--ink);background:transparent;
+    padding:0 0 var(--s2) 0;margin-bottom:var(--s3);
+    border-bottom:1px solid var(--rule);position:relative}
+  section.box>h2::after{
+    content:"";position:absolute;left:0;bottom:-1px;width:34px;height:2px;background:var(--gold)}
+  section.box>h2 .ik{color:var(--gold);flex:0 0 auto}
+  section.box>h2 span{flex:1 1 auto;min-width:0}
+  section.box>h2 em{
+    font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--soft);
+    letter-spacing:.01em;text-align:right;font-weight:400;flex:0 0 auto;max-width:52%}
+
+  /* Isi kartu duduk langsung di kertas. Latar hanya untuk baris yang
+     benar-benar perlu dipisahkan. */
+  section.box > div,
+  section.box > table,
+  section.box > svg{background:transparent}
+
+  /* "kenapa?" — penjelasan panjang disembunyikan, tidak dihapus. */
+  .knp{margin-top:var(--s1)}
+  .knp summary{
+    font-family:var(--mono);font-size:10.5px;color:var(--gold);cursor:pointer;
+    list-style:none;display:inline-flex;align-items:center;gap:4px;padding:2px 0}
+  .knp summary::-webkit-details-marker{display:none}
+  .knp summary::after{content:"\002B";font-weight:700}
+  .knp[open] summary::after{content:"\2212"}
+  .knp > div{
+    font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--soft);
+    padding:var(--s2) 0 var(--s1);max-width:64ch}
+  .pad{padding:0}
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .st1{animation-delay:.04s} .st2{animation-delay:.09s} .st3{animation-delay:.14s} .st4{animation-delay:.19s}
 
   /* ══ KPI ══ */
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
-  .kpi{background:var(--card);border:1px solid var(--ink);padding:10px 12px;position:relative;overflow:hidden;
-    animation:rise var(--dur) both}
-  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tone,var(--rule))}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:var(--s4) var(--s5);margin-bottom:var(--s6)}
+  .kpi{background:transparent;border:0;border-top:2px solid var(--tone,var(--rule));
+    padding:var(--s2) 0 0;position:relative;animation:rise var(--dur) both}
   .kpi b{display:block;font-family:var(--mono);font-size:26px;line-height:1.15;font-weight:600;
     font-variant-numeric:tabular-nums;color:var(--tone,var(--ink))}
   .kpi i{font-style:normal;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--soft)}
@@ -167,29 +202,31 @@
   .flame svg{width:17px;height:17px;animation:flick 1.6s ease-in-out infinite}
   @keyframes flick{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.14) rotate(2deg)}}
 
-  .todo{display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;
-    padding:13px 14px;border-bottom:1px solid var(--rule);animation:rise .4s both}
+  .todo{display:grid;grid-template-columns:26px 1fr auto;gap:var(--s3);align-items:center;
+    padding:var(--s3) 0;border-bottom:1px solid var(--rule);animation:rise .4s both}
   .todo:last-child{border-bottom:0}
-  .todo .mark{width:30px;height:30px;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
-    font-family:var(--mono);font-size:16px;font-weight:700;background:var(--card);cursor:pointer;
+  .todo .mark{width:26px;height:26px;border:1.5px solid var(--ink);border-radius:3px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:14px;font-weight:700;background:transparent;cursor:pointer;
     transition:background .25s,transform .25s,border-color .25s}
   .todo .mark[aria-disabled="true"]{cursor:default}
   .todo.done .mark{background:var(--ok);border-color:var(--ok);color:#fff;animation:pop .35s}
   .todo.auto.done .mark{background:var(--gold-lite);border-color:var(--ink);color:var(--ink)}
   @keyframes pop{0%{transform:scale(.6)}55%{transform:scale(1.25)}100%{transform:scale(1)}}
   .todo .t{font-size:14px;line-height:1.35}
-  .todo .t small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:2px}
+  .todo .t small{display:block;font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:3px;
+    letter-spacing:.02em}
   .todo .t small.src{color:var(--accent)}
   /* TIDAK ada coretan. Teks tercoret sulit dibaca anak, dan mengaburkan beda
      antara "tugas selesai" dan "pagar tidak dilanggar". Centang saja sudah cukup. */
   .todo.done .t{opacity:.78}
   .todo .prog{font-family:var(--mono);font-size:12px;font-weight:700;white-space:nowrap}
   /* Pagar bukan tugas: tidak ada yang "dikerjakan", hanya tidak dilanggar. */
-  .todo.pagar{background:rgba(27,33,48,.03)}
+  .todo.pagar{opacity:.82}
   .todo.pagar .mark{border-style:dashed}
   .todo.pagar.done .mark{background:transparent;border-color:var(--ok);border-style:solid;color:var(--ok)}
   .todo.pagar .prog{font-size:10px;letter-spacing:.1em}
-  .todo.pagar .t small::before{content:"PAGAR \u00b7 ";font-weight:700;color:var(--soft)}
+
   .bar{height:5px;background:var(--rule);margin-top:6px;max-width:190px;overflow:hidden}
   .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
 
@@ -202,8 +239,9 @@
   a.go.p{background:var(--gold-lite);color:var(--ink)} a.go.g{background:var(--navy)} a.go.d{background:var(--ink)}
 
   /* ══ kolom platform ══ */
-  .plats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-  .plat{background:var(--card);border:1px solid var(--ink);animation:rise var(--dur) both;overflow:hidden}
+  .plats{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);margin-bottom:var(--s6)}
+  .plat{background:var(--card);border:0;border-top:3px solid var(--ink);
+    animation:rise var(--dur) both;overflow:hidden}
   .plat > h3{
     font-family:var(--serif);font-size:14px;letter-spacing:.01em;font-weight:600;
     padding:11px 14px;color:var(--card);display:flex;justify-content:space-between;align-items:center}
@@ -215,8 +253,8 @@
   .plat .hero span{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--soft);letter-spacing:.02em}
   .plat .hero .sub{margin-left:auto;text-align:right;font-family:var(--mono);font-size:11px;color:var(--soft)}
   .plat dl{margin:0}
-  .plat .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
-    padding:7px 12px;border-bottom:1px solid var(--rule);font-size:12.5px}
+  .plat .r{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);
+    padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule);font-size:13px}
   .plat .r:last-child{border-bottom:0}
   .plat .r dt{font-family:var(--sans);color:var(--ink);font-weight:500}
   .plat .r dd{font-family:var(--mono);font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -250,6 +288,29 @@
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(159,49,40,.5)}50%{box-shadow:0 0 0 9px rgba(159,49,40,0)}}
   @media(prefers-reduced-motion:reduce){ .tilt{animation:none} }
 
+  /* ══ pelatih ══ */
+  .rek{display:grid;grid-template-columns:1fr;gap:0}
+  .rek a{display:grid;grid-template-columns:1fr auto;gap:var(--s3);align-items:center;
+    text-decoration:none;color:inherit;padding:var(--s3);border-bottom:1px solid var(--rule);
+    background:var(--card);transition:background .15s}
+  .rek a:last-child{border-bottom:0}
+  .rek a:hover{background:var(--paper)}
+  .rek b{font-family:var(--serif);font-size:16px;font-weight:600;display:block;margin-bottom:3px}
+  .rek small{font-family:var(--mono);font-size:11px;color:var(--soft);line-height:1.5;display:block}
+  .rek .arr{font-family:var(--mono);font-size:16px;color:var(--gold);font-weight:600}
+  .rek a.kuat{border-left:3px solid var(--no)}
+  .rek a.senang{border-left:3px solid var(--ok)}
+  .sumber{font-family:var(--mono);font-size:10.5px;padding:9px 14px;line-height:1.55;
+    border-bottom:1px solid var(--rule)}
+  .sumber.tebak{background:rgba(181,112,26,.09);color:var(--ink)}
+  .sumber.pasti{background:rgba(31,107,74,.09);color:var(--ink)}
+  .usul{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:12px}
+  .usul div{border:1px solid var(--rule);padding:9px 11px}
+  .usul dt{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--soft)}
+  .usul dd{font-family:var(--mono);font-size:19px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  .usul dd s{color:var(--soft);font-size:13px;font-weight:400;margin-right:6px}
+  .usul div.ubah{border-color:var(--gold);border-left-width:3px}
+
   /* ══ kunci tilt ══ */
   .lock{position:fixed;inset:0;z-index:80;background:rgba(12,25,41,.96);color:#F0E9D8;
     display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;
@@ -267,13 +328,13 @@
     cursor:pointer;min-height:44px}
 
   /* ══ peringatan ══ */
-  .alert-row{display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--rule);font-size:13px;
-    align-items:flex-start;animation:rise .4s both}
+  .alert-row{display:flex;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--rule);
+    font-size:14px;align-items:flex-start;animation:rise .4s both;background:transparent!important}
   .alert-row:last-child{border-bottom:0}
-  .alert-row b{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;padding:3px 7px;white-space:nowrap;
-    border:1px solid currentColor;flex:0 0 auto}
-  .alert-row.no{background:rgba(159,49,40,.07)} .alert-row.no b{color:var(--no)}
-  .alert-row.warn{background:rgba(181,112,26,.07)} .alert-row.warn b{color:var(--warn)}
+  .alert-row b{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;padding:4px 7px;white-space:nowrap;
+    border:1px solid currentColor;flex:0 0 auto;align-self:flex-start;margin-top:1px}
+  .alert-row.no b{background:rgba(159,49,40,.08)} .alert-row.no b{color:var(--no)}
+  .alert-row.warn b{background:rgba(181,112,26,.08)} .alert-row.warn b{color:var(--warn)}
   .alert-row.ok b{color:var(--ok)}
   .alert-row.no b{animation:blink 1.4s ease-in-out infinite}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
@@ -286,20 +347,20 @@
   .week .box i{display:block;background:var(--tone);width:100%;height:0;
     transition:height .8s cubic-bezier(.2,.8,.2,1)}
   .week .box em{position:absolute;top:2px;left:0;right:0;font-style:normal;font-size:8.5px;font-weight:700;color:var(--ink)}
-  .talk{border-left:3px solid var(--navy);background:rgba(30,58,95,.06);padding:10px 12px;font-size:13.5px;
-    line-height:1.5;margin:0 12px 10px;animation:rise .4s both}
+  .talk{border-left:2px solid var(--navy);background:transparent;padding:var(--s1) 0 var(--s1) var(--s3);
+    font-size:14px;line-height:1.55;margin:0 0 var(--s4);animation:rise .4s both}
   .talk b{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--soft);
     text-transform:uppercase;margin-bottom:4px}
 
   /* ══ tabel ══ */
   table{width:100%;border-collapse:collapse;font-size:12.5px}
   th{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--soft);
-    text-align:left;padding:9px 12px;border-bottom:2px solid var(--ink)}
-  td{padding:8px 12px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12.5px;
-    font-variant-numeric:tabular-nums}
+    text-align:left;padding:var(--s2) var(--s2) var(--s2) 0;border-bottom:1px solid var(--ink)}
+  td{padding:var(--s2) var(--s2) var(--s2) 0;border-bottom:1px solid var(--rule);
+    font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
   td.w{color:var(--ok);font-weight:700} td.l{color:var(--no);font-weight:700} td.d{color:var(--soft);font-weight:700}
   tr:last-child td{border-bottom:0}
-  .empty{padding:16px 12px;font-family:var(--mono);font-size:11px;color:var(--soft);line-height:1.7}
+  .empty{padding:var(--s3) 0;font-family:var(--mono);font-size:11px;color:var(--soft);line-height:1.7}
 
   /* ══ batang analisis pelatih ══ */
   .hbars{padding:12px}
@@ -335,8 +396,8 @@
   .strip .cell.l1{background:#EFE0BE} .strip .cell.l2{background:#DFC584}
   .strip .cell.l3{background:#C9A24C} .strip .cell.l4{background:var(--gold-lite)}
 
-  .note{border-left:3px solid var(--gold);background:rgba(168,121,31,.07);padding:10px 12px;font-size:13.5px;
-    line-height:1.5;margin-bottom:8px;animation:rise .4s both}
+  .note{border-left:2px solid var(--gold);background:transparent;padding:var(--s1) 0 var(--s1) var(--s3);
+    font-size:13.5px;line-height:1.55;margin-bottom:var(--s3);animation:rise .4s both}
   .note b{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;display:block;color:var(--soft);margin-bottom:3px}
   .warnbox{border:2px dashed var(--warn);background:rgba(181,112,26,.09);padding:11px 13px;font-size:12.5px;
     line-height:1.55;margin-bottom:16px}
@@ -461,23 +522,41 @@ const TIERS = [
   { id:1, nama:"Tier 1 — Fondasi", rating:"1200–1500",
     fokus:"Fork, Pin, Skewer, Double Check, Mat baris belakang, visi geometris",
     evaluasi:"Review akurasi puzzle mingguan",
-    target:{puzzle:30,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0},
-    manual:["Drill endgame 15 menit (Raja+Pion vs Raja, oposisi)","Ulang 3 pola mat dasar di papan fisik","Baca 1 partai juara dunia bersama orang tua"] },
+    target:{puzzle:30,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    manual:[
+      { teks:"Drill endgame pion (Raja+Pion vs Raja, oposisi)", tema:"pawnEndgame", n:8 },
+      { teks:"Ulang pola mat dasar", tema:"mateIn2", n:8 },
+      { teks:"Baca 1 partai juara dunia bersama orang tua" },
+    ] },
   { id:2, nama:"Tier 2 — Kompetisi", rating:"1500–1800",
     fokus:"Strategi posisional, lajur terbuka, outpost kuda, repertoar 1.e4 / Sicilian / KID",
     evaluasi:"Pemeriksaan anotasi mandiri anak; filter opening via API",
-    target:{puzzle:40,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0},
-    manual:["Anotasi 1 partai sendiri SEBELUM buka engine","Drill endgame benteng 20 menit","Review repertoar pembukaan 15 menit"] },
+    target:{puzzle:40,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    manual:[
+      { teks:"Drill endgame benteng", tema:"rookEndgame", n:10 },
+      { teks:"Latih serangan mat", tema:"mate", n:10 },
+      { teks:"Anotasi 1 partai sendiri SEBELUM buka engine" },
+      { teks:"Review repertoar pembukaan 15 menit" },
+    ] },
   { id:3, nama:"Tier 3 — Master", rating:"2000–2200",
     fokus:"Candidate moves (Kotov), kalkulasi 4–6 langkah, prophylaxis, Lucena & Philidor",
     evaluasi:"Uji visualisasi buta; skor kelulusan modul endgame",
-    target:{puzzle:50,rapid:2,bulletMax:0,gameMax:5,rush:0,rushScore:0},
-    manual:["Kalkulasi 5 posisi tanpa menggeser bidak","Analisis 1 partai kalah bersama pelatih","Drill endgame teoretis 30 menit"] },
+    target:{puzzle:50,rapid:2,bulletMax:0,gameMax:5,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    manual:[
+      { teks:"Kalkulasi panjang (tanpa menggeser bidak)", tema:"veryLong", n:8 },
+      { teks:"Drill endgame teoretis", tema:"endgame", n:12 },
+      { teks:"Analisis 1 partai kalah bersama pelatih" },
+    ] },
   { id:4, nama:"Tier 4 — Elite", rating:"2300+",
     fokus:"Deep prep anti-database, novelty langkah 15+, manajemen krisis waktu",
     evaluasi:"Simulasi tekanan waktu; persiapan lawan spesifik",
-    target:{puzzle:40,rapid:1,bulletMax:0,gameMax:4,rush:0,rushScore:0},
-    manual:["Persiapan lawan turnamen 45 menit","Analisis mendalam 1 partai klasik","Latihan blitz-drill krisis waktu"] },
+    target:{puzzle:40,rapid:1,bulletMax:0,gameMax:4,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    manual:[
+      { teks:"Kalkulasi sangat panjang", tema:"veryLong", n:10 },
+      { teks:"Endgame menteri & benteng", tema:"queenEndgame", n:8 },
+      { teks:"Persiapan lawan turnamen 45 menit" },
+      { teks:"Analisis mendalam 1 partai klasik" },
+    ] },
 ];
 
 /* ═══════════ status ═══════════ */
@@ -676,6 +755,119 @@ Object.assign(EN, {
   "Layar ini tidak bisa menghentikanmu bermain. Kamu bisa membuka Lichess sekarang juga dan tidak ada yang mencegahmu. Ini bukan penjara — ini pengingat. Yang memutuskan tetap kamu.":"This screen cannot stop you from playing. You could open Lichess right now and nothing would prevent you. This is not a prison — it is a reminder. The decision is still yours.",
   "Saya mengerti, dan tetap ingin lanjut":"I understand, and I still want to continue",
 
+  // pelatih
+  "Pelatih":"Coach", "Penilaian kemarin":"Yesterday's assessment", "Target hari ini":"Today's targets",
+  "Puzzle hari ini":"Today's puzzles", "klik untuk langsung latihan":"tap to train right away",
+  "Puzzle pilihan pelatih untukmu":"Coach's puzzle picks for you",
+  "berdasarkan hasil kemarin":"based on yesterday's results",
+  "PUZZLE BEBAS":"FREE PUZZLES", "Terapkan target ini":"Apply these targets",
+  "diubah dari kemarin":"changed from yesterday", "tidak berubah":"unchanged",
+  "PERBAIKI":"FIX", "PERHATIKAN":"WATCH", "BAIK":"GOOD",
+  "Batas partai":"Game limit", "Batas bullet":"Bullet limit",
+  "Tidak ada alasan untuk mengubah target. Konsistensi lebih berharga daripada penyesuaian harian.":"No reason to change the targets. Consistency is worth more than daily tinkering.",
+  "Sumber: puzzle dashboard Lichess — performa nyata anak per tema, 30 hari terakhir. Ini BUKAN tebakan.":"Source: Lichess puzzle dashboard — the child's real per-theme performance over the last 30 days. This is NOT a guess.",
+  "Sumber: TEBAKAN dari partai + kurikulum tier. Lichess tidak memberi tahu tema mana yang lemah tanpa token. Isi Token Lichess di Pengaturan untuk membuat rekomendasi ini berhenti menebak.":"Source: a GUESS from games + tier curriculum. Lichess will not reveal which themes are weak without a token. Add a Lichess token in Settings to stop this from being guesswork.",
+  "Kemarin tidak ada aktivitas sama sekali":"No activity at all yesterday",
+  "Tidak ada puzzle, tidak ada partai. Pelatih tidak bisa menilai apa pun dari hari kosong — jadi target hari ini tidak diubah.":"No puzzles, no games. A coach cannot judge anything from an empty day — so today's targets are left unchanged.",
+  "Puzzle kemarin {a}/{b}":"Puzzles yesterday {a}/{b}",
+  "Meleset lebih dari separuh. Target diturunkan hari ini — target yang mustahil dicapai berhenti jadi target dan mulai jadi rasa gagal harian.":"Missed by more than half. The target is lowered today — a target that cannot be reached stops being a target and becomes a daily sense of failure.",
+  "Meleset sedikit. Target dipertahankan.":"Missed slightly. Target held.",
+  "Puzzle diturunkan ke {a} karena kemarin hanya {b} dari {c}.":"Puzzles lowered to {a} because yesterday reached only {b} of {c}.",
+  "Target puzzle tercapai dan rating naik {a}":"Puzzle target met and rating rose {a}",
+  "Kemarin {a} puzzle, rating puzzle naik. Target dinaikkan tipis ke {b}. Kenaikan kecil dan bertahap — bukan lompatan.":"{a} puzzles yesterday, and the puzzle rating rose. Target nudged up to {b}. Small and gradual — not a leap.",
+  "Puzzle dinaikkan ke {a} karena target tercapai DAN rating naik.":"Puzzles raised to {a} because the target was met AND the rating rose.",
+  "Target tercapai tapi rating puzzle turun {a}":"Target met but puzzle rating fell {a}",
+  "Jumlah tercapai, tapi kualitasnya tidak. Ini gejala mengerjakan puzzle sambil buru-buru. Target TIDAK dinaikkan; hari ini fokus ke ketelitian, bukan jumlah.":"The count was met, the quality was not. This is the signature of rushing through puzzles. The target is NOT raised; today the focus is precision, not volume.",
+  "Target puzzle tercapai ({a})":"Puzzle target met ({a})",
+  "Target dipertahankan. Konsistensi lebih berharga daripada lompatan.":"Target held. Consistency beats leaps.",
+  "Kemarin tilt: {a} kekalahan beruntun":"Tilt yesterday: {a} straight losses",
+  "Batas partai hari ini diturunkan ke {a}. Setelah hari yang buruk, yang dibutuhkan bukan lebih banyak partai — tapi lebih sedikit partai dan satu analisis.":"The game limit is lowered to {a} today. After a bad day, what is needed is not more games — it is fewer games and one analysis.",
+  "Batas partai diturunkan ke {a} karena kemarin tilt.":"Game limit lowered to {a} because of yesterday's tilt.",
+  "{a} kekalahan miniatur kemarin":"{a} miniature losses yesterday",
+  "Kalah di bawah {a} langkah{b}. Ini blunder pembukaan, bukan kekalahan strategis. Hari ini WAJIB: bedah partai ini bersama anak sebelum ia bermain lagi.":"Lost in under {a} moves{b}. These are opening blunders, not strategic defeats. Today is MANDATORY: go through these games with the child before they play again.",
+  "Partai rapid diturunkan ke {a}: analisis dulu, main belakangan.":"Rapid games lowered to {a}: analyse first, play later.",
+  "Akurasi kemarin {a}%":"Accuracy yesterday {a}%",
+  "Di bawah 70%. Hampir selalu berarti bermain terlalu cepat untuk kontrol waktunya — bukan kurang tahu, tapi kurang berpikir.":"Below 70%. Almost always means playing too fast for the time control — not a lack of knowledge, but a lack of thinking.",
+  "{a} partai bullet kemarin":"{a} bullet games yesterday",
+  "Bullet melatih refleks dan merusak kebiasaan kalkulasi. Ini yang paling langsung bertabrakan dengan target tier ini.":"Bullet trains reflexes and corrodes calculation habits. It collides most directly with the goals of this tier.",
+  "Kemarin bersih":"Yesterday was clean",
+  "Tidak ada tanda bahaya. Target dipertahankan.":"No warning signs. Targets held.",
+  "Menang hanya {a}% dari {b} puzzle tema ini (30 hari terakhir). Ini titik terlemahnya.":"Only {a}% solved out of {b} puzzles in this theme (last 30 days). This is the weakest point.",
+  "Tema terkuatnya ({a}% dari {b}). Sisipkan sedikit supaya sesi tidak terasa hukuman.":"Their strongest theme ({a}% of {b}). Mix a few in so the session does not feel like punishment.",
+  "Kemarin kalah di bawah {a} langkah. Latih penglihatan taktik di fase pembukaan.":"Lost in under {a} moves yesterday. Train tactical vision in the opening phase.",
+  "Akurasi {a}% — latih taktik pendek untuk membiasakan melihat sebelum melangkah.":"Accuracy {a}% — train short tactics to build the habit of looking before moving.",
+  "Rating puzzle turun {a}. Kembali ke campuran seimbang, jangan tema sulit dulu.":"Puzzle rating fell {a}. Go back to a balanced mix; leave the hard themes for later.",
+  "Rating puzzle naik {a}. Naikkan kesulitan: kalkulasi panjang.":"Puzzle rating rose {a}. Raise the difficulty: long calculation.",
+  "Bagian dari kurikulum {a}. (Tebakan — tanpa token Lichess, pelatih tidak tahu tema mana yang benar-benar lemah.)":"Part of the {a} curriculum. (A guess — without a Lichess token, the coach cannot know which themes are genuinely weak.)",
+  "Token Lichess (opsional — membuat rekomendasi puzzle berhenti menebak)":"Lichess token (optional — makes puzzle recommendations stop being guesswork)",
+  "Baca sebelum mengisi":"Read before filling this in",
+  "Token ini memberi akses baca ke riwayat puzzle anak. Buat di lichess.org/account/oauth/token dengan izin puzzle:read SAJA — jangan centang izin lain. Token disimpan di browser ini dan TIDAK pernah masuk ke file yang kamu unggah ke GitHub. Kalau ragu, kosongkan: pelatih tetap bekerja, hanya rekomendasi temanya jadi tebakan.":"This token grants read access to the child's puzzle history. Create it at lichess.org/account/oauth/token with the puzzle:read scope ONLY — do not tick any other scope. It is stored in this browser and NEVER ends up in the file you upload to GitHub. If in doubt, leave it blank: the coach still works, its theme picks are just guesses.",
+  // tema
+  "Garpu":"Fork", "Pin":"Pin", "Skewer":"Skewer", "Serangan terbuka":"Discovered attack",
+  "Skak ganda":"Double check", "Bidak menggantung":"Hanging piece", "Bidak terperangkap":"Trapped piece",
+  "Pengalihan":"Deflection", "Pemancingan":"Attraction", "Pembukaan jalur":"Clearance",
+  "Penghadangan":"Interference", "Menyingkirkan penjaga":"Capturing the defender",
+  "Korban":"Sacrifice", "Langkah sunyi":"Quiet move", "Langkah bertahan":"Defensive move",
+  "Langkah antara":"Intermezzo", "Serangan sinar-X":"X-ray attack", "Zugzwang":"Zugzwang",
+  "Mat baris belakang":"Back-rank mate", "Mat terkurung":"Smothered mate", "Mat kail":"Hook mate",
+  "Mat Anastasia":"Anastasia's mate", "Mat Arab":"Arabian mate", "Mat Boden":"Boden's mate",
+  "Mat 1 langkah":"Mate in 1", "Mat 2 langkah":"Mate in 2", "Mat 3 langkah":"Mate in 3",
+  "Serangan mat":"Mating attack", "Menang telak":"Crushing", "Merebut keunggulan":"Winning advantage",
+  "Pion maju":"Advanced pawn", "Promosi":"Promotion", "Raja terbuka":"Exposed king",
+  "Fase pembukaan":"Opening phase", "Fase tengah":"Middlegame", "Fase akhir":"Endgame",
+  "Endgame benteng":"Rook endgame", "Endgame pion":"Pawn endgame", "Endgame menteri":"Queen endgame",
+  "Endgame gajah":"Bishop endgame", "Endgame kuda":"Knight endgame",
+  "Taktik pendek":"Short tactics", "Kalkulasi panjang":"Long calculation",
+  "Kalkulasi sangat panjang":"Very long calculation", "Satu langkah":"One-movers",
+  "Campuran seimbang":"Healthy mix",
+
+  "{a} puzzle tema: {b}":"{a} puzzles on theme: {b}",
+  "Fokus hari ini — terverifikasi dari riwayat puzzle Lichess":"Today's focus — verified from Lichess puzzle history",
+  "Fokus hari ini — TIDAK bisa diverifikasi tanpa token Lichess":"Today's focus — CANNOT be verified without a Lichess token",
+  "Fokus tema hari ini":"Today's theme focus", "Tema hari ini":"Today's themes",
+  "berbeda dari kemarin":"different from yesterday",
+  "terverifikasi":"verified", "tidak terverifikasi":"not verified",
+  "Kenapa tema ini":"Why these themes",
+  "Target {a} puzzle":"Target {a} puzzles", "sudah {a}":"{a} done",
+  "{a} dari {b} puzzle":"{a} of {b} puzzles",
+  "Setiap puzzle yang anak kerjakan dicek temanya. Kalau ia mengerjakan 10 puzzle Pin, dasbor tahu. Ini target, bukan saran.":"Every puzzle the child solves is checked for its theme. If they solve 10 pin puzzles, the dashboard knows. This is a target, not a suggestion.",
+  "Tanpa token Lichess, target tema hanya bisa dicentang manual — dasbor tidak bisa tahu tema apa yang benar-benar dikerjakan anak.":"Without a Lichess token, theme targets can only be ticked by hand — the dashboard cannot know which themes the child actually practised.",
+  "Tema berganti setiap hari dan tidak pernah mengulang tema kemarin. Sekali dipilih untuk hari ini, ia tidak berubah walau halaman dimuat ulang.":"Themes change every day and never repeat yesterday's. Once chosen for today, they do not change even if the page is reloaded.",
+  "Tema fokus dimatikan (Jumlah tema fokus = 0).":"Theme focus is off (Focus themes per day = 0).",
+  "Tidak ada tema fokus hari ini.":"No focus themes today.",
+  "Jumlah tema fokus / hari":"Focus themes per day", "Puzzle per tema":"Puzzles per theme",
+  "Beban total":"Total load",
+  "Puzzle tema DI LUAR target puzzle harian (bukan bagian darinya)":"Theme puzzles are ON TOP of the daily puzzle target (not part of it)",
+  "Total puzzle/hari: {a}":"Total puzzles/day: {a}",
+  "{a} umum + {b} tema ({c} tema \u00d7 {d}). Puzzle tema TIDAK dihitung sebagai puzzle umum.":"{a} general + {b} themed ({c} themes \u00d7 {d}). Themed puzzles do NOT count towards the general total.",
+  "{a} umum, di antaranya minimal {b} harus bertema ({c} tema \u00d7 {d}).":"{a} general, of which at least {b} must be themed ({c} themes \u00d7 {d}).",
+  "Di atas 40 puzzle sehari, anak berhenti belajar dan mulai bertahan hidup. Jenuh adalah penyebab nomor satu anak berhenti main catur — bukan kurang latihan.":"Above 40 puzzles a day a child stops learning and starts surviving. Burnout is the number one reason children quit chess — not lack of practice.",
+
+  "Drill endgame pion (Raja+Pion vs Raja, oposisi)":"Pawn endgame drill (K+P vs K, opposition)",
+  "Ulang pola mat dasar":"Review basic mating patterns",
+  "Baca 1 partai juara dunia bersama orang tua":"Read one world-champion game with a parent",
+  "Drill endgame benteng":"Rook endgame drill", "Latih serangan mat":"Train mating attacks",
+  "Anotasi 1 partai sendiri SEBELUM buka engine":"Annotate one of your own games BEFORE opening an engine",
+  "Review repertoar pembukaan 15 menit":"Review the opening repertoire, 15 minutes",
+  "Kalkulasi panjang (tanpa menggeser bidak)":"Long calculation (without moving the pieces)",
+  "Drill endgame teoretis":"Theoretical endgame drill",
+  "Analisis 1 partai kalah bersama pelatih":"Analyse one lost game with the coach",
+  "Kalkulasi sangat panjang":"Very long calculation",
+  "Endgame menteri & benteng":"Queen & rook endgames",
+  "Persiapan lawan turnamen 45 menit":"Tournament opponent prep, 45 minutes",
+  "Analisis mendalam 1 partai klasik":"Deep analysis of one classical game",
+  " \u2014 {a} puzzle":" \u2014 {a} puzzles",
+  "Kurikulum {a} — terverifikasi dari tema puzzle Lichess":"{a} curriculum — verified from Lichess puzzle themes",
+  "Kurikulum — butuh token Lichess untuk diverifikasi. Sementara ini: centang manual.":"Curriculum — needs a Lichess token to be verified. For now: tick manually.",
+  "Tugas kurikulum (satu per baris)":"Curriculum tasks (one per line)",
+  "Format: Teks tugas | tema | jumlah":"Format: Task text | theme | count",
+  "Ada tema \u2192 TERVERIFIKASI otomatis. Tanpa tema \u2192 centang manual.":"With a theme \u2192 AUTO-VERIFIED. Without a theme \u2192 manual tick.",
+  "Contoh: Drill endgame benteng | rookEndgame | 10":"Example: Rook endgame drill | rookEndgame | 10",
+  "Daftar semua tema Lichess \u2197":"All Lichess themes \u2197",
+
+  "kenapa?":"why?", "MANUAL":"MANUAL", "MANUAL \u00b7 butuh token":"MANUAL \u00b7 needs token",
+  "OTOMATIS":"AUTO", "OTOMATIS \u00b7 tema Lichess":"AUTO \u00b7 Lichess theme", "PAGAR":"GUARDRAIL",
+
   // rapor
   "RAPOR MINGGUAN":"WEEKLY REPORT", "PER HARI":"PER DAY", "BAHAN OBROLAN":"CONVERSATION STARTERS",
   "Kepatuhan rata-rata":"Average compliance", "Hari aktif":"Active days",
@@ -708,7 +900,7 @@ const anakKosong = (nama) => ({
   tier:1, targets:null, manual:null, checks:{}, notes:{}, snaps:{},
   data:null, fetchedAt:0, filter:"semua",
 });
-const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari"];
+const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin"];
 function anakAktif(){ return DB.anak.find(a => a.id === DB.aktif) || DB.anak[0] || null; }
 function muatAnak(){
   const a = anakAktif(); if(!a) return;
@@ -733,6 +925,8 @@ let S = {
   notes:{},         // "2026-07-13": [ {t, text} ]
   filter:"semua",
   snaps:{},         // "2026-07-13": { rushAttempts, rushScore, tacticsHigh, tacticsHighDate, rapid, blitz }
+  temaHari:null,    // { dk, list:[tema...] } — dikunci per hari
+  temaKemarin:null,
   data:null,        // hasil tarik terakhir
   fetchedAt:0,
   role:"ortu", tab:"hari"
@@ -746,7 +940,13 @@ const ms = t => (t < 1e11 ? t * 1000 : t);
 
 function tier(){ return TIERS.find(t=>t.id===S.tier) || TIERS[0]; }
 function targets(){ return S.targets || tier().target; }
-function manualTasks(){ return S.manual || tier().manual; }
+/* Tugas kurikulum. Bentuk objek: { teks, tema?, n? }
+   Kalau ada `tema`, ia BISA diverifikasi dari riwayat puzzle Lichess —
+   berhenti jadi centang manual. String lama tetap diterima (data lama). */
+function manualTasks(){
+  const raw = S.manual || tier().manual || [];
+  return raw.map(x => typeof x === "string" ? { teks:x } : x);
+}
 
 /* ═══════════ pengambilan data ═══════════ */
 function url(u){ return S.cfg.proxy ? S.cfg.proxy + encodeURIComponent(u) : u; }
@@ -780,6 +980,32 @@ async function ambilMentah(u, accept){
 }
 const tidur = ms2 => new Promise(r => setTimeout(r, ms2));
 async function getJSON(u){ return (await ambilMentah(u, "application/json")).json(); }
+
+/* Permintaan ber-token. Token TIDAK PERNAH ditulis ke dalam file ini —
+   ia diketik pengguna, disimpan di browsernya, dan tidak ikut ke GitHub. */
+async function fetchAuth(u, token, accept){
+  const ac = new AbortController();
+  const jam = setTimeout(() => ac.abort(), BATAS_MS);
+  try{
+    const r = await fetch(url(u), {
+      headers: { Accept: accept, Authorization: "Bearer " + token },
+      signal: ac.signal, cache: "no-store",
+    });
+    clearTimeout(jam);
+    if(r.status === 401) throw new Error("HTTP 401 \u2014 token ditolak Lichess");
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r;
+  }catch(e){ clearTimeout(jam); throw e; }
+}
+async function getJSONAuth(u, token){
+  return (await fetchAuth(u, token, "application/json")).json();
+}
+async function getNDJSONAuth(u, token){
+  const t = await (await fetchAuth(u, token, "application/x-ndjson")).text();
+  return t.split("\n").filter(Boolean)
+    .map(l => { try { return JSON.parse(l); } catch(e){ return null; } })
+    .filter(Boolean);
+}
 /* Lichess mengirim daftar partai sebagai NDJSON: satu objek JSON per baris,
    bukan satu array. r.json() akan GAGAL di sini. */
 async function getNDJSON(u){
@@ -935,21 +1161,37 @@ async function fetchAll(){
       /* Dulu memakai Promise.all dengan `prof` tanpa .catch: kalau endpoint profil
          gagal, SELURUH data Lichess ikut hangus — termasuk feed aktivitas yang
          sebenarnya berhasil. allSettled menyelamatkan apa pun yang berhasil. */
+      const T_ = S.cfg.liToken;
       const hasil = await Promise.allSettled([
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`),
         getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true`),
+        // Performa PER TEMA, 30 hari. Butuh token (puzzle:read).
+        T_ ? getJSONAuth(`https://lichess.org/api/puzzle/dashboard/30`, T_)
+           : Promise.reject(new Error("tanpa token")),
+        /* SETIAP percobaan puzzle, dengan tema dan waktunya. Inilah yang membuat
+           target tema bisa DIVERIFIKASI, bukan sekadar disarankan. Tanpa ini,
+           "kerjakan 10 puzzle Pin" hanya bisa jadi centang manual. */
+        T_ ? getNDJSONAuth(`https://lichess.org/api/puzzle/activity?max=200`, T_)
+           : Promise.reject(new Error("tanpa token")),
       ]);
       const nilai = i => hasil[i].status === "fulfilled" ? hasil[i].value : null;
       const prof = nilai(0), act = nilai(1) || [], hist = nilai(2) || [], lg = nilai(3);
+      const pzDash = nilai(4), pzAct = nilai(5);
 
       if(!prof && !act.length && !lg)
         throw hasil[0].reason || new Error("semua endpoint Lichess gagal");
 
-      out.lichess = { user:u, prof, act, hist, games: lg || [], gamesOk: !!lg };
+      out.lichess = { user:u, prof, act, hist, games: lg || [], gamesOk: !!lg, pzDash, pzAct };
       if(!prof) logLine("Lichess: profil gagal ditarik, tapi aktivitas & partai TETAP terbaca. " +
         "Rating tidak akan diperbarui kali ini.", "warn");
+      if(T_ && !pzDash && !pzAct)
+        logLine("Token Lichess DITOLAK atau tidak punya izin puzzle:read. Rekomendasi tema kembali jadi tebakan, " +
+          "dan target tema tidak bisa diverifikasi.", "no");
+      else if(pzDash || pzAct)
+        logLine(`Token OK \u2014 ${(pzDash && pzDash.themes ? pzDash.themes.length + " tema, " : "")}` +
+          `${pzAct ? pzAct.length + " percobaan puzzle terbaca. Target tema DIVERIFIKASI." : ""}`, "");
     }catch(e){ out.errors.push(["Lichess", e.message]); }
   }
 
@@ -1221,6 +1463,25 @@ function buildQuests(){
   if(S.cfg.lichess && T.puzzle > 0) q.push({ auto:true, ok: pz >= T.puzzle, now:pz, goal:T.puzzle,
     t:tr("Selesaikan {a} puzzle",{a:T.puzzle}), src:tr("Lichess — terverifikasi otomatis") });
 
+  /* TEMA HARI INI. Ini yang membuat rekomendasi pelatih berhenti jadi saran
+     dan mulai jadi TARGET. Berbeda tiap hari, dan bisa diverifikasi kalau ada token. */
+  if(S.cfg.lichess && T.temaJumlah > 0 && T.temaPuzzle > 0){
+    const hitung = temaHitung(dk);
+    pilihTema().forEach((tm, i) => {
+      const n = hitung ? (hitung[tm] || 0) : 0;
+      if(hitung){
+        q.push({ auto:true, tema:tm, ok: n >= T.temaPuzzle, now:n, goal:T.temaPuzzle,
+          t: tr("{a} puzzle tema: {b}", {a:T.temaPuzzle, b:temaNama(tm)}),
+          src: tr("Fokus hari ini — terverifikasi dari riwayat puzzle Lichess") });
+      } else {
+        q.push({ auto:false, tema:tm, idx: 100 + i,
+          ok: !!(S.checks[dk]||{})["m" + (100+i)],
+          t: tr("{a} puzzle tema: {b}", {a:T.temaPuzzle, b:temaNama(tm)}),
+          src: tr("Fokus hari ini — TIDAK bisa diverifikasi tanpa token Lichess") });
+      }
+    });
+  }
+
   if(T.rapid > 0) q.push({ auto:true, ok: rapid >= T.rapid, now:rapid, goal:T.rapid,
     t:tr("Main {a} partai rapid",{a:T.rapid}), src:tr("Chess.com + Lichess — terverifikasi otomatis") });
 
@@ -1231,8 +1492,23 @@ function buildQuests(){
   q.push({ auto:true, ok: g.total <= T.gameMax, now:g.total, goal:T.gameMax, invert:true,
     t:tr("Total partai maksimal {a}",{a:T.gameMax}), src:tr("Pagar anti-tilt: bermain berlebihan setelah kalah menurunkan rating.") });
 
-  manualTasks().forEach((m,i) => q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i], t:m,
-    src:tr("Manual — dicentang pelatih atau orang tua") }));
+  const hitungKur = temaHitung(dk);
+  manualTasks().forEach((m,i) => {
+    /* Kalau tugas punya tema Lichess DAN token tersedia, ia terverifikasi.
+       "Drill endgame" bukan lagi janji — ia angka. */
+    if(m.tema && hitungKur && m.n > 0){
+      const now = hitungKur[m.tema] || 0;
+      q.push({ auto:true, tema:m.tema, ok: now >= m.n, now, goal:m.n,
+        t: tr(m.teks) + tr(" \u2014 {a} puzzle", {a:m.n}),
+        src: tr("Kurikulum {a} — terverifikasi dari tema puzzle Lichess", {a:tier().nama}) });
+    } else {
+      q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i],
+        tema: m.tema || null, t: tr(m.teks),
+        src: m.tema
+          ? tr("Kurikulum — butuh token Lichess untuk diverifikasi. Sementara ini: centang manual.")
+          : tr("Manual — dicentang pelatih atau orang tua") });
+    }
+  });
   // Pagar ditaruh PALING BAWAH. Yang harus dilihat anak lebih dulu adalah
   // apa yang harus DIKERJAKAN, bukan apa yang tidak boleh dilanggar.
   return q.sort((a,b) => (a.invert?1:0) - (b.invert?1:0));
@@ -1251,8 +1527,8 @@ function buildQuests(){
    membeku di bahasa awal dan tidak ikut berganti. */
 const TABS = () => ({
   anak:    [["misi",tr("Misi hari ini")], ["progres",tr("Perkembanganku")]],
-  ortu:    [["hari",tr("Hari ini")], ["minggu",tr("Rapor mingguan")], ["partai",tr("Partai")], ["atur",tr("Pengaturan")]],
-  pelatih: [["hari",tr("Hari ini")], ["analisis",tr("Analisis")], ["partai",tr("Partai")], ["rencana",tr("Rencana")], ["atur",tr("Pengaturan")]],
+  ortu:    [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["partai",tr("Partai")], ["atur",tr("Pengaturan")]],
+  pelatih: [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["partai",tr("Partai")], ["rencana",tr("Rencana")], ["atur",tr("Pengaturan")]],
 });
 const TONE = { ok:"var(--ok)", warn:"var(--warn)", no:"var(--no)", teal:"var(--gold)",
                coral:"var(--gold-lite)", sky:"var(--navy)", gold:"var(--gold)", carbon:"var(--navy)" };
@@ -1284,6 +1560,40 @@ function konfeti(){
   setTimeout(()=>c.innerHTML="", 3200);
 }
 const FLAME = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.4-2-.4-2 2 1.4 3.4 3.5 3.4 6a6 6 0 0 1-12 0c0-5 6-6 6-13z"/></svg>`;
+
+/* IKON. Garis tipis, satu keluarga, currentColor. Bukan ilustrasi:
+   ilustrasi di dasbor pemantauan adalah hiasan yang harus di-scroll tiap malam. */
+const IK = {
+  target:'<path d="M12 3v3m0 12v3M3 12h3m12 0h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  puzzle:'<path d="M9 4h6v2a2 2 0 1 0 4 0V4h1v6h-2a2 2 0 1 0 0 4h2v6h-6v-2a2 2 0 1 0-4 0v2H4v-6h2a2 2 0 1 0 0-4H4V4h5z"/>',
+  bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
+  alert:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4m0 3v.5"/>',
+  chart:'<path d="M4 20V9m5 11V4m5 16v-7m5 7V11"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/>',
+  board:'<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  coach:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  note:'<path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5M8 13h8M8 17h5"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M19.1 4.9 17 7m-10 10-2.1 2.1"/>',
+  fire:'<path d="M12 3c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.4-2-.4-2 2 1.4 3.4 3.5 3.4 6a6 6 0 0 1-12 0c0-5 6-6 6-13z"/>',
+  share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M12 15V3m-4 4 4-4 4 4"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0"/><path d="M17 5.5a3.5 3.5 0 0 1 0 7M18 20a7 7 0 0 0-3-5.7"/>',
+  check:'<path d="M4 12.5 9 18 20 6"/>',
+  book:'<path d="M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z"/>',
+};
+const ik = (n, sz) => `<svg class="ik" viewBox="0 0 24 24" width="${sz||18}" height="${sz||18}"
+  fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+  aria-hidden="true">${IK[n]||""}</svg>`;
+
+/* Judul bagian. Ikon + judul + meta. Satu bentuk, dipakai di semua tempat —
+   itulah yang membuat halaman terasa rapi, bukan hiasan tambahan. */
+const H2 = (icon, judul, meta) =>
+  `<h2>${ik(icon)}<span>${judul}</span>${meta?`<em>${meta}</em>`:""}</h2>`;
+
+/* Penjelasan panjang disembunyikan, TIDAK dihapus.
+   Angka merah tanpa alasan menghasilkan hukuman. */
+const kenapa = (teks) => teks
+  ? `<details class="knp"><summary>${tr("kenapa?")}</summary><div>${teks}</div></details>`
+  : "";
 
 function ring(pct, tone, big, small, label, done){
   const off = 264 - 264 * Math.min(1, pct);
@@ -1509,6 +1819,7 @@ async function ujiKoneksi(){
 /* ═══════════ TAMPILAN: ANAK ═══════════ */
 function viewMisi(){
   const dk = todayKey(), T = targets();
+  const P = pelatih();
   const q = buildQuests();
   const auto = q.filter(x=>x.auto), man = q.filter(x=>!x.auto);
   const done = q.filter(x=>x.ok).length;
@@ -1547,23 +1858,40 @@ function viewMisi(){
   </div>
 
   <section class="box st1">
-    <h2>${tr("Yang harus kamu kerjakan")}</h2>
+    ${H2("check", tr("Yang harus kamu kerjakan"))}
     <div id="todos"></div>
   </section>
 
   <section class="box st2">
-    <h2>${tr("Mulai sekarang")}</h2>
-    <div class="golinks">
-      <a class="go p" href="https://lichess.org/training" target="_blank" rel="noopener">
-        <b>${tr("PUZZLE")} \u2192</b><span>Lichess &middot; ${tr("target {a} hari ini",{a:T.puzzle})}</span></a>
-      <a class="go g" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
-        <b>${tr("MAIN RAPID")} \u2192</b><span>Chess.com &middot; ${tr("{a} partai",{a:T.rapid})}</span></a>
-
+    ${H2("puzzle", tr("Tema hari ini"), `${tr("berbeda dari kemarin")}`)}
+    <div class="rek">
+      ${pilihTema().map(t => {
+        const h = temaHitung(dk);
+        const n = h ? (h[t]||0) : null;
+        const goal = T.temaPuzzle;
+        const selesai = n != null && n >= goal;
+        return `<a href="${temaUrl(t)}" target="_blank" rel="noopener" class="${selesai?"senang":"kuat"}">
+          <span><b>${temaNama(t)}</b>
+            <small>${n!=null ? tr("{a} dari {b} puzzle", {a:n, b:goal}) : tr("Target {a} puzzle", {a:goal})}</small>
+            ${n!=null?`<span class="bar" style="margin-top:5px"><i data-w="${Math.min(100,Math.round(100*n/goal))}%"></i></span>`:""}
+          </span>
+          <span class="arr">${selesai?"\u2713":"\u2192"}</span></a>`;
+      }).join("") || `<div class="empty">${tr("Tidak ada tema fokus hari ini.")}</div>`}
     </div>
   </section>
 
   <section class="box st3">
-    <h2>${tr("Pesan pelatih")}</h2>
+    ${H2("bolt", tr("Mulai sekarang"))}
+    <div class="golinks">
+      <a class="go p" href="https://lichess.org/training" target="_blank" rel="noopener">
+        <b>${tr("PUZZLE BEBAS")} \u2192</b><span>Lichess &middot; ${tr("target {a} hari ini",{a:T.puzzle})}</span></a>
+      <a class="go g" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
+        <b>${tr("MAIN RAPID")} \u2192</b><span>Chess.com &middot; ${tr("{a} partai",{a:T.rapid})}</span></a>
+    </div>
+  </section>
+
+  <section class="box st4">
+    ${H2("note", tr("Pesan pelatih"))}
     <div class="pad" id="noteAnak"></div>
   </section>`;
 }
@@ -1571,17 +1899,17 @@ function viewMisi(){
 function viewProgres(){
   return `
   <section class="box">
-    <h2>${tr("Ratingmu")}</h2>
+    ${H2("chart", tr("Ratingmu"))}
     <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
     <div class="legend" id="legend"></div>
   </section>
   <section class="box st1">
-    <h2>${tr("21 hari terakhir")} <em>${tr("makin gelap = makin banyak latihan")}</em></h2>
+    ${H2("calendar", tr("21 hari terakhir"), `${tr("makin gelap = makin banyak latihan")}`)}
     <div class="strip" id="strip"></div>
   </section>
   <div class="plats" id="plats"></div>
   <section class="box st3">
-    <h2>${tr("Angkamu")}</h2>
+    ${H2("chart", tr("Angkamu"))}
     <div id="summary"></div>
   </section>`;
 }
@@ -1594,15 +1922,15 @@ function viewHariOrtu(){
   <div class="cards" id="kpis"></div>
   <div class="plats" id="plats"></div>
   <section class="box st1">
-    <h2>${tr("Tugas hari ini")} <em id="questDate"></em></h2>
+    ${H2("check", tr("Tugas hari ini"), `<span id="questDate"></span>`)}
     <div id="todos"></div>
   </section>
   <section class="box st2">
-    <h2>${tr("Perlu perhatian")}</h2>
+    ${H2("alert", tr("Perlu perhatian"))}
     <div id="alerts"></div>
   </section>
   <section class="box st4">
-    <h2>${tr("Catatan pelatih hari ini")}</h2>
+    ${H2("note", tr("Catatan pelatih hari ini"))}
     <div class="pad" id="noteList"></div>
   </section>`;
 }
@@ -1629,20 +1957,20 @@ function viewMinggu(){
     <div class="kpi" style="--tone:var(--sky)"><b id="wPz">0</b><i>${tr("total puzzle")}</i><small>${tr("minggu ini")}</small></div>
   </div>
   <section class="box st1">
-    <h2>${tr("Puzzle per hari")} <em>${tr("warna = kepatuhan hari itu")}</em></h2>
+    ${H2("chart", tr("Puzzle per hari"), `${tr("warna = kepatuhan hari itu")}`)}
     <div class="week">${bar}</div>
   </section>
   <section class="box st2">
-    <h2>${tr("Bahan obrolan")} <em>${tr("bukan bahan hukuman")}</em></h2>
+    ${H2("users", tr("Bahan obrolan"), `${tr("bukan bahan hukuman")}`)}
     <div style="padding-top:10px">${bahanObrolan().map(([t,p],i)=>
-      `<div class="talk" style="animation-delay:${.05*i}s"><b>${t}</b>${p}</div>`).join("")}</div>
+      `<div class="talk" style="animation-delay:${.05*i}s"><b>${t}</b>${kenapa(p)}</div>`).join("")}</div>
   </section>
   <section class="box st3">
-    <h2>${tr("Perlu perhatian hari ini")}</h2>
+    ${H2("alert", tr("Perlu perhatian hari ini"))}
     <div id="alerts"></div>
   </section>
   <section class="box st4 nocetak">
-    <h2>${tr("Bagikan rapor")}</h2>
+    ${H2("share", tr("Bagikan rapor"))}
     <div class="pad">
       <div class="btnrow" style="margin-top:0">
         <button class="btn go" id="bBagi">${tr("Salin / kirim ke WhatsApp")}</button>
@@ -1712,19 +2040,99 @@ function viewHariPelatih(){
   <div class="cards" id="kpis"></div>
   <div class="plats" id="plats"></div>
   <section class="box st1">
-    <h2>${tr("Tugas hari ini")} <em id="questDate"></em></h2>
+    ${H2("check", tr("Tugas hari ini"), `<span id="questDate"></span>`)}
     <div id="todos"></div>
   </section>
   <section class="box st2">
-    <h2>${tr("Peringatan otomatis")}</h2>
+    ${H2("alert", tr("Peringatan otomatis"))}
     <div id="alerts"></div>
   </section>
   <section class="box st4">
-    <h2>${tr("Catatan pelatih")}</h2>
+    ${H2("note", tr("Catatan pelatih"))}
     <div class="pad">
       <div id="noteList"></div>
       <textarea id="noteInput" placeholder="${tr("Catatan untuk anak & orang tua…")}"></textarea>
       <div class="btnrow"><button class="btn go" id="bNote">${tr("Simpan catatan")}</button></div>
+    </div>
+  </section>`;
+}
+
+function viewPelatih(){
+  const P = pelatih();
+  const K = P.K, T = targets();
+
+  const barisUsul = [
+    ["puzzle", tr("Puzzle"), T.puzzle, P.usul.puzzle],
+    ["rapid", tr("Partai rapid"), T.rapid, P.usul.rapid],
+    ["gameMax", tr("Batas partai"), T.gameMax, P.usul.gameMax],
+    ["bulletMax", tr("Batas bullet"), T.bulletMax, P.usul.bulletMax],
+  ];
+  const adaUbahan = barisUsul.some(([k,l,a,b]) => a !== b);
+
+  return `
+  <section class="box">
+    ${H2("coach", tr("Penilaian kemarin"), `${K.dk}`)}
+    <div>${P.diag.map(([k,judul,alasan],i)=>`
+      <div class="alert-row ${k}" style="animation-delay:${.04*i}s">
+        <b>${k==="no"?tr("PERBAIKI"):k==="warn"?tr("PERHATIKAN"):tr("BAIK")}</b>
+        <span><b style="display:block;font-family:var(--sans);font-size:14.5px;margin-bottom:2px">${judul}</b>${kenapa(alasan)}</span>
+      </div>`).join("")}</div>
+  </section>
+
+  <section class="box st1">
+    ${H2("target", tr("Target hari ini"), `${adaUbahan?tr("diubah dari kemarin"):tr("tidak berubah")}`)}
+    <div class="usul">
+      ${barisUsul.map(([k,label,lama,baru])=>`
+        <div class="${lama!==baru?"ubah":""}">
+          <dt>${label}</dt>
+          <dd>${lama!==baru?`<s>${lama}</s>`:""}${baru}</dd>
+        </div>`).join("")}
+    </div>
+    ${P.alasanTarget.length ? `<div style="padding:0 12px 12px">
+      ${P.alasanTarget.map(a=>`<div class="note" style="margin-bottom:6px">${a}</div>`).join("")}
+    </div>` : `<div class="empty">${tr("Tidak ada alasan untuk mengubah target. Konsistensi lebih berharga daripada penyesuaian harian.")}</div>`}
+    ${adaUbahan && S.role === "pelatih" ? `<div class="pad" style="border-top:1px solid var(--rule)">
+      <button class="btn go" id="bTerapkan">${tr("Terapkan target ini")}</button>
+    </div>` : ""}
+  </section>
+
+  <section class="box st2">
+    ${H2("puzzle", tr("Fokus tema hari ini"), `${temaTerverifikasi()?tr("terverifikasi"):tr("tidak terverifikasi")}`)}
+    <div class="sumber ${temaTerverifikasi()?"pasti":"tebak"}">
+      ${temaTerverifikasi()
+        ? tr("Setiap puzzle yang anak kerjakan dicek temanya. Kalau ia mengerjakan 10 puzzle Pin, dasbor tahu. Ini target, bukan saran.")
+        : tr("Tanpa token Lichess, target tema hanya bisa dicentang manual — dasbor tidak bisa tahu tema apa yang benar-benar dikerjakan anak.")}
+    </div>
+    <div class="rek">
+      ${pilihTema().map(t => {
+        const h = temaHitung(todayKey());
+        const n = h ? (h[t]||0) : null;
+        const goal = targets().temaPuzzle;
+        const selesai = n != null && n >= goal;
+        return `<a href="${temaUrl(t)}" target="_blank" rel="noopener" class="${selesai?"senang":"kuat"}">
+          <span><b>${temaNama(t)}</b>
+            <small>${tr("Target {a} puzzle", {a:goal})}${n!=null?" \u00b7 " + tr("sudah {a}", {a:n}):""}</small></span>
+          <span class="arr">${selesai?"\u2713":"\u2192"}</span></a>`;
+      }).join("") || `<div class="empty">${tr("Tema fokus dimatikan (Jumlah tema fokus = 0).")}</div>`}
+    </div>
+    <div class="empty" style="border-top:1px solid var(--rule)">
+      ${tr("Tema berganti setiap hari dan tidak pernah mengulang tema kemarin. Sekali dipilih untuk hari ini, ia tidak berubah walau halaman dimuat ulang.")}
+    </div>
+  </section>
+
+  <section class="box st3">
+    ${H2("book", tr("Kenapa tema ini"), `${tr("klik untuk langsung latihan")}`)}
+    <div class="sumber ${P.sumber==="dashboard"?"pasti":"tebak"}">
+      ${P.sumber==="dashboard"
+        ? tr("Sumber: puzzle dashboard Lichess — performa nyata anak per tema, 30 hari terakhir. Ini BUKAN tebakan.")
+        : tr("Sumber: TEBAKAN dari partai + kurikulum tier. Lichess tidak memberi tahu tema mana yang lemah tanpa token. Isi Token Lichess di Pengaturan untuk membuat rekomendasi ini berhenti menebak.")}
+    </div>
+    <div class="rek">
+      ${P.rek.map(r=>`
+        <a href="${temaUrl(r.key)}" target="_blank" rel="noopener" class="${r.kuat?"kuat":"senang"}">
+          <span><b>${temaNama(r.key)}</b><small>${r.alasan}</small></span>
+          <span class="arr">\u2192</span>
+        </a>`).join("")}
     </div>
   </section>`;
 }
@@ -1754,12 +2162,12 @@ function viewAnalisis(){
   </div>
 
   <section class="box st1">
-    <h2>${tr("Tren akurasi")} <em>${tr("25 partai terakhir yang dianalisis")}</em></h2>
+    ${H2("chart", tr("Tren akurasi"), `${tr("25 partai terakhir yang dianalisis")}`)}
     <svg class="chart" id="accChart" role="img" aria-label="Tren akurasi"></svg>
   </section>
 
   <section class="box st2">
-    <h2>${tr("Repertoar pembukaan")} <em>${tr("kedua situs \u00b7 pisah per warna")}</em></h2>
+    ${H2("board", tr("Repertoar pembukaan"), `${tr("kedua situs \u00b7 pisah per warna")}`)}
     <div class="hbars" style="padding-bottom:0">
       ${["putih","hitam"].map(w=>{
         const b = pembukaan(w);
@@ -1791,7 +2199,7 @@ function viewAnalisis(){
 
 
   <section class="box st3">
-    <h2>${tr("Distribusi kontrol waktu")} <em>${tr("bullet = alarm")}</em></h2>
+    ${H2("chart", tr("Distribusi kontrol waktu"), `${tr("bullet = alarm")}`)}
     <div class="hbars">${Object.entries(kelas).sort((a,b)=>b[1]-a[1]).map(([n,v])=>
       `<div class="hbar" style="--tone:${n==="bullet"?"var(--no)":n==="rapid"?"var(--ok)":"var(--carbon)"}">
         <span class="n">${n}</span><span class="t"><i data-w="${Math.round(100*v/maxK)}%"></i></span>
@@ -1799,7 +2207,7 @@ function viewAnalisis(){
   </section>
 
   <section class="box st4">
-    <h2>${tr("Riwayat rating")}</h2>
+    ${H2("chart", tr("Riwayat rating"))}
     <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
     <div class="legend" id="legend"></div>
   </section>`;
@@ -1808,7 +2216,7 @@ function viewAnalisis(){
 function viewRencana(){
   return `
   <section class="box">
-    <h2>${tr("Tier kurikulum")}</h2>
+    ${H2("book", tr("Tier kurikulum"))}
     <div class="pad">
       <label>${tr("Tier saat ini")}</label>
       <select id="tier"></select>
@@ -1816,7 +2224,7 @@ function viewRencana(){
     </div>
   </section>
   <section class="box st1">
-    <h2>${tr("Target harian")} <em>${tr("dipakai untuk verifikasi otomatis")}</em></h2>
+    ${H2("target", tr("Target harian"), `${tr("dipakai untuk verifikasi otomatis")}`)}
     <div class="pad">
       <div class="fields">
         <div><label>${tr("Puzzle / hari (Lichess — terverifikasi)")}</label><input type="number" id="tPuzzle" min="0"></div>
@@ -1825,9 +2233,27 @@ function viewRencana(){
         <div><label>${tr("Partai rapid / hari")}</label><input type="number" id="tRapid" min="0"></div>
         <div><label>${tr("Batas partai bullet / hari")}</label><input type="number" id="tBulletMax" min="0"></div>
         <div><label>${tr("Batas total partai / hari (anti-tilt)")}</label><input type="number" id="tGameMax" min="0"></div>
+        <div><label>${tr("Jumlah tema fokus / hari")}</label><input type="number" id="tTemaJumlah" min="0" max="4"></div>
+        <div><label>${tr("Puzzle per tema")}</label><input type="number" id="tTemaPuzzle" min="0"></div>
       </div>
-      <label>${tr("Tugas manual (satu per baris — dicentang pelatih/orang tua)")}</label>
-      <textarea id="tManual" style="font-family:var(--mono);font-size:12px"></textarea>
+      <div class="warnbox" style="margin-top:12px">
+        <b>${tr("Beban total")}</b>
+        <label style="display:flex;align-items:center;gap:9px;margin:6px 0 0;text-transform:none;font-size:13px">
+          <input type="checkbox" id="tTemaLuar" style="width:auto;min-height:0">
+          <span>${tr("Puzzle tema DI LUAR target puzzle harian (bukan bagian darinya)")}</span>
+        </label>
+        <div style="margin-top:7px" id="bebanInfo"></div>
+      </div>
+
+      <label>${tr("Tugas kurikulum (satu per baris)")}</label>
+      <textarea id="tManual" style="font-family:var(--mono);font-size:12px" rows="6"></textarea>
+      <div class="empty" style="padding:6px 0;line-height:1.6">
+        ${tr("Format: Teks tugas | tema | jumlah")}<br>
+        ${tr("Ada tema \u2192 TERVERIFIKASI otomatis. Tanpa tema \u2192 centang manual.")}<br>
+        ${tr("Contoh: Drill endgame benteng | rookEndgame | 10")}<br>
+        <a href="https://lichess.org/training/themes" target="_blank" rel="noopener"
+           style="color:var(--gold)">${tr("Daftar semua tema Lichess \u2197")}</a>
+      </div>
       <div class="btnrow"><button class="btn go" id="bTargets">${tr("Simpan target")}</button></div>
     </div>
   </section>`;
@@ -1835,7 +2261,7 @@ function viewRencana(){
 
 function viewPartai(){
   return `<section class="box">
-    <h2>${tr("Partai terakhir")} <em>${tr("kedua situs")}</em></h2>
+    ${H2("board", tr("Partai terakhir"), `${tr("kedua situs")}`)}
     <div class="filt" id="filt">
       ${[["semua",tr("Semua")],["Lichess","Lichess"],["Chess.com","Chess.com"],["mini",tr("Kekalahan miniatur")]].map(([v,l])=>
         `<button data-f="${v}" class="${(S.filter||"semua")===v?"on":""}">${l}</button>`).join("")}
@@ -1847,7 +2273,7 @@ function viewPartai(){
 function viewAtur(){
   return `
   <section class="box">
-    <h2>${tr("Anak yang dipantau")} <em>${DB.anak.length} anak tersimpan</em></h2>
+    ${H2("users", tr("Anak yang dipantau"), `${DB.anak.length} anak tersimpan`)}
     <div id="daftarAnak"></div>
     <div class="pad" style="border-top:1px solid var(--rule)">
       <button class="btn go" id="bTambahAnak">+ ${tr("Tambah anak")}</button>
@@ -1855,13 +2281,19 @@ function viewAtur(){
   </section>
 
   <section class="box st1">
-    <h2>${tr("Sambungan")} <em id="aturNama"></em></h2>
+    ${H2("gear", tr("Sambungan"), `<span id="aturNama"></span>`)}
     <div class="pad">
       <div class="fields">
         <div><label>${tr("Nama anak")}</label><input id="cName"></div>
         <div><label>${tr("Zona waktu")}</label><input id="cTz" disabled></div>
         <div><label>${tr("Username Chess.com (partai)")}</label><input id="cChess" autocapitalize="off"></div>
         <div><label>${tr("Username Lichess (puzzle)")}</label><input id="cLichess" autocapitalize="off"></div>
+      </div>
+      <label>${tr("Token Lichess (opsional — membuat rekomendasi puzzle berhenti menebak)")}</label>
+      <input id="cLiToken" type="password" autocapitalize="off" placeholder="lip_xxxxxxxxxxxx">
+      <div class="warnbox" style="margin-top:8px">
+        <b>${tr("Baca sebelum mengisi")}</b>
+        ${tr("Token ini memberi akses baca ke riwayat puzzle anak. Buat di lichess.org/account/oauth/token dengan izin puzzle:read SAJA — jangan centang izin lain. Token disimpan di browser ini dan TIDAK pernah masuk ke file yang kamu unggah ke GitHub. Kalau ragu, kosongkan: pelatih tetap bekerja, hanya rekomendasi temanya jadi tebakan.")}
       </div>
       <label>URL Sheet CSV (File \u2192 Share \u2192 Publish to web \u2192 sheet "Harian" \u2192 CSV)</label>
       <input id="cCsv" autocapitalize="off" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&single=true&output=csv">
@@ -1879,17 +2311,285 @@ function viewAtur(){
     </div>
   </section>
   <section class="box st2">
-    <h2>${tr("Diagnosis")} <em>${tr("uji tiap endpoint terpisah")}</em></h2>
+    ${H2("gear", tr("Diagnosis"), `${tr("uji tiap endpoint terpisah")}`)}
     <div id="testLog"><div class="empty">${tr('Tekan "Uji koneksi" untuk memeriksa setiap alamat satu per satu.')}</div></div>
   </section>
   <section class="box st2">
-    <h2>${tr("Batas kejujuran alat ini")}</h2>
+    ${H2("book", tr("Batas kejujuran alat ini"))}
     <div class="pad" style="font-size:13px;line-height:1.6">
       <p style="margin-bottom:8px"><b>Terverifikasi:</b> jumlah puzzle harian (Lichess), semua partai + hasil + rating + akurasi (Chess.com), deret kekalahan, volume bermain.</p>
       <p style="margin-bottom:8px"><b>Tidak terlihat sama sekali:</b> pelajaran/video, waktu layar, latihan papan fisik, apakah anak dibantu mesin. Tugas manual ada untuk menutup celah ini — dan hanya sekuat kejujuran anak.</p>
       <p><b>Chess.com tidak menyimpan riwayat</b> rating taktik maupun Puzzle Rush. Aplikasi ini yang mencatatnya. Hari yang tidak dibuka, tidak tercatat — kecuali Apps Script terpasang.</p>
     </div>
   </section>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PELATIH OTOMATIS
+
+   BUKAN "AI". Ini mesin berbasis aturan, dan itu disengaja.
+
+   Model bahasa akan memberi kalimat yang terdengar bijak tanpa kamu bisa
+   memeriksa dari mana asalnya. Untuk keputusan yang menyangkut anakmu setiap
+   hari, itu lebih buruk daripada aturan sederhana yang bisa kamu bantah.
+
+   Setiap rekomendasi di sini WAJIB menyebut angka yang melahirkannya.
+   Kalau pelatih ini salah, kamu harus bisa menunjuk barisnya.
+
+   Dua tingkat kecerdasan:
+     TANPA token — menebak tema dari bukti partai (kekalahan miniatur, akurasi,
+                   tren rating puzzle) + kurikulum tier. Jujur bahwa itu tebakan.
+     DENGAN token — membaca /api/puzzle/dashboard: performa anak PER TEMA.
+                   Rekomendasi berhenti jadi tebakan.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Slug tema Lichess -> URL latihan langsung: lichess.org/training/{slug} */
+const TEMA = {
+  fork:"Garpu", pin:"Pin", skewer:"Skewer", discoveredAttack:"Serangan terbuka",
+  doubleCheck:"Skak ganda", hangingPiece:"Bidak menggantung", trappedPiece:"Bidak terperangkap",
+  deflection:"Pengalihan", attraction:"Pemancingan", clearance:"Pembukaan jalur",
+  interference:"Penghadangan", capturingDefender:"Menyingkirkan penjaga",
+  sacrifice:"Korban", quietMove:"Langkah sunyi", defensiveMove:"Langkah bertahan",
+  intermezzo:"Langkah antara", xRayAttack:"Serangan sinar-X", zugzwang:"Zugzwang",
+  backRankMate:"Mat baris belakang", smotheredMate:"Mat terkurung", hookMate:"Mat kail",
+  anastasiaMate:"Mat Anastasia", arabianMate:"Mat Arab", bodenMate:"Mat Boden",
+  mateIn1:"Mat 1 langkah", mateIn2:"Mat 2 langkah", mateIn3:"Mat 3 langkah",
+  mate:"Serangan mat", crushing:"Menang telak", advantage:"Merebut keunggulan",
+  advancedPawn:"Pion maju", promotion:"Promosi", exposedKing:"Raja terbuka",
+  opening:"Fase pembukaan", middlegame:"Fase tengah", endgame:"Fase akhir",
+  rookEndgame:"Endgame benteng", pawnEndgame:"Endgame pion", queenEndgame:"Endgame menteri",
+  bishopEndgame:"Endgame gajah", knightEndgame:"Endgame kuda",
+  short:"Taktik pendek", long:"Kalkulasi panjang", veryLong:"Kalkulasi sangat panjang",
+  oneMove:"Satu langkah", healthyMix:"Campuran seimbang",
+};
+const temaUrl = t => "https://lichess.org/training/" + t;
+const temaNama = t => tr(TEMA[t] || t);
+
+/* Kurikulum tema per tier — dipakai kalau tidak ada token. */
+const TEMA_TIER = {
+  1: ["fork","pin","skewer","backRankMate","hangingPiece","mateIn1","mateIn2"],
+  2: ["discoveredAttack","deflection","attraction","doubleCheck","smotheredMate","mateIn2","short"],
+  3: ["quietMove","defensiveMove","interference","zugzwang","xRayAttack","long","rookEndgame"],
+  4: ["veryLong","zugzwang","quietMove","endgame","rookEndgame","queenEndgame","defensiveMove"],
+};
+
+function kemarinKey(){
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return dayKey(d);
+}
+
+/* Ringkasan KEMARIN — satu-satunya bahan yang dipakai pelatih. */
+function kemarin(){
+  const dk = kemarinKey(), T = targets();
+  const list = normGames().filter(g => dayKey(g.t) === dk).sort((a,b)=>a.t-b.t);
+  const acc = list.filter(g => g.acc != null);
+  let cur = 0, tilt = 0;
+  list.forEach(g => { if(g.res==="K"){ cur++; tilt = Math.max(tilt,cur); } else cur = 0; });
+
+  const snapKmr = S.snaps[dk], snapKini = S.snaps[todayKey()];
+  const rKmr = snapKmr ? snapKmr.puzRating : null;
+  const rKini = snapKini ? snapKini.puzRating : null;
+
+  return {
+    dk,
+    puzzle: puzzlesOn(dk),
+    puzzleTarget: T.puzzle,
+    puzzleRating: rKmr,
+    deltaRating: (rKini != null && rKmr != null) ? rKini - rKmr : null,
+    partai: list.length,
+    byClass: list.reduce((o,g)=>{ o[g.speed]=(o[g.speed]||0)+1; return o; },{}),
+    menang: list.filter(g=>g.res==="M").length,
+    kalah: list.filter(g=>g.res==="K").length,
+    akurasi: acc.length ? acc.reduce((a,b)=>a+b.acc,0)/acc.length : null,
+    tilt,
+    mini: list.filter(g=>g.mini),
+    aktif: puzzlesOn(dk) > 0 || list.length > 0,
+    list,
+  };
+}
+
+/* Berapa puzzle per TEMA yang dikerjakan pada hari tertentu.
+   Satu puzzle bisa punya banyak tema; ia dihitung untuk SEMUA temanya — itu benar,
+   puzzle "pin + mat baris belakang" memang melatih keduanya. */
+function temaHitung(dk){
+  const A = (S.data && S.data.lichess && S.data.lichess.pzAct) || null;
+  if(!A) return null;                       // tanpa token: tidak bisa diverifikasi
+  const out = {};
+  A.forEach(r => {
+    if(!r || !r.date || dayKey(ms(r.date)) !== dk) return;
+    ((r.puzzle && r.puzzle.themes) || []).forEach(t => out[t] = (out[t] || 0) + 1);
+  });
+  return out;
+}
+const temaTerverifikasi = () => !!(S.data && S.data.lichess && S.data.lichess.pzAct);
+
+/* Tema terlemah dari puzzle dashboard Lichess (butuh token). */
+function temaLemah(){
+  const d = S.data && S.data.lichess && S.data.lichess.pzDash;
+  if(!d || !d.themes || !d.themes.length) return null;
+  return d.themes
+    .filter(t => t.results && t.results.nb >= 5)        // < 5 percobaan = kebisingan
+    .map(t => ({
+      key: t.theme,
+      nb: t.results.nb,
+      perf: t.results.performance,
+      menang: Math.round(100 * (t.results.firstWins || 0) / t.results.nb),
+    }))
+    .sort((a,b) => a.menang - b.menang);
+}
+
+/* ═══════════ TEMA HARI INI ═══════════
+   Syarat: (1) berbeda tiap hari, (2) tidak mengulang tema kemarin,
+   (3) sekali dipilih untuk hari ini, TIDAK berubah walau halaman di-refresh —
+   target yang berganti sendiri di tengah hari bukan target, tapi lelucon. */
+function pilihTema(){
+  const dk = todayKey(), T = targets();
+  const n = Math.max(0, T.temaJumlah || 0);
+  if(!n) return [];
+
+  // sudah dipilih hari ini? pakai itu. Jangan pernah mengocok ulang.
+  if(S.temaHari && S.temaHari.dk === dk && (S.temaHari.list||[]).length === n)
+    return S.temaHari.list;
+
+  const kmrList = (S.temaKemarin && S.temaKemarin.dk === kemarinKey()) ? (S.temaKemarin.list||[]) : [];
+  const lemah = temaLemah();
+  let kolam;
+
+  if(lemah && lemah.length >= 2){
+    /* KEKELIRUAN YANG DIPERBAIKI: dulu kolam = 6 tema teratas dari daftar
+       terurut, lalu dirotasi. Tapi kalau anak hanya punya 5 tema tercatat,
+       rotasi bisa mendarat di tema TERKUATNYA (85% menang) — dan fokus harian
+       yang berputar ke tema yang sudah dikuasai adalah waktu yang terbuang.
+
+       Sekarang kolam dibatasi ke tema yang benar-benar lemah (<65% menang).
+       Rotasi tetap ada, tapi hanya di dalam kolam itu. */
+    const benarLemah = lemah.filter(x => x.menang < 65);
+    kolam = (benarLemah.length >= n ? benarLemah : lemah.slice(0, Math.max(n, 3)))
+      .slice(0, 5).map(x => x.key);
+  } else {
+    kolam = (TEMA_TIER[S.tier] || TEMA_TIER[1]).slice();
+  }
+  // buang tema kemarin supaya hari ini benar-benar beda
+  const bersih = kolam.filter(t => !kmrList.includes(t));
+  const pakai = bersih.length >= n ? bersih : kolam;
+
+  const hariKe = Math.floor(new Date(dk).getTime() / 864e5);
+  const pilih = [];
+  for(let i = 0; pilih.length < n && i < pakai.length * 2; i++){
+    const t = pakai[(hariKe + i) % pakai.length];
+    if(!pilih.includes(t)) pilih.push(t);
+  }
+
+  S.temaKemarin = S.temaHari || null;
+  S.temaHari = { dk, list: pilih };
+  persist();
+  return pilih;
+}
+
+/* ═══════════ MESIN PELATIH ═══════════ */
+function pelatih(){
+  const K = kemarin(), T = targets(), tier_ = tier();
+  const diag = [];    // [tingkat, judul, alasan-dengan-angka]
+  const usul = { ...T };
+  const alasanTarget = [];
+  let rek = [];       // rekomendasi puzzle
+
+  /* ── 1. DIAGNOSIS ── */
+  if(!K.aktif){
+    diag.push(["warn", tr("Kemarin tidak ada aktivitas sama sekali"),
+      tr("Tidak ada puzzle, tidak ada partai. Pelatih tidak bisa menilai apa pun dari hari kosong — jadi target hari ini tidak diubah.")]);
+  }
+
+  if(K.puzzle < T.puzzle && K.aktif){
+    const pct = Math.round(100 * K.puzzle / Math.max(1,T.puzzle));
+    diag.push([pct < 50 ? "no" : "warn",
+      tr("Puzzle kemarin {a}/{b}", {a:K.puzzle, b:T.puzzle}),
+      pct < 50
+        ? tr("Meleset lebih dari separuh. Target diturunkan hari ini — target yang mustahil dicapai berhenti jadi target dan mulai jadi rasa gagal harian.")
+        : tr("Meleset sedikit. Target dipertahankan.")]);
+    if(pct < 50){ usul.puzzle = Math.max(10, Math.round(K.puzzle * 1.2 / 5) * 5);
+      alasanTarget.push(tr("Puzzle diturunkan ke {a} karena kemarin hanya {b} dari {c}.", {a:usul.puzzle, b:K.puzzle, c:T.puzzle})); }
+  } else if(K.puzzle >= T.puzzle && K.aktif){
+    const naik = K.deltaRating;
+    if(naik != null && naik > 0){
+      usul.puzzle = Math.min(T.puzzle + 5, 60);
+      diag.push(["ok", tr("Target puzzle tercapai dan rating naik {a}", {a:"+"+naik}),
+        tr("Kemarin {a} puzzle, rating puzzle naik. Target dinaikkan tipis ke {b}. Kenaikan kecil dan bertahap — bukan lompatan.", {a:K.puzzle, b:usul.puzzle})]);
+      alasanTarget.push(tr("Puzzle dinaikkan ke {a} karena target tercapai DAN rating naik.", {a:usul.puzzle}));
+    } else if(naik != null && naik < -15){
+      diag.push(["warn", tr("Target tercapai tapi rating puzzle turun {a}", {a:naik}),
+        tr("Jumlah tercapai, tapi kualitasnya tidak. Ini gejala mengerjakan puzzle sambil buru-buru. Target TIDAK dinaikkan; hari ini fokus ke ketelitian, bukan jumlah.")]);
+    } else {
+      diag.push(["ok", tr("Target puzzle tercapai ({a})", {a:K.puzzle}),
+        tr("Target dipertahankan. Konsistensi lebih berharga daripada lompatan.")]);
+    }
+  }
+
+  if(K.tilt >= 3){
+    usul.gameMax = Math.max(2, T.gameMax - 2);
+    diag.push(["no", tr("Kemarin tilt: {a} kekalahan beruntun", {a:K.tilt}),
+      tr("Batas partai hari ini diturunkan ke {a}. Setelah hari yang buruk, yang dibutuhkan bukan lebih banyak partai — tapi lebih sedikit partai dan satu analisis.", {a:usul.gameMax})]);
+    alasanTarget.push(tr("Batas partai diturunkan ke {a} karena kemarin tilt.", {a:usul.gameMax}));
+  }
+
+  if(K.mini.length){
+    const buka = [...new Set(K.mini.map(g=>g.opening).filter(Boolean))];
+    diag.push(["no", tr("{a} kekalahan miniatur kemarin", {a:K.mini.length}),
+      tr("Kalah di bawah {a} langkah{b}. Ini blunder pembukaan, bukan kekalahan strategis. Hari ini WAJIB: bedah partai ini bersama anak sebelum ia bermain lagi.",
+        {a:MINI, b: buka.length ? " (" + buka.join(", ") + ")" : ""})]);
+    usul.rapid = Math.max(1, Math.min(T.rapid, 1));
+    alasanTarget.push(tr("Partai rapid diturunkan ke {a}: analisis dulu, main belakangan.", {a:usul.rapid}));
+  }
+
+  if(K.akurasi != null && K.akurasi < 70){
+    diag.push(["warn", tr("Akurasi kemarin {a}%", {a:K.akurasi.toFixed(1)}),
+      tr("Di bawah 70%. Hampir selalu berarti bermain terlalu cepat untuk kontrol waktunya — bukan kurang tahu, tapi kurang berpikir.")]);
+  }
+
+  if(K.byClass.bullet){
+    diag.push(["no", tr("{a} partai bullet kemarin", {a:K.byClass.bullet}),
+      tr("Bullet melatih refleks dan merusak kebiasaan kalkulasi. Ini yang paling langsung bertabrakan dengan target tier ini.")]);
+  }
+
+  if(!diag.length) diag.push(["ok", tr("Kemarin bersih"),
+    tr("Tidak ada tanda bahaya. Target dipertahankan.")]);
+
+  /* ── 2. REKOMENDASI PUZZLE ── */
+  const lemah = temaLemah();
+  let sumber;
+
+  if(lemah && lemah.length){
+    sumber = "dashboard";
+    rek = lemah.slice(0, 3).map(t => ({
+      key: t.key,
+      alasan: tr("Menang hanya {a}% dari {b} puzzle tema ini (30 hari terakhir). Ini titik terlemahnya.",
+        {a:t.menang, b:t.nb}),
+      kuat: true,
+    }));
+    const kuatnya = lemah[lemah.length-1];
+    if(kuatnya && kuatnya.menang >= 80)
+      rek.push({ key:kuatnya.key, kuat:false,
+        alasan: tr("Tema terkuatnya ({a}% dari {b}). Sisipkan sedikit supaya sesi tidak terasa hukuman.",
+          {a:kuatnya.menang, b:kuatnya.nb}) });
+  } else {
+    sumber = "tebakan";
+    const kandidat = [];
+    if(K.mini.length) kandidat.push(["opening", tr("Kemarin kalah di bawah {a} langkah. Latih penglihatan taktik di fase pembukaan.", {a:MINI})]);
+    if(K.akurasi != null && K.akurasi < 70) kandidat.push(["short", tr("Akurasi {a}% — latih taktik pendek untuk membiasakan melihat sebelum melangkah.", {a:K.akurasi.toFixed(1)})]);
+    if(K.deltaRating != null && K.deltaRating < -15) kandidat.push(["healthyMix", tr("Rating puzzle turun {a}. Kembali ke campuran seimbang, jangan tema sulit dulu.", {a:K.deltaRating})]);
+    if(K.deltaRating != null && K.deltaRating > 20) kandidat.push(["long", tr("Rating puzzle naik {a}. Naikkan kesulitan: kalkulasi panjang.", {a:"+"+K.deltaRating})]);
+    // sisanya dari kurikulum tier, dirotasi harian supaya tidak membosankan
+    const daftar = TEMA_TIER[S.tier] || TEMA_TIER[1];
+    const hariKe = Math.floor(Date.now() / 864e5);
+    for(let i=0; i<daftar.length && kandidat.length < 4; i++){
+      const t = daftar[(hariKe + i) % daftar.length];
+      if(!kandidat.some(x => x[0] === t))
+        kandidat.push([t, tr("Bagian dari kurikulum {a}. (Tebakan — tanpa token Lichess, pelatih tidak tahu tema mana yang benar-benar lemah.)", {a:tier_.nama})]);
+    }
+    rek = kandidat.slice(0,4).map(([k,a]) => ({ key:k, alasan:a, kuat:true }));
+  }
+
+  return { K, diag, usul, alasanTarget, rek, sumber };
 }
 
 /* ═══════════ KOLOM PER PLATFORM ═══════════
@@ -1948,7 +2648,7 @@ function renderPlatforms(){
           ${baris("Puzzle Storm", L && L.storm && L.storm.runs ? L.storm.score : "\u2014",
               L && L.storm && L.storm.runs ? tr("{a} kali main",{a:L.storm.runs}) : "")}
         </dl>
-        <div class="foot">${tr("Jumlah puzzle harian TERVERIFIKASI. Rating puzzle bergerak naik dan turun — inilah angka yang paling jujur menggambarkan kemampuan taktik anak.")}</div>
+        <div class="foot">${kenapa(tr("Jumlah puzzle harian TERVERIFIKASI. Rating puzzle bergerak naik dan turun — inilah angka yang paling jujur menggambarkan kemampuan taktik anak."))}</div>
       </div>`;
 
   // ── CHESS.COM: rumah partai ──
@@ -1979,7 +2679,7 @@ function renderPlatforms(){
                 ? `${C.chess_blitz.record.win||0}M / ${C.chess_blitz.record.draw||0}R / ${C.chess_blitz.record.loss||0}K` : "")}
           ${baris(tr("Kontrol waktu hari ini"), "\u00a0", kelas(dC), "dim")}
         </dl>
-        <div class="foot">${tr("Rating taktik yang ditampilkan adalah yang TERTINGGI sepanjang masa — ia tidak pernah turun, jadi ia tidak bisa memberi tahu kalau kemampuan anak menurun. Gunakan rating puzzle Lichess untuk itu.")}</div>
+        <div class="foot">${kenapa(tr("Rating taktik yang ditampilkan adalah yang TERTINGGI sepanjang masa — ia tidak pernah turun, jadi ia tidak bisa memberi tahu kalau kemampuan anak menurun. Gunakan rating puzzle Lichess untuk itu."))}</div>
       </div>`;
 
   el.innerHTML = li + cc;
@@ -2055,6 +2755,15 @@ function renderRatings(){
 }
 
 /* ═══════════ RENDER BERSAMA ═══════════ */
+/* Label pendek menggantikan kalimat panjang di daftar tugas.
+   Kalimat aslinya tetap ada, di balik "kenapa?". */
+function labelPendek(x){
+  if(!x.auto) return x.tema ? tr("MANUAL \u00b7 butuh token") : tr("MANUAL");
+  if(x.invert) return tr("PAGAR");
+  if(x.tema)   return tr("OTOMATIS \u00b7 tema Lichess");
+  return tr("OTOMATIS");
+}
+
 function renderTodos(){
   const dk = todayKey();
   const el = $("#todos"); if(!el) return;
@@ -2074,8 +2783,13 @@ function renderTodos(){
       <span class="mark" role="checkbox" aria-checked="${x.ok}" aria-disabled="${x.auto || S.role==='anak'}"
         ${(x.auto || S.role==='anak')?"":`tabindex="0" data-toggle="${x.idx}"`}
         ${x.invert && !x.ok ? 'style="background:var(--no);border-color:var(--no);color:#fff"' : ""}>${tanda}</span>
-      <span class="t">${x.t}<small class="${x.auto?"src":""}">${x.src}</small>
-        ${x.auto && !x.invert ? `<span class="bar"><i data-w="${pct}%"></i></span>` : ""}</span>
+      <span class="t">${x.tema
+          ? `<a href="${temaUrl(x.tema)}" target="_blank" rel="noopener"
+               style="color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold)">${x.t} \u2197</a>`
+          : x.t}
+        <small class="${x.auto?"src":""}">${labelPendek(x)}</small>
+        ${x.auto && !x.invert ? `<span class="bar"><i data-w="${pct}%"></i></span>` : ""}
+        ${x.src && x.src.length > 42 ? kenapa(x.src) : ""}</span>
       <span class="prog" style="color:${warna}">${prog}</span>
     </div>`;
   }).join("");
@@ -2157,8 +2871,18 @@ function renderAlerts(){
     A.push(["warn",tr("MINIATUR"), tr("{a} kekalahan miniatur di seluruh riwayat. Buka tab Partai, saring 'Kekalahan miniatur'.",{a:mini.length})]);
 
   if(!A.length) A.push(["ok",tr("AMAN"),tr("Tidak ada tanda bahaya hari ini.")]);
-  el.innerHTML = A.map(([k,t,m],i)=>`<div class="alert-row ${k}" style="animation-delay:${.04*i}s">
-    <b>${t}</b><span>${m}</span></div>`).join("");
+  /* Kalimat pertama terlihat. Sisanya di balik "kenapa?".
+     Penjelasannya tidak hilang — ia berhenti menghalangi. */
+  const pecah = (m) => {
+    const i = m.indexOf(". ");
+    if(i < 0 || i > 90) return [m, ""];
+    return [m.slice(0, i+1), m.slice(i+2)];
+  };
+  el.innerHTML = A.map(([k,t,m],i)=>{
+    const [depan, sisa] = pecah(m);
+    return `<div class="alert-row ${k}" style="animation-delay:${.04*i}s">
+      <b>${t}</b><span>${depan}${kenapa(sisa)}</span></div>`;
+  }).join("");
 }
 
 function renderNotes(){
@@ -2301,12 +3025,43 @@ function renderPlan(){
   const T = targets();
   $("#tPuzzle").value = T.puzzle; $("#tRush").value = T.rush||0; $("#tRushScore").value = T.rushScore||0;
   $("#tRapid").value = T.rapid; $("#tBulletMax").value = T.bulletMax; $("#tGameMax").value = T.gameMax;
-  $("#tManual").value = manualTasks().join("\n");
+  $("#tTemaJumlah").value = T.temaJumlah || 0; $("#tTemaPuzzle").value = T.temaPuzzle || 0;
+  $("#tTemaLuar").checked = !!T.temaLuar;
+  const hitungBeban = () => {
+    const jml = +$("#tTemaJumlah").value || 0, per = +$("#tTemaPuzzle").value || 0;
+    const umum = +$("#tPuzzle").value || 0;
+    const tema = jml * per;
+    const total = $("#tTemaLuar").checked ? umum + tema : Math.max(umum, tema);
+    const el = $("#bebanInfo");
+    const berat = total > 40;
+    el.innerHTML = `<b style="font-family:var(--mono);font-size:12px;color:${berat?"var(--no)":"var(--ok)"}">
+      ${tr("Total puzzle/hari: {a}", {a:total})}</b>
+      <div style="font-family:var(--mono);font-size:11px;line-height:1.5;margin-top:4px">
+      ${$("#tTemaLuar").checked
+        ? tr("{a} umum + {b} tema ({c} tema \u00d7 {d}). Puzzle tema TIDAK dihitung sebagai puzzle umum.", {a:umum,b:tema,c:jml,d:per})
+        : tr("{a} umum, di antaranya minimal {b} harus bertema ({c} tema \u00d7 {d}).", {a:umum,b:tema,c:jml,d:per})}
+      ${berat ? "<br><b>" + tr("Di atas 40 puzzle sehari, anak berhenti belajar dan mulai bertahan hidup. Jenuh adalah penyebab nomor satu anak berhenti main catur — bukan kurang latihan.") + "</b>" : ""}
+      </div>`;
+  };
+  ["#tTemaJumlah","#tTemaPuzzle","#tPuzzle","#tTemaLuar"].forEach(id => {
+    const el = $(id); if(el) el.oninput = el.onchange = hitungBeban;
+  });
+  hitungBeban();
+  $("#tManual").value = manualTasks()
+    .map(m => m.tema ? `${m.teks} | ${m.tema} | ${m.n || 10}` : m.teks)
+    .join("\n");
   sel.onchange = async e => { S.tier = +e.target.value; S.targets = null; S.manual = null; await persist(); render(); };
   $("#bTargets").onclick = async () => {
     S.targets = { puzzle:+$("#tPuzzle").value||0, rush:+$("#tRush").value||0, rushScore:+$("#tRushScore").value||0,
-      rapid:+$("#tRapid").value||0, bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0 };
-    S.manual = $("#tManual").value.split("\n").map(x=>x.trim()).filter(Boolean);
+      rapid:+$("#tRapid").value||0, bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0,
+      temaJumlah:+$("#tTemaJumlah").value||0, temaPuzzle:+$("#tTemaPuzzle").value||0,
+      temaLuar: $("#tTemaLuar").checked };
+    S.temaHari = null;   // target berubah -> pilih ulang tema hari ini
+    S.manual = $("#tManual").value.split("\n").map(x=>x.trim()).filter(Boolean).map(baris => {
+      const p2 = baris.split("|").map(y => y.trim());
+      if(p2.length >= 2 && p2[1]) return { teks:p2[0], tema:p2[1], n: Math.max(1, +p2[2] || 10) };
+      return { teks: p2[0] };
+    });
     await persist(); render();
   };
 }
@@ -2349,11 +3104,13 @@ function renderAtur(){
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
   $("#cCsv").value = S.cfg.csv || "";
+  const tk = $("#cLiToken"); if(tk) tk.value = S.cfg.liToken || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $("#bFetch").onclick = async () => {
     S.cfg.name = $("#cName").value.trim(); S.cfg.chess = $("#cChess").value.trim();
     S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
     S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
+    S.cfg.liToken = ($("#cLiToken")||{}).value ? $("#cLiToken").value.trim() : (S.cfg.liToken||"");
     await persist(); await fetchAll();
   };
   $("#bExport").onclick = () => {
@@ -2454,6 +3211,7 @@ function render(){
   const V = {
     misi: viewMisi, progres: viewProgres,
     hari: S.role==="pelatih" ? viewHariPelatih : viewHariOrtu,
+    pelatih: viewPelatih,
     minggu: viewMinggu, analisis: viewAnalisis, rencana: viewRencana,
     partai: viewPartai, atur: viewAtur,
   };
@@ -2472,6 +3230,12 @@ function render(){
   if(qd) qd.textContent = new Date().toLocaleDateString(LOCALE(),{weekday:"long",day:"numeric",month:"long"});
 
   renderPilihAnak(); renderBagi();
+  const bTp = $("#bTerapkan");
+  if(bTp) bTp.onclick = async () => {
+    S.targets = { ...pelatih().usul };
+    await persist();
+    S.tab = "hari"; render();
+  };
   renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderPlatforms(); renderRatings();
   renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur();
   if($("#chart")) renderChart("chart", ratingSeries(), false);
