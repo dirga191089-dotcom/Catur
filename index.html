@@ -96,7 +96,7 @@
     background:var(--card);color:var(--soft);border:1px solid var(--rule);border-radius:var(--r);cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s,border-color .15s}
   .util button:hover{color:var(--ink);border-color:var(--soft)}
-  #bTema{font-size:15px}
+  #bTema,#bAtur{font-size:15px}
   .hrow{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
   .roles{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
   .roles-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
@@ -492,6 +492,21 @@
     .week{gap:3px}
     .week .box{height:40px}
   }
+  /* ── Riwayat kepatuhan ── */
+  .csub{font-family:var(--sans);font-size:12.5px;color:var(--soft);margin:2px 0 14px}
+  .clist{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+  .crow{display:grid;grid-template-columns:98px 1fr 46px;grid-template-areas:"day bar pct" "day lg lg";
+    gap:4px 10px;align-items:center;background:var(--card);padding:10px 12px}
+  .cday{grid-area:day;display:flex;flex-direction:column;line-height:1.25}
+  .cday b{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ink)}
+  .cday span{font-family:var(--mono);font-size:9.5px;color:var(--soft)}
+  .cbar{grid-area:bar;height:8px;background:var(--paper);border-radius:99px;overflow:hidden}
+  .cbar span{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .cpct{grid-area:pct;font-family:var(--mono);font-weight:600;font-size:13px;text-align:right}
+  .clg{grid-area:lg;font-family:var(--mono);font-size:11px;color:var(--no);line-height:1.4}
+  .cok{color:var(--ok)}
+  @media (max-width:700px){ .crow{grid-template-columns:82px 1fr 42px} .cpct{font-size:12px} }
+  #bAtur.on{color:var(--ink);border-color:var(--soft);background:var(--paper)}
 </style>
 </head>
 <body data-role="ortu">
@@ -506,6 +521,7 @@
     <div class="util">
       <button id="bLang" title="Bahasa / Language" aria-label="Ganti bahasa">ID</button>
       <button id="bTema" title="Ganti tema" aria-label="Ganti tema terang/gelap">☀</button>
+      <button id="bAtur" title="Pengaturan" aria-label="Buka pengaturan">⚙</button>
     </div>
   </div>
   <div class="hrow">
@@ -534,6 +550,13 @@
 <div class="conf" id="conf"></div>
 
 <script>
+/* ================== TOKEN LICHESS OTOMATIS (opsional) ==================
+   Tempel token puzzle:read DI ANTARA tanda kutip di bawah, lalu simpan file.
+   Sekali diisi, verifikasi tema jalan otomatis tanpa buka Pengaturan.
+   PERINGATAN: file ini publik — token di sini bisa dibaca & DIPAKAI siapa saja.
+   Pakai token dengan izin puzzle:read SAJA, dan cabut yang lama kalau bocor. */
+const LICHESS_TOKEN = "";
+/* ====================================================================== */
 /* ═══════════ penyimpanan ═══════════ */
 const KEY = "rtgm.v1";
 const Store = {
@@ -618,6 +641,11 @@ Object.assign(EN, {
   "Misi hari ini":"Today's mission", "Perkembanganku":"My progress",
   "Hari ini":"Today", "Rapor mingguan":"Weekly report", "Partai":"Games",
   "Pengaturan":"Settings", "Analisis":"Analysis", "Rencana":"Plan",
+  "Kepatuhan":"Compliance", "Kepatuhan harian":"Daily compliance", "tuntas":"met",
+  "rata-rata":"average", "beruntun tuntas":"met streak", "100% berturut":"100% in a row",
+  "hari tercatat":"days recorded",
+  "Rekam kepatuhan terverifikasi tiap hari, terbaru di atas. Termasuk hari saat dasbor tidak dibuka.":"Verified compliance record per day, newest first. Includes days the dashboard was not opened.",
+  "Belum ada catatan kepatuhan. Angka ini datang dari snapshot harian Apps Script di Sheet \u2014 pasang backend dan tunggu job malam pertama.":"No compliance records yet. These numbers come from the Apps Script daily snapshot in the Sheet \u2014 set up the backend and wait for the first nightly job.",
   "Semua":"All", "buka":"open",
 
   // tugas & pagar
@@ -1163,7 +1191,12 @@ async function fetchAll(){
       out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
       if(d.lichess) out.lichess = d.lichess;
       if(!d.stats) out.errors.push(["Apps Script", "Endpoint hidup, tapi stats kosong \u2014 kemungkinan besar Chess.com memblokir IP Google (403). Riwayat dari Sheet tetap dipakai, tapi angka hari ini tidak akan terisi. Kalau ini menetap, hapus URL Web App dan biarkan dasbor menarik langsung dari browser."]);
-      if(d.snaps) S.snaps = Object.assign({}, d.snaps, S.snaps);
+      if(d.snaps) Object.keys(d.snaps).forEach(k => {
+        // Gabung per-hari: field backend jadi dasar, field lokal menimpa untuk
+        // field yang sama. Tema (khusus backend) selalu diambil dari backend.
+        S.snaps[k] = Object.assign({}, d.snaps[k], S.snaps[k]);
+        if(d.snaps[k].tema) S.snaps[k].tema = d.snaps[k].tema;
+      });
       if(d.nama && !S.cfg.name) S.cfg.name = d.nama;
     }catch(e){ out.errors.push(["Apps Script", e.message]); }
   }
@@ -1191,7 +1224,7 @@ async function fetchAll(){
       /* Dulu memakai Promise.all dengan `prof` tanpa .catch: kalau endpoint profil
          gagal, SELURUH data Lichess ikut hangus — termasuk feed aktivitas yang
          sebenarnya berhasil. allSettled menyelamatkan apa pun yang berhasil. */
-      const T_ = S.cfg.liToken;
+      const T_ = (S.cfg.liToken && S.cfg.liToken.trim()) || LICHESS_TOKEN.trim();
       const hasil = await Promise.allSettled([
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`),
@@ -1557,8 +1590,8 @@ function buildQuests(){
    membeku di bahasa awal dan tidak ikut berganti. */
 const TABS = () => ({
   anak:    [["misi",tr("Misi hari ini")], ["progres",tr("Perkembanganku")]],
-  ortu:    [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["partai",tr("Partai")], ["atur",tr("Pengaturan")]],
-  pelatih: [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["partai",tr("Partai")], ["rencana",tr("Rencana")], ["atur",tr("Pengaturan")]],
+  ortu:    [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")]],
+  pelatih: [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")], ["rencana",tr("Rencana")]],
 });
 const TONE = { ok:"var(--ok)", warn:"var(--warn)", no:"var(--no)", teal:"var(--gold)",
                coral:"var(--gold-lite)", sky:"var(--navy)", gold:"var(--gold)", carbon:"var(--navy)" };
@@ -2300,6 +2333,45 @@ function viewPartai(){
   </section>`;
 }
 
+function viewKepatuhan(){
+  const esc = x => String(x).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
+  const ada = d => S.snaps[d] && S.snaps[d].kepatuhan !== undefined &&
+                   S.snaps[d].kepatuhan !== null && S.snaps[d].kepatuhan !== "";
+  const hari = Object.keys(S.snaps)
+    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d)).sort().reverse();
+  if(!hari.length) return `<section class="box"><h2>${tr("Kepatuhan harian")}</h2>
+    <div class="empty">${tr("Belum ada catatan kepatuhan. Angka ini datang dari snapshot harian Apps Script di Sheet \u2014 pasang backend dan tunggu job malam pertama.")}</div></section>`;
+
+  const pct  = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
+  const tone = v => v >= 80 ? "var(--ok)" : v >= 50 ? "var(--warn)" : "var(--no)";
+  const rata = arr => arr.length ? Math.round(arr.reduce((a,d)=>a+pct(d),0)/arr.length) : 0;
+  const l7 = hari.slice(0,7), l30 = hari.slice(0,30);
+  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+
+  const baris = hari.map(d => {
+    const v = pct(d), lg = (S.snaps[d].langgar || "").toString().trim();
+    const tgl = new Date(d + "T00:00:00").toLocaleDateString(LOCALE(), { weekday:"short", day:"numeric", month:"short" });
+    return `<div class="crow">
+      <div class="cday"><b>${tgl}</b><span>${d}</span></div>
+      <div class="cbar"><span style="width:${v}%;background:${tone(v)}"></span></div>
+      <div class="cpct" style="color:${tone(v)}">${v}%</div>
+      <div class="clg">${lg ? esc(lg) : `<span class="cok">\u2713 ${tr("tuntas")}</span>`}</div>
+    </div>`;
+  }).join("");
+
+  return `<section class="box">
+    <h2>${tr("Kepatuhan harian")}</h2>
+    <p class="csub">${tr("Rekam kepatuhan terverifikasi tiap hari, terbaru di atas. Termasuk hari saat dasbor tidak dibuka.")}</p>
+    <div class="cards">
+      <div class="kpi" style="--tone:${tone(rata(l7))}"><b>${rata(l7)}%</b><i>${tr("rata-rata")}</i><small>${tr("7 hari terakhir")}</small></div>
+      <div class="kpi" style="--tone:var(--sky)"><b>${rata(l30)}%</b><i>${tr("rata-rata")}</i><small>${tr("30 hari terakhir")}</small></div>
+      <div class="kpi" style="--tone:var(--gold)"><b>${runtun}</b><i>${tr("beruntun tuntas")}</i><small>${tr("100% berturut")}</small></div>
+      <div class="kpi" style="--tone:var(--carbon)"><b>${hari.length}</b><i>${tr("hari tercatat")}</i><small>${tr("seluruh riwayat")}</small></div>
+    </div>
+    <div class="clist">${baris}</div>
+  </section>`;
+}
+
 function viewAtur(){
   return `
   <section class="box">
@@ -2442,8 +2514,14 @@ function kemarin(){
    Satu puzzle bisa punya banyak tema; ia dihitung untuk SEMUA temanya — itu benar,
    puzzle "pin + mat baris belakang" memang melatih keduanya. */
 function temaHitung(dk){
+  // SUMBER UTAMA: backend Apps Script (token puzzle:read di Script Properties).
+  // Tema per hari ikut dalam snaps dari Sheet -> terverifikasi walau dasbor tak
+  // dibuka hari itu, dan tanpa token di browser sama sekali.
+  const bk = S.snaps && S.snaps[dk] && S.snaps[dk].tema;
+  if(bk && typeof bk === "object") return bk;
+  // CADANGAN: token di browser (kalau diisi di Pengaturan / konstanta LICHESS_TOKEN).
   const A = (S.data && S.data.lichess && S.data.lichess.pzAct) || null;
-  if(!A) return null;                       // tanpa token: tidak bisa diverifikasi
+  if(!A) return null;                       // tak ada keduanya: tidak bisa diverifikasi
   const out = {};
   A.forEach(r => {
     if(!r || !r.date || dayKey(ms(r.date)) !== dk) return;
@@ -2451,7 +2529,10 @@ function temaHitung(dk){
   });
   return out;
 }
-const temaTerverifikasi = () => !!(S.data && S.data.lichess && S.data.lichess.pzAct);
+const temaTerverifikasi = () => !!(
+  (S.data && S.data.lichess && S.data.lichess.pzAct) ||
+  Object.keys(S.snaps || {}).some(k => S.snaps[k] && S.snaps[k].tema)
+);
 
 /* Tema terlemah dari puzzle dashboard Lichess (butuh token). */
 function temaLemah(){
@@ -3233,17 +3314,19 @@ function render(){
     ? "Anak tahu bahwa aktivitasnya dipantau \u2014 itu syaratnya, bukan pilihannya."
     : el.dataset.i18n); });
   const tabs = TABS()[S.role];
-  if(!tabs.some(t=>t[0]===S.tab)) S.tab = tabs[0][0];
+  if(!tabs.some(t=>t[0]===S.tab) && !(S.tab==="atur" && S.role!=="anak")) S.tab = tabs[0][0];
   $("#nav").innerHTML = tabs.map(([id,label])=>
     `<button data-tab="${id}" class="${id===S.tab?"on":""}">${label}</button>`).join("");
   $$("#nav button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; persist(); render(); });
+  const bAtur = $("#bAtur");
+  if(bAtur){ bAtur.style.display = S.role === "anak" ? "none" : ""; bAtur.classList.toggle("on", S.tab === "atur"); }
 
   const V = {
     misi: viewMisi, progres: viewProgres,
     hari: S.role==="pelatih" ? viewHariPelatih : viewHariOrtu,
     pelatih: viewPelatih,
     minggu: viewMinggu, analisis: viewAnalisis, rencana: viewRencana,
-    partai: viewPartai, atur: viewAtur,
+    partai: viewPartai, patuh: viewKepatuhan, atur: viewAtur,
   };
   $("#view").innerHTML = V[S.tab]();
 
@@ -3316,6 +3399,12 @@ if(bT) bT.onclick = async () => {
   DB.tema = document.body.dataset.tema === "gelap" ? "terang" : "gelap";
   terapkanTema();
   await Store.save(DB);
+};
+
+const bA = $("#bAtur");
+if(bA) bA.onclick = () => {
+  S.tab = S.tab === "atur" ? (TABS()[S.role][0] || ["hari"])[0] : "atur";
+  persist(); render();
 };
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if(DB.tema === "auto") terapkanTema();

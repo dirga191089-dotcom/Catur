@@ -42,6 +42,17 @@ const KONFIG = {
   emailOrangTua: ['ganti@email-anda.com'],
   emailPelatih:  [],
 
+  /* Telegram (opsional). Laporan malam langsung masuk ke genggaman, tidak
+     menunggu email dibuka. Gratis dan resmi — berbeda dengan gateway WhatsApp
+     tak resmi, yang berbayar atau melanggar ToS WhatsApp dan bisa memblokir
+     nomormu. Kalau ingin di WhatsApp: teruskan dari Telegram, jangan bot bajakan.
+
+     Cara: chat @BotFather -> /newbot -> salin token.
+           Chat bot itu sekali, lalu buka
+           https://api.telegram.org/bot<TOKEN>/getUpdates -> salin "chat":{"id":...}. */
+  telegramToken:  '',
+  telegramChatId: '',
+
   // Kontak untuk header User-Agent. Chess.com MEMINTA ini, dan mengisinya
   // memperkecil kemungkinan diblokir. Jangan dikosongkan.
   kontak: 'ganti@email-anda.com',
@@ -83,7 +94,7 @@ function hapusTriggerLama_() {
 
 function siapkanSheet_() {
   const ss = SpreadsheetApp.getActive();
-  mk_(ss, SHEET_HARIAN, [
+  const shH = mk_(ss, SHEET_HARIAN, [
     'Tanggal', 'Anak', 'Status ambil',
     'Puzzle (Lichess)', 'Puzzle benar', 'Puzzle salah', 'Rating puzzle',
     'Puzzle TOTAL kumulatif',
@@ -91,12 +102,35 @@ function siapkanSheet_() {
     'Taktik tertinggi (CC)', 'Rekor baru?', 'Rating rapid', 'Rating blitz',
     'Partai hari ini', 'Rapid', 'Blitz', 'Bullet', 'Menang', 'Kalah', 'Seri',
     'Kalah beruntun', 'Akurasi rata2', 'Kepatuhan %', 'Pelanggaran',
+    'Tema (JSON)',
   ]);
+  // Kolom tanggal dipaksa berformat TEKS. Tanpa ini, Sheets terus-menerus
+  // mengubahnya jadi Date dan perbandingan string jadi rapuh.
+  shH.getRange('A:A').setNumberFormat('@');
+
   mk_(ss, SHEET_PARTAI, [
     'Anak', 'Waktu selesai', 'Kontrol', 'Lawan', 'Rating lawan', 'Hasil',
     'Rating anak', 'Akurasi anak', 'ECO', 'URL',
   ]);
   mk_(ss, SHEET_LOG, ['Waktu', 'Tingkat', 'Pesan']);
+}
+
+/* BUG YANG DIPERBAIKI: Sheets otomatis mengubah string "2026-07-14" menjadi
+   objek Date. getValues() lalu mengembalikan Date, dan `Date === "2026-07-14"`
+   SELALU false. Akibatnya baris hari ini tidak pernah ditimpa — setiap hari
+   bertambah baris duplikat, dan grafik ikut kacau.
+
+   getDisplayValues() BUKAN solusinya: ia mengembalikan tanggal sesuai format
+   tampilan Sheet, yang di lokal Indonesia berbunyi "14/07/2026". Itu menukar
+   satu bug dengan bug yang lebih sunyi.
+
+   Yang benar: normalkan KEDUA sisi, apa pun bentuk yang dikembalikan Sheets. */
+function tglStr_(v, tz) {
+  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
+  var t = String(v == null ? '' : v).trim();
+  var m = t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);   // 14/07/2026
+  if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return t;
 }
 
 function mk_(ss, nama, header) {
@@ -184,12 +218,25 @@ function ambilLichess_(tanggal, tz) {
 
     /* Partai sungguhan, bukan ringkasan. Lichess mengirim NDJSON:
        satu objek JSON per baris. JSON.parse() atas seluruh badan akan GAGAL. */
-    const raw = UrlFetchApp.fetch(LI() + '/games/user/' + ANAK.lichess +
-      '?max=100&opening=true', {
-        method: 'get', muteHttpExceptions: true,
-        headers: { 'Accept': 'application/x-ndjson',
-                   'User-Agent': 'RTGM-Pantau/1.0 (kontak: ' + KONFIG.kontak + ')' },
-      });
+    /* BUG FATAL YANG DIPERBAIKI: dulu ditulis LI() + '/games/user/' + nama,
+       padahal LI() sudah berisi '/api/user/{nama}'. Hasilnya:
+         lichess.org/api/user/X/games/user/X   -> 404, SELALU.
+       Endpoint ekspor partai Lichess ada di cabang yang BERBEDA:
+         lichess.org/api/games/user/{nama}
+       Akibat bug ini, daftar partai Lichess tidak pernah sekali pun berhasil
+       ditarik, dan skrip diam-diam mundur ke feed aktivitas yang kurang akurat. */
+    const urlPartai = 'https://lichess.org/api/games/user/' + encodeURIComponent(ANAK.lichess) +
+      '?max=100&opening=true';
+    const raw = UrlFetchApp.fetch(urlPartai, {
+      method: 'get',
+      muteHttpExceptions: true,
+      headers: {
+        'Accept': 'application/x-ndjson',
+        'User-Agent': 'RoadToGrandMaster/1.0 (kontak: ' + KONFIG.kontak + ')',
+      },
+    });
+    if (raw.getResponseCode() !== 200)
+      log_('PERINGATAN', 'Lichess partai HTTP ' + raw.getResponseCode() + ' — ' + urlPartai);
     if (raw.getResponseCode() === 200) {
       const me = ANAK.lichess.toLowerCase();
       raw.getContentText().split('\n').filter(String).forEach(baris => {
@@ -224,7 +271,8 @@ function ambilLichess_(tanggal, tz) {
     const data = sh.getDataRange().getValues();
     let sebelum = null;
     for (let i = data.length - 1; i >= 1; i--) {
-      if (data[i][0] && data[i][0] < tanggal && data[i][1] === ANAK.nama &&
+      const d = tglStr_(data[i][0], tz);
+      if (d && d < tanggal && data[i][1] === ANAK.nama &&
           data[i][7] !== '' && data[i][7] != null) {
         sebelum = Number(data[i][7]); break;
       }
@@ -239,6 +287,67 @@ function ambilLichess_(tanggal, tz) {
 function LI_URL_() { return LI(); }
 /** Lichess kirim milidetik. Kalau angkanya kecil, itu detik — jangan asal kali 1000. */
 function msLi_(t) { return t < 1e11 ? t * 1000 : t; }
+
+// ═══════════════════ TOKEN LICHESS — verifikasi TEMA puzzle ═══════════════════
+/* Token puzzle:read TIDAK ditulis di file ini. Simpan di Script Properties:
+   Project Settings > Script properties > tambah  LICHESS_TOKEN = <token puzzle:read>.
+   (Atau tempel di pasangTokenLichess() sekali, jalankan, lalu kosongkan lagi.)
+   /api/puzzle/activity selalu mengembalikan aktivitas PEMILIK token — jadi token
+   ini harus milik akun Lichess si anak (Varisha). Banyak anak = butuh mekanisme
+   token per anak; untuk satu anak, ini sudah benar. */
+function _tokenLi_() {
+  return PropertiesService.getScriptProperties().getProperty('LICHESS_TOKEN') || '';
+}
+function pasangTokenLichess() {
+  const t = '';                 // <- tempel token puzzle:read di sini, jalankan SEKALI
+  if (!t) { console.log('Isi variabel t di dalam fungsi ini dulu, lalu jalankan.'); return; }
+  PropertiesService.getScriptProperties().setProperty('LICHESS_TOKEN', t.trim());
+  console.log('Token tersimpan di Script Properties. SEKARANG kosongkan lagi variabel t di kode ini.');
+}
+function cabutTokenLichess() {
+  PropertiesService.getScriptProperties().deleteProperty('LICHESS_TOKEN');
+  console.log('Token Lichess dihapus dari Script Properties.');
+}
+
+/* Jumlah puzzle per TEMA pada satu tanggal, dari /api/puzzle/activity (ber-token).
+   Skema Lichess: tiap baris NDJSON = { date(ms), win, puzzle:{ themes:[...] } }. */
+function ambilTemaLichess_(tanggal, tz) {
+  const out = { tema: {}, total: 0, status: 'MATI' };
+  const t = _tokenLi_();
+  if (!t)            { out.status = 'TANPA TOKEN'; return out; }
+  if (!ANAK.lichess) { out.status = 'MATI';        return out; }
+  try {
+    const res = UrlFetchApp.fetch('https://lichess.org/api/puzzle/activity?max=200', {
+      method: 'get', muteHttpExceptions: true,
+      headers: { 'Accept': 'application/x-ndjson', 'Authorization': 'Bearer ' + t },
+    });
+    const kode = res.getResponseCode();
+    if (kode === 401) { out.status = 'TOKEN DITOLAK';
+      log_('PERINGATAN', 'Token Lichess ditolak (401) atau tanpa izin puzzle:read.'); return out; }
+    if (kode !== 200) { out.status = 'HTTP ' + kode; return out; }
+    res.getContentText().split('\n').filter(String).forEach(function (baris) {
+      var a; try { a = JSON.parse(baris); } catch (e) { return; }
+      if (!a || a.date == null || !a.puzzle) return;
+      var d = new Date(msLi_(a.date));
+      if (Utilities.formatDate(d, tz, 'yyyy-MM-dd') !== tanggal) return;
+      (a.puzzle.themes || []).forEach(function (th) { out.tema[th] = (out.tema[th] || 0) + 1; });
+      out.total++;
+    });
+    out.status = 'OK';
+  } catch (e) {
+    out.status = 'GAGAL: ' + e.message;
+    log_('PERINGATAN', 'Tema Lichess: ' + e.message);
+  }
+  return out;
+}
+
+/* Sheet lama tidak punya kolom 'Tema (JSON)'. Pastikan header kolom ke-26 ada. */
+function pastikanKolomTema_(sh) {
+  if (sh.getRange(1, 26).getValue() !== 'Tema (JSON)') {
+    sh.getRange(1, 26).setValue('Tema (JSON)')
+      .setFontWeight('bold').setBackground('#1B2130').setFontColor('#F1F2EB');
+  }
+}
 
 function ambilStats_()    { return ambil_(BASE() + '/stats'); }
 function ambilArsip_()    { return ambil_(BASE() + '/games/archives').archives || []; }
@@ -267,8 +376,10 @@ function catatSatuAnak_() {
     // Chess.com gagal TIDAK boleh membuang data Lichess. Puzzle tetap dicatat.
     log_('GAGAL', 'Ambil stats Chess.com: ' + e.message);
     const liSaja = ambilLichess_(hariIni, tz);
+    const temaSaja = ambilTemaLichess_(hariIni, tz);
+    liSaja.tema = temaSaja.tema; liSaja.temaStatus = temaSaja.status;
     tulisBaris_(hariIni, 'GAGAL Chess.com: ' + e.message, null, [], liSaja);
-    kirimEmail_('[Road To Grand Master] Chess.com GAGAL — ' + ANAK.nama + ' ' + hariIni,
+    kirimNotif_('[Road To Grand Master] Chess.com GAGAL — ' + ANAK.nama + ' ' + hariIni,
       'Data Chess.com tidak bisa ditarik hari ini.\n\n' + e.message +
       '\n\nData Lichess TETAP tercatat: ' + liSaja.puzzle + ' puzzle.' +
       '\n\nAngka partai untuk ' + hariIni + ' KOSONG karena pengambilannya gagal — ' +
@@ -293,15 +404,26 @@ function catatSatuAnak_() {
   const li = ambilLichess_(hariIni, tz);
   if (li.status !== 'OK' && li.status !== 'MATI') status += ' | Lichess ' + li.status;
 
+  // Verifikasi TEMA (butuh token puzzle:read di Script Properties).
+  const temaLi = ambilTemaLichess_(hariIni, tz);
+  li.tema = temaLi.tema; li.temaStatus = temaLi.status;
+  if (['OK', 'MATI', 'TANPA TOKEN'].indexOf(temaLi.status) < 0) status += ' | Tema ' + temaLi.status;
+
   const baris = tulisBaris_(hariIni, status, stats, partaiHariIni, li);
   kirimLaporan_(hariIni, baris);
 }
 
 function tulisBaris_(tanggal, status, stats, partai, li) {
-  li = li || { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', puzzleTotal: null, partai: 0, partaiList: [] };
+  li = li || { puzzle: 0, benar: 0, salah: 0, ratingPuzzle: '', puzzleTotal: null, partai: 0, partaiList: [], tema: {}, temaStatus: '' };
   const ss = SpreadsheetApp.getActive();
   const tz = ss.getSpreadsheetTimeZone();
   const sh = ss.getSheetByName(SHEET_HARIAN);
+  pastikanKolomTema_(sh);
+
+  // Tema hanya ditulis kalau BENAR-benar terverifikasi (status OK). Kalau tanpa
+  // token / gagal, kolom dikosongkan -> frontend jatuh ke centang manual, bukan
+  // mengaku 'terverifikasi nol'.
+  const temaJson = (li.temaStatus === 'OK') ? JSON.stringify(li.tema || {}) : '';
 
   const rush  = stats && stats.puzzle_rush && stats.puzzle_rush.daily ? stats.puzzle_rush.daily : null;
   const rBest = stats && stats.puzzle_rush && stats.puzzle_rush.best  ? stats.puzzle_rush.best  : null;
@@ -374,6 +496,7 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
     stats && stats.chess_blitz && stats.chess_blitz.last ? stats.chess_blitz.last.rating : '',
     r.total, r.rapid, r.blitz, r.bullet, r.menang, r.kalah, r.seri,
     r.kalahBeruntun, r.akurasi || '', kepatuhan, langgar.join('; '),
+    temaJson,
   ];
 
   // Satu baris per (tanggal, anak). Tanpa nama anak di kunci, anak kedua akan
@@ -381,7 +504,7 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   const data = sh.getDataRange().getValues();
   let idx = -1;
   for (let i = 1; i < data.length; i++)
-    if (data[i][0] === tanggal && data[i][1] === ANAK.nama) { idx = i + 1; break; }
+    if (tglStr_(data[i][0], tz) === tanggal && data[i][1] === ANAK.nama) { idx = i + 1; break; }
   if (idx > 0) sh.getRange(idx, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
 
@@ -510,7 +633,33 @@ function kirimLaporan_(tanggal, b) {
     'Untuk itu, tanya anaknya. Dasbor tidak menggantikan percakapan.',
   ].filter(x => x !== '').join('\n');
 
-  kirimEmail_('[Road To Grand Master] ' + ANAK.nama + ' — ' + tanggal + ' — kepatuhan ' + b.kepatuhan + '%', badan);
+  kirimNotif_('[Road To Grand Master] ' + ANAK.nama + ' — ' + tanggal + ' — kepatuhan ' + b.kepatuhan + '%', badan);
+}
+
+/* Satu pintu keluar untuk semua pemberitahuan. Email + Telegram. */
+function kirimNotif_(subjek, badan) {
+  kirimEmail_(subjek, badan);
+  kirimTelegram_(subjek + '\n\n' + badan);
+}
+
+function kirimTelegram_(pesan) {
+  if (!KONFIG.telegramToken || !KONFIG.telegramChatId) return;
+  try {
+    const res = UrlFetchApp.fetch(
+      'https://api.telegram.org/bot' + KONFIG.telegramToken + '/sendMessage', {
+        method: 'post',
+        muteHttpExceptions: true,
+        payload: {
+          chat_id: KONFIG.telegramChatId,
+          text: pesan.slice(0, 4000),   // batas Telegram 4096 karakter
+          disable_web_page_preview: 'true',
+        },
+      });
+    const kode = res.getResponseCode();
+    if (kode !== 200) log_('PERINGATAN', 'Telegram HTTP ' + kode + ': ' + res.getContentText().slice(0, 200));
+  } catch (e) {
+    log_('PERINGATAN', 'Telegram: ' + e.message);
+  }
 }
 
 function kirimEmail_(subjek, badan) {
@@ -547,17 +696,22 @@ function doGet(e) {
 
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEET_HARIAN);
+  const tzG = ss.getSpreadsheetTimeZone();
   const data = sh ? sh.getDataRange().getValues() : [];
   const snaps = {};
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
     if (r[1] !== ANAK.nama) continue;   // hanya anak yang diminta
-    snaps[r[0]] = {
+    const kunci = tglStr_(r[0], tzG);   // Date -> "yyyy-MM-dd", apa pun bentuk aslinya
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(kunci)) continue;
+    snaps[kunci] = {
       puzzles: r[3] || 0, puzzleWin: r[4] || 0, puzzleLoss: r[5] || 0, puzzleRating: r[6] || null,
       puzTotal: r[7] === '' || r[7] == null ? null : Number(r[7]),
       rushAttempts: r[8] || 0, rushScore: r[9] || 0,
       tacticsHigh: r[10] || null, rapid: r[12] || null, blitz: r[13] || null,
       status: r[2], kepatuhan: r[23], langgar: r[24],
+      tema: (function () { var v = r[25]; if (v == null || String(v).trim() === '') return null;
+        try { return JSON.parse(v); } catch (e) { return null; } })(),
     };
   }
   let stats = null, games = [], lichess = null;
@@ -577,6 +731,31 @@ function doGet(e) {
     } catch (e) { /* abaikan */ }
   }
 
+  // Tema live hari ini & beberapa hari terakhir — server-side, tanpa token di browser.
+  try {
+    var tokLi = _tokenLi_();
+    if (tokLi && ANAK.lichess) {
+      var resT = UrlFetchApp.fetch('https://lichess.org/api/puzzle/activity?max=200', {
+        method: 'get', muteHttpExceptions: true,
+        headers: { 'Accept': 'application/x-ndjson', 'Authorization': 'Bearer ' + tokLi },
+      });
+      if (resT.getResponseCode() === 200) {
+        var perHari = {};
+        resT.getContentText().split('\n').filter(String).forEach(function (baris) {
+          var a; try { a = JSON.parse(baris); } catch (e) { return; }
+          if (!a || a.date == null || !a.puzzle) return;
+          var k = Utilities.formatDate(new Date(msLi_(a.date)), tzG, 'yyyy-MM-dd');
+          perHari[k] = perHari[k] || {};
+          (a.puzzle.themes || []).forEach(function (th) { perHari[k][th] = (perHari[k][th] || 0) + 1; });
+        });
+        Object.keys(perHari).forEach(function (k) {
+          snaps[k] = snaps[k] || {};
+          snaps[k].tema = perHari[k];   // live menimpa yang tersimpan (lebih baru)
+        });
+      }
+    }
+  } catch (e) { /* abaikan; tema tersimpan dari Sheet tetap dipakai */ }
+
   return ContentService
     .createTextOutput(JSON.stringify({
       user: (ANAK.chess || '').toLowerCase(),
@@ -589,6 +768,17 @@ function doGet(e) {
 }
 
 // ═══════════════════ UJI MANUAL ═══════════════════
+/** Uji Telegram sendiri. Jalankan setelah mengisi token & chat id. */
+function ujiTelegram() {
+  if (!KONFIG.telegramToken || !KONFIG.telegramChatId) {
+    const m = 'Telegram tidak diaktifkan (token atau chatId kosong).';
+    console.log(m); return m;
+  }
+  kirimTelegram_('Uji koneksi Road To Grand Master \u2014 kalau pesan ini sampai, laporan malam akan masuk ke sini.');
+  const m = 'Pesan uji dikirim. Cek Telegram.';
+  console.log(m); return m;
+}
+
 /** Jalankan ini dulu sebelum pasang(). Menguji KEDUA API. */
 function ujiKoneksi() {
   let semua = '';
