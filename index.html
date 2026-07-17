@@ -667,6 +667,8 @@ Object.assign(EN, {
   "hari tercatat":"days recorded", "langsung":"live", "berjalan":"in progress",
   "Simpan PDF":"Save PDF", "Kirim WhatsApp":"Send to WhatsApp", "Kepatuhan Latihan":"Training compliance",
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
+  "Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.":"The Lichess token now lives in the backend (Apps Script), not here \u2014 theme verification is automatic with nothing to enter in the browser.",
+  "Sumber: tebakan dari partai + kurikulum. Verifikasi tema kini otomatis dari backend; ini hanya saran pilihan tema.":"Source: a guess from games + curriculum. Theme verification is now automatic from the backend; this is only a theme suggestion.",
   "Tidak ada catatan terverifikasi untuk tanggal ini.":"No verified record for this date.",
   "Puzzle Lichess":"Lichess puzzles", "Rating puzzle":"Puzzle rating", "Rating rapid":"Rapid rating",
   "Rating blitz":"Blitz rating", "Taktik tertinggi":"Tactics high",
@@ -2223,7 +2225,7 @@ function viewPelatih(){
     <div class="sumber ${P.sumber==="dashboard"?"pasti":"tebak"}">
       ${P.sumber==="dashboard"
         ? tr("Sumber: puzzle dashboard Lichess — performa nyata anak per tema, 30 hari terakhir. Ini BUKAN tebakan.")
-        : tr("Sumber: TEBAKAN dari partai + kurikulum tier. Lichess tidak memberi tahu tema mana yang lemah tanpa token. Isi Token Lichess di Pengaturan untuk membuat rekomendasi ini berhenti menebak.")}
+        : tr("Sumber: tebakan dari partai + kurikulum. Verifikasi tema kini otomatis dari backend; ini hanya saran pilihan tema.")}
     </div>
     <div class="rek">
       ${P.rek.map(r=>`
@@ -2536,12 +2538,7 @@ function viewAtur(){
         <div><label>${tr("Username Chess.com (partai)")}</label><input id="cChess" autocapitalize="off"></div>
         <div><label>${tr("Username Lichess (puzzle)")}</label><input id="cLichess" autocapitalize="off"></div>
       </div>
-      <label>${tr("Token Lichess (opsional — membuat rekomendasi puzzle berhenti menebak)")}</label>
-      <input id="cLiToken" type="password" autocapitalize="off" placeholder="lip_xxxxxxxxxxxx">
-      <div class="warnbox" style="margin-top:8px">
-        <b>${tr("Baca sebelum mengisi")}</b>
-        ${tr("Token ini memberi akses baca ke riwayat puzzle anak. Buat di lichess.org/account/oauth/token dengan izin puzzle:read SAJA — jangan centang izin lain. Token disimpan di browser ini dan TIDAK pernah masuk ke file yang kamu unggah ke GitHub. Kalau ragu, kosongkan: pelatih tetap bekerja, hanya rekomendasi temanya jadi tebakan.")}
-      </div>
+      <p class="csub" style="margin:2px 0 0">${tr("Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.")}</p>
       <label>URL Sheet CSV (File \u2192 Share \u2192 Publish to web \u2192 sheet "Harian" \u2192 CSV)</label>
       <input id="cCsv" autocapitalize="off" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&single=true&output=csv">
       <label>URL Web App Apps Script (opsional \u2014 butuh akses "Anyone")</label>
@@ -3360,13 +3357,11 @@ function renderAtur(){
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
   $("#cCsv").value = S.cfg.csv || "";
-  const tk = $("#cLiToken"); if(tk) tk.value = S.cfg.liToken || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $("#bFetch").onclick = async () => {
     S.cfg.name = $("#cName").value.trim(); S.cfg.chess = $("#cChess").value.trim();
     S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
     S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
-    S.cfg.liToken = ($("#cLiToken")||{}).value ? $("#cLiToken").value.trim() : (S.cfg.liToken||"");
     await persist(); await fetchAll();
   };
   $("#bExport").onclick = () => {
