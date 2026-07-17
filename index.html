@@ -525,6 +525,21 @@
   .tchips{display:flex;flex-wrap:wrap;gap:5px}
   .tchip{font-family:var(--mono);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:3px 9px;color:var(--ink)}
   .cdet-lg{font-family:var(--mono);font-size:12px;color:var(--no)}
+  .rp-list{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:6px}
+  .rp-g{display:flex;align-items:center;gap:10px;background:var(--card);padding:9px 12px}
+  .rp-res{flex:0 0 auto;width:22px;height:22px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:11px;color:#fff}
+  .rp-res.w{background:var(--ok)} .rp-res.l{background:var(--no)} .rp-res.d{background:var(--carbon)}
+  .rp-g-main{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+  .rp-g-main b{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .rp-g-main span{font-family:var(--sans);font-size:11.5px;color:var(--soft)}
+  .rp-link{font-family:var(--mono);font-size:11px;color:var(--accent);text-decoration:none;flex:0 0 auto}
+  .rp-reks{display:flex;flex-direction:column;gap:6px}
+  .rp-rek{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:var(--r);background:var(--card);padding:9px 12px}
+  .rp-rek:hover{background:var(--paper)}
+  .rp-rek b{font-family:var(--mono);font-size:13px;color:var(--ink)}
+  .rp-rek span{display:block;font-family:var(--sans);font-size:11px;color:var(--soft)}
+  .rp-target{font-family:var(--mono);font-weight:600;font-size:16px;color:var(--gold);white-space:nowrap;text-align:right}
+  .rp-target i{font-size:10px;color:var(--soft);font-style:normal}
   .clive{color:var(--gold);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.04em;white-space:nowrap}
   @media (max-width:700px){ .crow{grid-template-columns:82px 1fr 42px} .cpct{font-size:12px} }
   #bAtur.on{color:var(--ink);border-color:var(--soft);background:var(--paper)}
@@ -666,6 +681,28 @@ Object.assign(EN, {
   "rata-rata":"average", "beruntun tuntas":"met streak", "100% berturut":"100% in a row",
   "hari tercatat":"days recorded", "langsung":"live", "berjalan":"in progress",
   "Simpan PDF":"Save PDF", "Kirim WhatsApp":"Send to WhatsApp", "Kepatuhan Latihan":"Training compliance",
+  "Rencana puzzle besok":"Tomorrow's puzzle plan", "Fokus puzzle besok":"Tomorrow's puzzle focus",
+  "pembukaan":"opening", "tengah":"middlegame", "akhir":"endgame", "kesalahan serius":"serious errors",
+  "Latih {a}: {b} puzzle":"Train {a}: {b} puzzles",
+  "Fokus dari partai rapid terakhir ({a}) \u2014 terverifikasi dari riwayat Lichess":"Focus from recent rapid games ({a}) \u2014 verified from Lichess history",
+  "Fokus dari partai rapid terakhir ({a}) \u2014 butuh backend tema untuk verifikasi":"Focus from recent rapid games ({a}) \u2014 needs the theme backend to verify",
+  "Tema di atas sudah otomatis menjadi tugas terverifikasi di tab Hari ini.":"The themes above are automatically added as verified tasks in the Today tab.",
+  "impresisi":"inaccuracies", "Dianalisis \u2014 tanpa kesalahan serius":"Analysed \u2014 no serious errors",
+  "Kalah cepat \u2014 blunder pembukaan (perkiraan)":"Quick loss \u2014 opening blunder (estimated)",
+  "Akurasi rendah \u2014 blunder taktik (perkiraan)":"Low accuracy \u2014 tactical blunders (estimated)",
+  "Kalah panjang \u2014 masalah akhir (perkiraan)":"Long loss \u2014 endgame issue (estimated)",
+  "partai punya analisis engine (blunder per fase); sisanya perkiraan kasar.":"games have engine analysis (blunders by phase); the rest are rough estimates.",
+  "Belum ada partai dengan analisis engine Lichess \u2014 semua di bawah masih perkiraan.":"No games with Lichess engine analysis yet \u2014 everything below is still estimated.",
+  "Pembukaan":"Opening", "Taktik":"Tactics", "Akhir permainan":"Endgame",
+  "Diturunkan dari analisa":"Derived from analysing", "partai rapid 2 hari terakhir. Ketuk tema untuk latih di Lichess.":"rapid games from the last 2 days. Tap a theme to train on Lichess.",
+  "Kalah cepat \u2014 blunder pembukaan":"Quick loss \u2014 opening blunder",
+  "Akurasi rendah \u2014 blunder taktik di tengah":"Low accuracy \u2014 middlegame tactical blunders",
+  "Kalah dari partai panjang \u2014 masalah konversi/akhir":"Lost a long game \u2014 conversion/endgame issue",
+  "Seri dari posisi rapi \u2014 latih teknik akhir":"Drew from a clean position \u2014 practise endgame technique",
+  "Menang tapi akurasi rendah \u2014 masih rawan":"Won but low accuracy \u2014 still error-prone",
+  "Menang bersih":"Clean win", "Seri":"Draw",
+  "Belum ada partai rapid untuk dianalisa. Rencana muncul setelah anak main rapid.":"No rapid games to analyse yet. The plan appears after the child plays rapid.",
+  "Tidak ada kelemahan menonjol dari partai rapid \u2014 lanjutkan kurikulum biasa.":"No standout weakness from rapid games \u2014 continue the usual curriculum.",
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
   "Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.":"The Lichess token now lives in the backend (Apps Script), not here \u2014 theme verification is automatic with nothing to enter in the browser.",
   "Sumber: tebakan dari partai + kurikulum. Verifikasi tema kini otomatis dari backend; ini hanya saran pilihan tema.":"Source: a guess from games + curriculum. Theme verification is now automatic from the backend; this is only a theme suggestion.",
@@ -1271,7 +1308,7 @@ async function fetchAll(){
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`),
-        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true`),
+        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true&evals=true`),
         // Performa PER TEMA, 30 hari. Butuh token (puzzle:read).
         T_ ? getJSONAuth(`https://lichess.org/api/puzzle/dashboard/30`, T_)
            : Promise.reject(new Error("tanpa token")),
@@ -1513,12 +1550,25 @@ function normGames(){
     let res = "R";
     if(g.winner) res = (g.winner === (isW ? "white" : "black")) ? "M" : "K";
     const lgk = langkahLI(g.moves);
+    let blunder = null;
+    if(Array.isArray(g.analysis) && g.analysis.length){
+      blunder = { op:0, mid:0, eg:0, blunder:0, mistake:0, inaccuracy:0 };
+      g.analysis.forEach((a, ply) => {
+        if(!a || !a.judgment) return;
+        if(((ply % 2 === 0) === isW) === false) return;
+        const nm = a.judgment.name;
+        if(nm === "Inaccuracy"){ blunder.inaccuracy++; return; }
+        if(nm === "Blunder") blunder.blunder++; else blunder.mistake++;
+        const mv = Math.floor(ply/2) + 1;
+        blunder[mv <= 12 ? "op" : mv <= 30 ? "mid" : "eg"]++;
+      });
+    }
     out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
       putih: isW, langkah: lgk, mini: res === "K" && lgk != null && lgk < MINI,
       rating: my.rating, opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
       acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
       url: "https://lichess.org/" + g.id, opening: g.opening ? esc(g.opening.name) : null,
-      eco: g.opening ? g.opening.eco : null });
+      eco: g.opening ? g.opening.eco : null, blunder });
   });
   _ng = out.sort((a,b)=>b.t-a.t); _ngAt = kunci;
   return _ng;
@@ -1612,6 +1662,26 @@ function buildQuests(){
         src: m.tema
           ? tr("Kurikulum — butuh token Lichess untuk diverifikasi. Sementara ini: centang manual.")
           : tr("Manual — dicentang pelatih atau orang tua") });
+    }
+  });
+  // ── Fokus dari analisa partai rapid terakhir (rencanaPuzzle) ──
+  // Rekomendasi tema jadi TUGAS quest, bukan sekadar saran. Auto-verified sama
+  // seperti tema lain kalau backend tema aktif; kalau belum, jatuh ke manual.
+  const temaAda = new Set(q.filter(x => x.tema).map(x => x.tema));
+  rencanaPuzzle().rekom.slice(0,3).forEach((r, i) => {
+    if(temaAda.has(r.tema)) return;
+    temaAda.add(r.tema);
+    const idx = 200 + i;
+    if(hitungKur){
+      const now = hitungKur[r.tema] || 0;
+      q.push({ auto:true, tema:r.tema, ok: now >= r.target, now, goal:r.target,
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: r.target}),
+        src: tr("Fokus dari partai rapid terakhir ({a}) \u2014 terverifikasi dari riwayat Lichess", {a: r.label}) });
+    } else {
+      q.push({ auto:false, tema:r.tema, idx,
+        ok: !!(S.checks[dk]||{})["m"+idx],
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: r.target}),
+        src: tr("Fokus dari partai rapid terakhir ({a}) \u2014 butuh backend tema untuk verifikasi", {a: r.label}) });
     }
   });
   // Pagar ditaruh PALING BAWAH. Yang harus dilihat anak lebih dulu adalah
@@ -2163,6 +2233,89 @@ function viewHariPelatih(){
   </section>`;
 }
 
+function rencanaPuzzle(){
+  const rapid = normGames().filter(g => g.speed === "rapid" && g.t >= Date.now() - 2*864e5);
+  let dianalisis = 0;
+  const perGame = rapid.map(g => {
+    const b = g.blunder;
+    if(b && (b.blunder + b.mistake) > 0){
+      dianalisis++;
+      const serius = b.blunder + b.mistake;
+      const fase = [["op",b.op],["mid",b.mid],["eg",b.eg]].sort((x,y)=>y[1]-x[1])[0][0];
+      const sinyal = fase === "op" ? "opening" : fase === "eg" ? "endgame" : "taktik";
+      const bagian = [];
+      if(b.op)  bagian.push(b.op + " " + tr("pembukaan"));
+      if(b.mid) bagian.push(b.mid + " " + tr("tengah"));
+      if(b.eg)  bagian.push(b.eg + " " + tr("akhir"));
+      const catatan = serius + " " + tr("kesalahan serius") + " \u00b7 " + bagian.join(", ") +
+        (b.inaccuracy ? " (+" + b.inaccuracy + " " + tr("impresisi") + ")" : "");
+      return { g, sinyal, catatan, bobot: { opening:b.op, taktik:b.mid, endgame:b.eg }, analyzed:true };
+    }
+    if(b){ dianalisis++; return { g, sinyal:null, catatan: tr("Dianalisis \u2014 tanpa kesalahan serius"), bobot:null, analyzed:true }; }
+    let sinyal = null, catatan;
+    const acc = g.acc;
+    if(g.res === "K"){
+      if(g.mini || (g.langkah != null && g.langkah < 15)){ sinyal = "opening"; catatan = tr("Kalah cepat \u2014 blunder pembukaan (perkiraan)"); }
+      else if(acc != null && acc < 70){ sinyal = "taktik"; catatan = tr("Akurasi rendah \u2014 blunder taktik (perkiraan)"); }
+      else { sinyal = "endgame"; catatan = tr("Kalah panjang \u2014 masalah akhir (perkiraan)"); }
+    } else if(g.res === "R"){
+      if(acc != null && acc >= 80){ sinyal = "endgame"; catatan = tr("Seri dari posisi rapi \u2014 latih teknik akhir"); }
+      else catatan = tr("Seri");
+    } else {
+      if(acc != null && acc < 65){ sinyal = "taktik"; catatan = tr("Menang tapi akurasi rendah \u2014 masih rawan"); }
+      else catatan = tr("Menang bersih");
+    }
+    return { g, sinyal, catatan, bobot: sinyal ? { [sinyal]:1 } : null, analyzed:false };
+  });
+  const skor = { opening:0, taktik:0, endgame:0 };
+  perGame.forEach(a => { if(a.bobot) for(const k in a.bobot) skor[k] += a.bobot[k]; });
+  const peta = {
+    opening: { label: tr("Pembukaan"),       tema: ["opening"] },
+    taktik:  { label: tr("Taktik"),          tema: ["fork", "pin"] },
+    endgame: { label: tr("Akhir permainan"), tema: ["rookEndgame", "pawnEndgame"] },
+  };
+  const rekom = [];
+  Object.entries(skor).filter(([k,v]) => v > 0).sort((a,b) => b[1]-a[1]).forEach(([sg, jml]) => {
+    const target = Math.min(15, 4 + jml*2);
+    peta[sg].tema.forEach(tema => rekom.push({ sinyal:sg, label: peta[sg].label, tema, target, jml }));
+  });
+  return { perGame, rekom: rekom.slice(0,5), skor, jml: rapid.length, dianalisis };
+}
+function viewRencanaPuzzleCard(){
+  const R = rencanaPuzzle();
+  const badge = res => res==="M" ? ["w","M"] : res==="K" ? ["l","K"] : ["d","R"];
+  if(!R.jml) return `<section class="box"><h2>${tr("Rencana puzzle besok")}</h2>
+    <div class="empty">${tr("Belum ada partai rapid untuk dianalisa. Rencana muncul setelah anak main rapid.")}</div></section>`;
+
+  const daftar = R.perGame.map(a => {
+    const [cls, huruf] = badge(a.g.res);
+    const tgl = new Date(a.g.t).toLocaleDateString(LOCALE(), { day:"numeric", month:"short" });
+    const meta = (a.g.langkah != null ? a.g.langkah + "\u2113" : "\u2014") + (a.g.acc != null ? " \u00b7 " + a.g.acc.toFixed(0) + "%" : "");
+    return `<div class="rp-g">
+      <span class="rp-res ${cls}">${huruf}</span>
+      <div class="rp-g-main"><b>${tgl} \u00b7 ${meta}</b><span>${a.catatan}</span></div>
+      <a href="${a.g.url}" target="_blank" rel="noopener" class="rp-link">${tr("buka")}</a>
+    </div>`;
+  }).join("");
+
+  const rek = R.rekom.length ? R.rekom.map(r => `
+    <a href="${temaUrl(r.tema)}" target="_blank" rel="noopener" class="rp-rek">
+      <div><b>${r.tema}</b><span>${r.label} \u00b7 ${r.jml} ${tr("partai")}</span></div>
+      <div class="rp-target">${r.target} <i>${tr("puzzle")}</i></div>
+    </a>`).join("")
+    : `<div class="empty">${tr("Tidak ada kelemahan menonjol dari partai rapid \u2014 lanjutkan kurikulum biasa.")}</div>`;
+
+  return `<section class="box">
+    <h2>${tr("Rencana puzzle besok")}</h2>
+    <p class="csub">${tr("Diturunkan dari analisa")} ${R.jml} ${tr("partai rapid 2 hari terakhir. Ketuk tema untuk latih di Lichess.")}
+      ${R.dianalisis ? `<br><b>${R.dianalisis}/${R.jml}</b> ${tr("partai punya analisis engine (blunder per fase); sisanya perkiraan kasar.")}` : `<br>${tr("Belum ada partai dengan analisis engine Lichess \u2014 semua di bawah masih perkiraan.")}`}</p>
+    <div class="rp-list">${daftar}</div>
+    <div class="cdet-lbl" style="margin:14px 0 6px">${tr("Fokus puzzle besok")}</div>
+    <div class="rp-reks">${rek}</div>
+    ${R.rekom.length ? `<p class="csub" style="margin-top:10px">${tr("Tema di atas sudah otomatis menjadi tugas terverifikasi di tab Hari ini.")}</p>` : ""}
+  </section>`;
+}
+
 function viewPelatih(){
   const P = pelatih();
   const K = P.K, T = targets();
@@ -2316,7 +2469,8 @@ function viewAnalisis(){
     ${H2("chart", tr("Riwayat rating"))}
     <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
     <div class="legend" id="legend"></div>
-  </section>`;
+  </section>
+  ${viewRencanaPuzzleCard()}`;
 }
 
 function viewRencana(){
