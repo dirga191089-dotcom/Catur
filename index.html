@@ -1077,7 +1077,9 @@ async function fetchAuth(u, token, accept){
   const ac = new AbortController();
   const jam = setTimeout(() => ac.abort(), BATAS_MS);
   try{
-    const r = await fetch(url(u), {
+    // Permintaan ber-token TIDAK boleh lewat proxy pihak ketiga (proxy bisa
+    // menyadap header Authorization). Endpoint Lichess ini mendukung CORS langsung.
+    const r = await fetch(u, {
       headers: { Accept: accept, Authorization: "Bearer " + token },
       signal: ac.signal, cache: "no-store",
     });
@@ -1174,7 +1176,10 @@ function snapsDariCSV(teks){
   const n = (r,i) => (i >= 0 && r[i] !== "" && r[i] != null) ? Number(r[i]) : null;
   const out = {};
   baris.slice(1).forEach(r => {
-    const dk = (r[iTgl]||"").trim();
+    let dk = (r[iTgl]||"").trim();
+    // Toleran format lokal Indonesia (DD/MM/YYYY atau D/M/YYYY) -> ISO.
+    const mLoc = dk.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(mLoc) dk = mLoc[3] + "-" + mLoc[2].padStart(2,"0") + "-" + mLoc[1].padStart(2,"0");
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return;
     out[dk] = {
       puzzles: n(r,iPz) || 0, puzTotal: n(r,iTot), puzRating: n(r,iRate),
@@ -1494,8 +1499,8 @@ function normGames(){
     const lgk = langkahCC(g.pgn);
     out.push({ t: ms(g.end_time), site:"Chess.com", speed: speedNorm(g.time_class), res:r.res,
       putih: r.putih, langkah: lgk, mini: r.res === "K" && lgk != null && lgk < MINI,
-      rating: r.rating, opp: r.opp.username, oppRating: r.opp.rating, acc: r.acc,
-      url: g.url, opening: ecoNama(g.pgn), eco: (String(g.pgn||"").match(/\[ECO "([^"]+)"\]/)||[])[1] || null });
+      rating: r.rating, opp: esc(r.opp.username), oppRating: r.opp.rating, acc: r.acc,
+      url: g.url, opening: esc(ecoNama(g.pgn)), eco: (String(g.pgn||"").match(/\[ECO "([^"]+)"\]/)||[])[1] || null });
   });
   const L = S.data && S.data.lichess;
   if(L && L.games) L.games.forEach(g => {
@@ -1510,9 +1515,9 @@ function normGames(){
     const lgk = langkahLI(g.moves);
     out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
       putih: isW, langkah: lgk, mini: res === "K" && lgk != null && lgk < MINI,
-      rating: my.rating, opp: (op.user && op.user.name) || "Anonim", oppRating: op.rating,
+      rating: my.rating, opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
       acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
-      url: "https://lichess.org/" + g.id, opening: g.opening ? g.opening.name : null,
+      url: "https://lichess.org/" + g.id, opening: g.opening ? esc(g.opening.name) : null,
       eco: g.opening ? g.opening.eco : null });
   });
   _ng = out.sort((a,b)=>b.t-a.t); _ngAt = kunci;
@@ -1763,6 +1768,7 @@ function bahanObrolan(){
     tr("Rapor ini butuh beberapa hari aktivitas sebelum bisa memberi bahan obrolan yang berguna.")]);
   return out.slice(0,4);
 }
+function esc(x){ return x == null ? x : String(x).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
 function pembukaan(warna){
   const map = {};
   normGames().forEach(g => {
