@@ -455,6 +455,7 @@
     body{background:#fff;padding:0;background-image:none}
     body::before{display:none}
     nav, .who, .util, .roles, #bRefresh, .nocetak, footer, #pilihAnak{display:none!important}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
     section.box, .kpi, .plat{break-inside:avoid;box-shadow:none;animation:none}
     *{animation:none!important;transition:none!important}
     .ring .fg{stroke-dashoffset:var(--off,0)!important}
@@ -505,6 +506,26 @@
   .cpct{grid-area:pct;font-family:var(--mono);font-weight:600;font-size:13px;text-align:right}
   .clg{grid-area:lg;font-family:var(--mono);font-size:11px;color:var(--no);line-height:1.4}
   .cok{color:var(--ok)}
+  .crow-live{box-shadow:inset 3px 0 0 var(--gold)}
+  .cshare{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+  .cshare .btn{min-height:38px;padding:8px 14px}
+  .cpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .cpick label{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--soft)}
+  .cpick input[type=date]{width:auto;min-width:150px}
+  .cdetail{border:1px solid var(--rule);border-radius:var(--r);background:var(--card);padding:14px;box-shadow:0 1px 3px rgba(19,42,68,.05)}
+  .cdet-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .cdet-tgl{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink)}
+  .cdet-pct{font-family:var(--mono);font-weight:600;font-size:22px}
+  .cdet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:4px 0 12px}
+  .cdet-grid > div{background:var(--paper);border-radius:var(--r);padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+  .cdet-grid span{font-family:var(--sans);font-size:10.5px;color:var(--soft)}
+  .cdet-grid b{font-family:var(--mono);font-size:15px;color:var(--ink)}
+  .cdet-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);margin-bottom:4px}
+  .cdet-tema{margin:0 0 12px}
+  .tchips{display:flex;flex-wrap:wrap;gap:5px}
+  .tchip{font-family:var(--mono);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:3px 9px;color:var(--ink)}
+  .cdet-lg{font-family:var(--mono);font-size:12px;color:var(--no)}
+  .clive{color:var(--gold);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.04em;white-space:nowrap}
   @media (max-width:700px){ .crow{grid-template-columns:82px 1fr 42px} .cpct{font-size:12px} }
   #bAtur.on{color:var(--ink);border-color:var(--soft);background:var(--paper)}
 </style>
@@ -643,7 +664,16 @@ Object.assign(EN, {
   "Pengaturan":"Settings", "Analisis":"Analysis", "Rencana":"Plan",
   "Kepatuhan":"Compliance", "Kepatuhan harian":"Daily compliance", "tuntas":"met",
   "rata-rata":"average", "beruntun tuntas":"met streak", "100% berturut":"100% in a row",
-  "hari tercatat":"days recorded",
+  "hari tercatat":"days recorded", "langsung":"live", "berjalan":"in progress",
+  "Simpan PDF":"Save PDF", "Kirim WhatsApp":"Send to WhatsApp", "Kepatuhan Latihan":"Training compliance",
+  "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
+  "Tidak ada catatan terverifikasi untuk tanggal ini.":"No verified record for this date.",
+  "Puzzle Lichess":"Lichess puzzles", "Rating puzzle":"Puzzle rating", "Rating rapid":"Rapid rating",
+  "Rating blitz":"Blitz rating", "Taktik tertinggi":"Tactics high",
+  "Riwayat":"History", "belum ada riwayat terverifikasi":"no verified history yet",
+  "langsung dari tugas":"live from tasks",
+  "Rekam kepatuhan tiap hari, terbaru di atas. Baris hari ini langsung dari tugas; sisanya terverifikasi dari snapshot Apps Script \u2014 termasuk hari saat dasbor tidak dibuka.":"Compliance record per day, newest first. Today is live from tasks; the rest are verified from the Apps Script snapshot \u2014 including days the dashboard was not opened.",
+  "Belum ada catatan kepatuhan. Angka historis datang dari snapshot harian Apps Script di Sheet.":"No compliance records yet. Historical numbers come from the Apps Script daily snapshot in the Sheet.",
   "Rekam kepatuhan terverifikasi tiap hari, terbaru di atas. Termasuk hari saat dasbor tidak dibuka.":"Verified compliance record per day, newest first. Includes days the dashboard was not opened.",
   "Belum ada catatan kepatuhan. Angka ini datang dari snapshot harian Apps Script di Sheet \u2014 pasang backend dan tunggu job malam pertama.":"No compliance records yet. These numbers come from the Apps Script daily snapshot in the Sheet \u2014 set up the backend and wait for the first nightly job.",
   "Semua":"All", "buka":"open",
@@ -1137,7 +1167,7 @@ function snapsDariCSV(teks){
         iRate  = kol("rating puzzle"),
         iRushA = kol("rush percobaan"), iRushS = kol("rush skor"),
         iTac   = kol("taktik tertinggi"), iRapid = kol("rating rapid"), iBlitz = kol("rating blitz"),
-        iPatuh = kol("kepatuhan"), iLang = kol("pelanggaran"), iStat = kol("status");
+        iPatuh = kol("kepatuhan"), iLang = kol("pelanggaran"), iStat = kol("status"), iTema = kol("tema");
   if(iTgl < 0) return {};
   const n = (r,i) => (i >= 0 && r[i] !== "" && r[i] != null) ? Number(r[i]) : null;
   const out = {};
@@ -1150,6 +1180,8 @@ function snapsDariCSV(teks){
       tacticsHigh: n(r,iTac), rapid: n(r,iRapid), blitz: n(r,iBlitz),
       kepatuhan: n(r,iPatuh), langgar: iLang >= 0 ? r[iLang] : "",
       status: iStat >= 0 ? r[iStat] : "",
+      tema: (function(){ const v = iTema >= 0 ? r[iTema] : ""; if(!v || !String(v).trim()) return undefined;
+        try { const o = JSON.parse(v); return (o && typeof o === "object") ? o : undefined; } catch(e){ return undefined; } })(),
     };
   });
   return out;
@@ -1175,7 +1207,10 @@ async function fetchAll(){
       const snaps = snapsDariCSV(await r.text());
       const n = Object.keys(snaps).length;
       if(!n) throw new Error("CSV terbaca tapi tidak ada baris tanggal yang sah. Pastikan yang diterbitkan adalah sheet 'Harian'.");
-      S.snaps = Object.assign({}, snaps, S.snaps);
+      Object.keys(snaps).forEach(k => {
+        S.snaps[k] = Object.assign({}, snaps[k], S.snaps[k]);
+        if(snaps[k].tema) S.snaps[k].tema = snaps[k].tema;
+      });
       logLine(`Sheet CSV: ${n} hari riwayat`, "");
     }catch(e){ out.errors.push(["Sheet CSV", e.message]); }
   }
@@ -2337,16 +2372,39 @@ function viewKepatuhan(){
   const esc = x => String(x).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
   const ada = d => S.snaps[d] && S.snaps[d].kepatuhan !== undefined &&
                    S.snaps[d].kepatuhan !== null && S.snaps[d].kepatuhan !== "";
+  const today = todayKey();
   const hari = Object.keys(S.snaps)
-    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d)).sort().reverse();
-  if(!hari.length) return `<section class="box"><h2>${tr("Kepatuhan harian")}</h2>
-    <div class="empty">${tr("Belum ada catatan kepatuhan. Angka ini datang dari snapshot harian Apps Script di Sheet \u2014 pasang backend dan tunggu job malam pertama.")}</div></section>`;
+    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d) && d !== today).sort().reverse();
 
-  const pct  = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
+  const sel = S.patuhTgl || "";
+  const semuaTgl = Object.keys(S.snaps).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d)).sort();
+  const minTgl = semuaTgl.length ? semuaTgl[0] : today;
+  const picker = `<div class="cpick nocetak"><label>${tr("Cek tanggal")}</label>`
+    + `<input type="date" id="cTgl" value="${sel}" min="${minTgl}" max="${today}">`
+    + (sel ? `<button class="btn" id="cTglClear">${tr("Semua tanggal")}</button>` : "") + `</div>`;
+  if(sel) return `<section class="box"><h2>${tr("Kepatuhan harian")}</h2>${picker}${kepatuhanDetail(sel)}</section>`;
+
   const tone = v => v >= 80 ? "var(--ok)" : v >= 50 ? "var(--warn)" : "var(--no)";
+  const pct  = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
   const rata = arr => arr.length ? Math.round(arr.reduce((a,d)=>a+pct(d),0)/arr.length) : 0;
-  const l7 = hari.slice(0,7), l30 = hari.slice(0,30);
-  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+
+  // Hari ini — dihitung langsung dari tugas, tak menunggu snapshot malam.
+  let live = null;
+  try { const q = buildQuests(); const dn = q.filter(x=>x.ok).length;
+        live = { pct: q.length ? Math.round(100*dn/q.length) : 0, done: dn, total: q.length }; } catch(e){}
+
+  if(!hari.length && !live) return `<section class="box"><h2>${tr("Kepatuhan harian")}</h2>
+    <div class="empty">${tr("Belum ada catatan kepatuhan. Angka historis datang dari snapshot harian Apps Script di Sheet.")}</div></section>`;
+
+  const rowLive = live ? (function(){
+    const v = live.pct, tgl = new Date(today + "T00:00:00").toLocaleDateString(LOCALE(), { weekday:"short", day:"numeric", month:"short" });
+    return `<div class="crow crow-live">
+      <div class="cday"><b>${tgl} \u00b7 ${tr("hari ini")}</b><span>${tr("langsung dari tugas")} \u00b7 ${live.done}/${live.total}</span></div>
+      <div class="cbar"><span style="width:${v}%;background:${tone(v)}"></span></div>
+      <div class="cpct" style="color:${tone(v)}">${v}%</div>
+      <div class="clg"><span class="clive">\u25cf ${tr("berjalan")}</span></div>
+    </div>`;
+  })() : "";
 
   const baris = hari.map(d => {
     const v = pct(d), lg = (S.snaps[d].langgar || "").toString().trim();
@@ -2359,17 +2417,104 @@ function viewKepatuhan(){
     </div>`;
   }).join("");
 
+  const l7 = hari.slice(0,7), l30 = hari.slice(0,30);
+  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+
   return `<section class="box">
     <h2>${tr("Kepatuhan harian")}</h2>
-    <p class="csub">${tr("Rekam kepatuhan terverifikasi tiap hari, terbaru di atas. Termasuk hari saat dasbor tidak dibuka.")}</p>
+    <p class="csub">${tr("Rekam kepatuhan tiap hari, terbaru di atas. Baris hari ini langsung dari tugas; sisanya terverifikasi dari snapshot Apps Script \u2014 termasuk hari saat dasbor tidak dibuka.")}</p>
+    ${picker}
     <div class="cards">
+      <div class="kpi" style="--tone:${live ? tone(live.pct) : "var(--soft)"}"><b>${live ? live.pct+"%" : "\u2014"}</b><i>${tr("hari ini")}</i><small>${tr("langsung")}</small></div>
       <div class="kpi" style="--tone:${tone(rata(l7))}"><b>${rata(l7)}%</b><i>${tr("rata-rata")}</i><small>${tr("7 hari terakhir")}</small></div>
       <div class="kpi" style="--tone:var(--sky)"><b>${rata(l30)}%</b><i>${tr("rata-rata")}</i><small>${tr("30 hari terakhir")}</small></div>
       <div class="kpi" style="--tone:var(--gold)"><b>${runtun}</b><i>${tr("beruntun tuntas")}</i><small>${tr("100% berturut")}</small></div>
-      <div class="kpi" style="--tone:var(--carbon)"><b>${hari.length}</b><i>${tr("hari tercatat")}</i><small>${tr("seluruh riwayat")}</small></div>
     </div>
-    <div class="clist">${baris}</div>
+    <div class="cshare nocetak">
+      <button class="btn" id="cPdf">${tr("Simpan PDF")}</button>
+      <button class="btn go" id="cWa">${tr("Kirim WhatsApp")}</button>
+    </div>
+    <div class="clist">${rowLive}${baris}</div>
   </section>`;
+}
+function kepatuhanData(){
+  const ada = d => S.snaps[d] && S.snaps[d].kepatuhan !== undefined &&
+                   S.snaps[d].kepatuhan !== null && S.snaps[d].kepatuhan !== "";
+  const today = todayKey();
+  const hari = Object.keys(S.snaps).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d) && d !== today).sort().reverse();
+  const pct = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
+  const rata = arr => arr.length ? Math.round(arr.reduce((a,d)=>a+pct(d),0)/arr.length) : 0;
+  let live = null;
+  try { const q = buildQuests(); const dn = q.filter(x=>x.ok).length;
+        live = { pct:q.length?Math.round(100*dn/q.length):0, done:dn, total:q.length }; } catch(e){}
+  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+  return { today, hari, pct, live, l7:rata(hari.slice(0,7)), l30:rata(hari.slice(0,30)), runtun };
+}
+
+function kepatuhanTeks(){
+  const D = kepatuhanData(), a = anakAktif();
+  const nm = (a && a.nama) ? a.nama : tr("Anak");
+  const fmt = d => new Date(d + "T00:00:00").toLocaleDateString(LOCALE(), { day:"numeric", month:"short" });
+  const L = [];
+  L.push("*" + tr("Kepatuhan Latihan") + " \u2014 " + nm + "*");
+  if(D.live) L.push(tr("Hari ini") + ": " + D.live.pct + "% (" + D.live.done + "/" + D.live.total + " " + tr("tugas") + ")");
+  L.push(tr("Rata-rata 7 hari") + ": " + D.l7 + "%  |  30 " + tr("hari") + ": " + D.l30 + "%");
+  L.push(tr("Beruntun tuntas") + ": " + D.runtun + " " + tr("hari"));
+  L.push("");
+  L.push("*" + tr("Riwayat") + ":*");
+  if(!D.hari.length) L.push("(" + tr("belum ada riwayat terverifikasi") + ")");
+  D.hari.slice(0,14).forEach(d => {
+    const v = D.pct(d), lg = (S.snaps[d].langgar || "").toString().trim();
+    L.push("\u2022 " + fmt(d) + " \u2014 " + v + "%" + (lg ? " (" + lg + ")" : " \u2713"));
+  });
+  L.push("");
+  L.push("_Road To Grand Master_");
+  return L.join("\n");
+}
+
+function kepatuhanDetail(dk){
+  const esc = x => String(x).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
+  const sp = S.snaps[dk];
+  const fullTgl = new Date(dk + "T00:00:00").toLocaleDateString(LOCALE(), { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  const adaP = sp && sp.kepatuhan !== undefined && sp.kepatuhan !== null && sp.kepatuhan !== "";
+  if(!adaP) return `<div class="cdetail"><div class="cdet-tgl">${fullTgl}</div>
+    <div class="empty" style="margin-top:8px">${tr("Tidak ada catatan terverifikasi untuk tanggal ini.")}</div></div>`;
+  const v = Math.max(0, Math.min(100, Number(sp.kepatuhan) || 0));
+  const tone = v >= 80 ? "var(--ok)" : v >= 50 ? "var(--warn)" : "var(--no)";
+  const rating = (sp.puzRating != null) ? sp.puzRating : (sp.puzzleRating != null ? sp.puzzleRating : null);
+  const stat = [
+    sp.puzzles != null ? [tr("Puzzle Lichess"), sp.puzzles] : null,
+    (sp.rushScore || sp.rushAttempts) ? [tr("Rush"), (sp.rushScore || 0) + " / " + (sp.rushAttempts || 0) + "\u00d7"] : null,
+    rating != null ? [tr("Rating puzzle"), rating] : null,
+    sp.rapid != null ? [tr("Rating rapid"), sp.rapid] : null,
+    sp.blitz != null ? [tr("Rating blitz"), sp.blitz] : null,
+    sp.tacticsHigh != null ? [tr("Taktik tertinggi"), sp.tacticsHigh] : null,
+  ].filter(Boolean);
+  const temaChips = (sp.tema && typeof sp.tema === "object")
+    ? Object.entries(sp.tema).sort((a,b)=>b[1]-a[1]).map(([k,n]) => `<span class="tchip">${esc(k)} \u00d7${n}</span>`).join("")
+    : "";
+  const lg = (sp.langgar || "").toString().trim();
+  return `<div class="cdetail">
+    <div class="cdet-head"><div class="cdet-tgl">${fullTgl}</div><div class="cdet-pct" style="color:${tone}">${v}%</div></div>
+    <div class="cbar" style="margin:6px 0 12px"><span style="width:${v}%;background:${tone}"></span></div>
+    ${stat.length ? `<div class="cdet-grid">${stat.map(([k,val]) => `<div><span>${k}</span><b>${val}</b></div>`).join("")}</div>` : ""}
+    ${temaChips ? `<div class="cdet-tema"><div class="cdet-lbl">${tr("Tema dikerjakan")}</div><div class="tchips">${temaChips}</div></div>` : ""}
+    <div class="cdet-lg"><div class="cdet-lbl">${tr("Pelanggaran")}</div>${lg ? esc(lg) : `<span class="cok">\u2713 ${tr("tuntas")}</span>`}</div>
+  </div>`;
+}
+
+function kepatuhanWA(){
+  window.open("https://wa.me/?text=" + encodeURIComponent(kepatuhanTeks()), "_blank");
+}
+function kepatuhanPDF(){ window.print(); }
+function wireKepatuhanShare(){
+  const w = $("#cWa"), q = $("#cPdf");
+  if(w) w.onclick = kepatuhanWA;
+  if(q) q.onclick = kepatuhanPDF;
+  const t = $("#cTgl");
+  if(t) t.onchange = () => { S.patuhTgl = t.value; render(); };
+  const tc = $("#cTglClear");
+  if(tc) tc.onclick = () => { S.patuhTgl = ""; render(); };
 }
 
 function viewAtur(){
@@ -3350,7 +3495,7 @@ function render(){
     S.tab = "hari"; render();
   };
   renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderPlatforms(); renderRatings();
-  renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur();
+  renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur(); wireKepatuhanShare();
   if($("#chart")) renderChart("chart", ratingSeries(), false);
   if($("#accChart")) renderChart("accChart",
     akurasiTren().length ? [{name:tr("Akurasi"), color:"#A8791F", pts:akurasiTren()}] : [], true);
