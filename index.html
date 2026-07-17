@@ -506,6 +506,13 @@
   .cpct{grid-area:pct;font-family:var(--mono);font-weight:600;font-size:13px;text-align:right}
   .clg{grid-area:lg;font-family:var(--mono);font-size:11px;color:var(--no);line-height:1.4}
   .cok{color:var(--ok)}
+  .dg-box{border-style:solid !important;border-color:var(--navy) !important;background:rgba(37,70,107,.06)}
+  .dg{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+  .dg-r{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .dg-r > span{color:var(--soft)}
+  .dg-y{color:var(--ok);font-weight:600}
+  .dg-n{color:var(--no);font-weight:600}
+  .dg-v{font-family:var(--sans);font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;padding-top:8px;border-top:1px solid var(--rule)}
   .crow-live{box-shadow:inset 3px 0 0 var(--gold)}
   .cshare{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
   .cshare .btn{min-height:38px;padding:8px 14px}
@@ -704,6 +711,11 @@ Object.assign(EN, {
   "Belum ada partai rapid untuk dianalisa. Rencana muncul setelah anak main rapid.":"No rapid games to analyse yet. The plan appears after the child plays rapid.",
   "Tidak ada kelemahan menonjol dari partai rapid \u2014 lanjutkan kurikulum biasa.":"No standout weakness from rapid games \u2014 continue the usual curriculum.",
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
+  "Diagnosa verifikasi tema":"Theme verification diagnosis", "OTOMATIS":"AUTOMATIC", "MANUAL":"MANUAL",
+  "URL Web App /exec terisi":"Web App /exec URL filled", "Data termuat via /exec":"Data loaded via /exec",
+  "Tema hari ini dari backend":"Today's theme from backend", "Hari bertema tersimpan":"Days with theme stored",
+  "Status tugas tema":"Theme task status", "AKTIF":"ACTIVE", "TIDAK ADA SUMBER":"NO SOURCE",
+  "HANYA CSV":"CSV ONLY", "GS TIDAK TERMUAT":"GS NOT LOADED", "BACKEND TAK KIRIM TEMA":"BACKEND SENDS NO THEME",
   "Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.":"The Lichess token now lives in the backend (Apps Script), not here \u2014 theme verification is automatic with nothing to enter in the browser.",
   "Sumber: tebakan dari partai + kurikulum. Verifikasi tema kini otomatis dari backend; ini hanya saran pilihan tema.":"Source: a guess from games + curriculum. Theme verification is now automatic from the backend; this is only a theme suggestion.",
   "Tidak ada catatan terverifikasi untuk tanggal ini.":"No verified record for this date.",
@@ -2679,6 +2691,46 @@ function wireKepatuhanShare(){
   if(tc) tc.onclick = () => { S.patuhTgl = ""; render(); };
 }
 
+function diagnosaTema(){
+  const today = todayKey(), cfg = S.cfg || {};
+  const punyaGs  = !!(cfg.gs  && cfg.gs.trim());
+  const punyaCsv = !!(cfg.csv && cfg.csv.trim());
+  const viaGs = !!(S.data && S.data.chess && S.data.chess.viaGs);
+  const snapT = (S.snaps && S.snaps[today]) || null;
+  const adaTemaToday = !!(snapT && snapT.tema && typeof snapT.tema === "object");
+  const hariBertema = Object.keys(S.snaps || {}).filter(d => S.snaps[d] && S.snaps[d].tema && typeof S.snaps[d].tema === "object").length;
+  const th = temaHitung(today);
+  const auto = !!(th && typeof th === "object");
+  let verdict, langkah;
+  if(auto){ verdict = tr("AKTIF");
+    langkah = tr("Verifikasi tema hidup hari ini. Kalau masih ada tugas MANUAL, itu tugas tanpa tema (main/review partai) yang memang tak bisa diverifikasi."); }
+  else if(!punyaGs && !punyaCsv){ verdict = tr("TIDAK ADA SUMBER");
+    langkah = tr("Belum ada URL data sama sekali. Isi URL Web App /exec di atas, lalu Tarik data."); }
+  else if(!punyaGs){ verdict = tr("HANYA CSV");
+    langkah = tr("Kamu hanya memakai CSV. Lewat CSV, tema HARI INI tidak live \u2014 baru terisi setelah job malam. Isi URL Web App /exec agar tema hari ini langsung terverifikasi."); }
+  else if(!viaGs){ verdict = tr("GS TIDAK TERMUAT");
+    langkah = tr("URL /exec terisi tapi datanya tak termuat. Pastikan URL berakhiran /exec dan akses Anyone, lalu Tarik data."); }
+  else { verdict = tr("BACKEND TAK KIRIM TEMA");
+    langkah = tr("GS termuat, tapi tak ada tema hari ini. Hampir pasti web app belum di-redeploy sebagai VERSI BARU, atau token Lichess ditolak. Redeploy versi baru, jalankan catatHarian() sekali, lalu cek Executions di Apps Script."); }
+  return { punyaGs, punyaCsv, viaGs, adaTemaToday, hariBertema, auto, verdict, langkah };
+}
+function panelDiagnosaTema(){
+  const D = diagnosaTema();
+  const yn = b => b ? `<span class="dg-y">\u2713</span>` : `<span class="dg-n">\u2717</span>`;
+  const rows = [
+    [tr("URL Web App /exec terisi"), yn(D.punyaGs)],
+    [tr("Data termuat via /exec"), yn(D.viaGs)],
+    [tr("Tema hari ini dari backend"), yn(D.adaTemaToday)],
+    [tr("Hari bertema tersimpan"), `<b>${D.hariBertema}</b>`],
+    [tr("Status tugas tema"), D.auto ? `<span class="dg-y">${tr("OTOMATIS")}</span>` : `<span class="dg-n">${tr("MANUAL")}</span>`],
+  ];
+  return `<div class="warnbox dg-box">
+    <b>${tr("Diagnosa verifikasi tema")}</b>
+    <div class="dg">${rows.map(([k,v]) => `<div class="dg-r"><span>${k}</span>${v}</div>`).join("")}</div>
+    <div class="dg-v"><b>${D.verdict}</b> \u2014 ${D.langkah}</div>
+  </div>`;
+}
+
 function viewAtur(){
   return `
   <section class="box">
@@ -2711,6 +2763,7 @@ function viewAtur(){
         <button class="btn" id="bExport">${tr("Ekspor JSON")}</button>
         <button class="btn" id="bReset" style="color:var(--no)">${tr("Hapus semua")}</button>
       </div>
+      ${panelDiagnosaTema()}
       <div id="fetchLog" style="margin-top:12px"></div>
     </div>
   </section>
