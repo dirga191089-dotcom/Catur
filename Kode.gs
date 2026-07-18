@@ -34,7 +34,8 @@ const KONFIG = {
   /* Banyak anak. Tambahkan objek baru ke daftar ini; tidak perlu apa pun lagi.
      Setiap anak mendapat barisnya sendiri di sheet, dibedakan kolom "Anak". */
   anak: [
-    { nama: 'Varisha', chess: 'VarishaArbas', lichess: 'VarishaChess' },
+    // chess: '' -> Chess.com DINONAKTIFKAN (sistem murni Lichess).
+    { nama: 'Varisha', chess: '', lichess: 'VarishaChess' },
     // { nama: 'Adik',  chess: '',             lichess: '' },
   ],
 
@@ -295,8 +296,14 @@ function msLi_(t) { return t < 1e11 ? t * 1000 : t; }
    /api/puzzle/activity selalu mengembalikan aktivitas PEMILIK token — jadi token
    ini harus milik akun Lichess si anak (Varisha). Banyak anak = butuh mekanisme
    token per anak; untuk satu anak, ini sudah benar. */
+/* Opsi "tempel di kode": isi token puzzle:read di antara kutip di bawah, sekali.
+   Berlaku di semua perangkat, tak perlu tempel di browser lagi.
+   CATATAN: ini tersimpan DI FILE Kode.gs (tidak publik, tapi ikut kalau file
+   dibagikan/di-commit). Kalau ragu, kosongkan dan pakai Script Properties. */
+const LICHESS_TOKEN_HARDCODE = 'lip_1ydnk5YQdMseboA6FOlG';
 function _tokenLi_() {
-  return PropertiesService.getScriptProperties().getProperty('LICHESS_TOKEN') || '';
+  return PropertiesService.getScriptProperties().getProperty('LICHESS_TOKEN')
+      || (LICHESS_TOKEN_HARDCODE || '').trim();
 }
 function pasangTokenLichess() {
   const t = '';                 // <- tempel token puzzle:read di sini, jalankan SEKALI
@@ -304,6 +311,40 @@ function pasangTokenLichess() {
   PropertiesService.getScriptProperties().setProperty('LICHESS_TOKEN', t.trim());
   console.log('Token tersimpan di Script Properties. SEKARANG kosongkan lagi variabel t di kode ini.');
 }
+/* ═══════════ HAPUS SEMUA DATA CHESS.COM (sekali jalan, permanen) ═══════════
+   Menghapus HANYA data milik Chess.com:
+     - Sheet 'Harian' kolom 9-14: Rush percobaan, Rush skor, Taktik tertinggi (CC),
+       Rekor baru?, Rating rapid (CC), Rating blitz (CC)
+     - Sheet 'Partai' : SELURUH isinya (sheet ini memang khusus partai Chess.com)
+   TIDAK menyentuh: puzzle Lichess, tema, kepatuhan, pelanggaran, dan kolom
+   jumlah partai (15-21) karena kolom itu CAMPURAN Chess.com + Lichess —
+   menghapusnya akan ikut membuang data Lichess.
+   Sebelum menghapus, seluruh spreadsheet disalin sebagai cadangan di Drive. */
+function hapusDataChesscom() {
+  const ss = SpreadsheetApp.getActive();
+  const cadangan = ss.copy('CADANGAN sebelum hapus Chess.com - ' +
+    Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm'));
+  console.log('Cadangan dibuat: ' + cadangan.getUrl());
+
+  const shH = ss.getSheetByName(SHEET_HARIAN);
+  let selH = 0;
+  if (shH && shH.getLastRow() > 1) {
+    selH = shH.getLastRow() - 1;
+    shH.getRange(2, 9, selH, 6).clearContent();   // kolom 9..14
+  }
+
+  const shP = ss.getSheetByName(SHEET_PARTAI);
+  let selP = 0;
+  if (shP && shP.getLastRow() > 1) {
+    selP = shP.getLastRow() - 1;
+    shP.getRange(2, 1, selP, shP.getLastColumn()).clearContent();
+  }
+
+  log_('HAPUS', 'Data Chess.com dihapus. Harian: ' + selH + ' baris (kolom 9-14), Partai: ' + selP + ' baris. Cadangan: ' + cadangan.getUrl());
+  console.log('SELESAI. Harian: ' + selH + ' baris dibersihkan (kolom 9-14). Partai: ' + selP + ' baris dihapus.');
+  console.log('Kalau ternyata salah, pulihkan dari cadangan: ' + cadangan.getUrl());
+}
+
 function cabutTokenLichess() {
   PropertiesService.getScriptProperties().deleteProperty('LICHESS_TOKEN');
   console.log('Token Lichess dihapus dari Script Properties.');
@@ -356,12 +397,17 @@ function ambilBulan_(url) { return ambil_(url).games || []; }
 // ═══════════════════ PENCATATAN HARIAN ═══════════════════
 /** Dipanggil trigger harian. Mengulang untuk SETIAP anak di KONFIG.anak. */
 function catatHarian() {
-  KONFIG.anak.forEach(function (a) {
-    ANAK = a;
-    try { catatSatuAnak_(); }
-    catch (e) { log_('GAGAL', a.nama + ': ' + e.message); }
-    Utilities.sleep(800);   // sopan terhadap kedua API
-  });
+  // Cegah duplikasi baris kalau trigger overlap (eksekusi lambat / dobel).
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) { log_('LEWAT', 'Eksekusi lain sedang menulis; dilewati.'); return; }
+  try {
+    KONFIG.anak.forEach(function (a) {
+      ANAK = a;
+      try { catatSatuAnak_(); }
+      catch (e) { log_('GAGAL', a.nama + ': ' + e.message); }
+      Utilities.sleep(800);   // sopan terhadap kedua API
+    });
+  } finally { lock.releaseLock(); }
 }
 
 function catatSatuAnak_() {
@@ -369,9 +415,9 @@ function catatSatuAnak_() {
   const tz = ss.getSpreadsheetTimeZone();
   const hariIni = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
 
-  let stats, partaiHariIni = [], status = 'OK';
+  let stats = null, partaiHariIni = [], status = 'OK';
   try {
-    stats = ambilStats_();
+    if (ANAK.chess) stats = ambilStats_();
   } catch (e) {
     // Chess.com gagal TIDAK boleh membuang data Lichess. Puzzle tetap dicatat.
     log_('GAGAL', 'Ambil stats Chess.com: ' + e.message);
@@ -389,7 +435,7 @@ function catatSatuAnak_() {
 
   // Partai hari ini diambil dari arsip bulan berjalan.
   try {
-    const arsip = ambilArsip_();
+    const arsip = ANAK.chess ? ambilArsip_() : [];
     if (arsip.length) {
       const semua = ambilBulan_(arsip[arsip.length - 1]);
       partaiHariIni = semua.filter(g =>
@@ -483,7 +529,7 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   if (r.bullet > T.bulletMaks)      langgar.push('bullet ' + r.bullet);
   if (r.total > T.partaiMaks)       langgar.push('volume ' + r.total);
   if (r.kalahBeruntun >= 3)         langgar.push('tilt ' + r.kalahBeruntun + ' kalah beruntun');
-  if (rushPercobaan === 0)          langgar.push('Rush tidak dikerjakan');
+  if (T.rushPercobaan > 0 && rushPercobaan === 0) langgar.push('Rush tidak dikerjakan');
   if (rushPercobaan > 0 && rushSkor < T.rushSkor) langgar.push('skor Rush ' + rushSkor + ' < ' + T.rushSkor);
 
   const row = [
@@ -752,6 +798,11 @@ function doGet(e) {
           snaps[k] = snaps[k] || {};
           snaps[k].tema = perHari[k];   // live menimpa yang tersimpan (lebih baru)
         });
+        // Tandai HARI INI "verifikasi aktif" walau 0 puzzle, agar tugas tema
+        // tampil OTOMATIS (0/N) di dasbor, bukan MANUAL.
+        var todayG = Utilities.formatDate(new Date(), tzG, 'yyyy-MM-dd');
+        snaps[todayG] = snaps[todayG] || {};
+        if (snaps[todayG].tema == null) snaps[todayG].tema = {};
       }
     }
   } catch (e) { /* abaikan; tema tersimpan dari Sheet tetap dipakai */ }

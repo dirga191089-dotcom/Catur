@@ -584,7 +584,7 @@
 <div id="view"></div>
 
 <footer>
-  <div>Road To Grand Master \u00b7 data dari API publik Chess.com &amp; Lichess. Tidak ada server. Semua tersimpan di perangkat ini.</div>
+  <div>Road To Grand Master \u00b7 data dari API publik Lichess. Tidak ada server. Semua tersimpan di perangkat ini.</div>
   <div style="margin-top:6px">Anak tahu bahwa aktivitasnya dipantau — itu syaratnya, bukan pilihannya.</div>
 </footer>
 </div>
@@ -1050,7 +1050,7 @@ function muatAnak(){
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
-  if(!S.cfg.chess)   S.cfg.chess   = BAKED_CHESS;
+  S.cfg.chess = "";   // Chess.com dinonaktifkan (murni Lichess)
   if(!S.cfg.lichess) S.cfg.lichess = BAKED_LICHESS;
   _ng = null; _ngAt = "";        // WAJIB: buang cache partai anak sebelumnya
 }
@@ -1064,7 +1064,7 @@ function simpanAnak(){
 // Ganti URL ini kalau kamu redeploy ke deployment BARU. Kalau pakai 'Manage
 // deployments > Edit > New version', URL tetap sama dan baris ini tak perlu diubah.
 const BAKED_GS = "https://script.google.com/macros/s/AKfycbxWGobbmg-IYmLJuSwMiUJFcqHgVItOBifHg3NnLE9UbAdqCbv-puCrwovG7PiUemTx_w/exec";
-const BAKED_CHESS = "VarishaArbas";
+const BAKED_CHESS = "";
 const BAKED_LICHESS = "VarishaChess";
 let S = {
   cfg:{ name:"Varisha", chess:BAKED_CHESS, lichess:BAKED_LICHESS, proxy:"", csv:"", gs:BAKED_GS },
@@ -1559,15 +1559,7 @@ function normGames(){
   const kunci = DB.aktif + "|" + S.fetchedAt;   // id anak IKUT jadi kunci cache
   if(_ng && _ngAt === kunci) return _ng;
   const out = [];
-  const C = S.data && S.data.chess;
-  if(C && C.games) C.games.forEach(g => {
-    const r = chessResultFor(g);
-    const lgk = langkahCC(g.pgn);
-    out.push({ t: ms(g.end_time), site:"Chess.com", speed: speedNorm(g.time_class), res:r.res,
-      putih: r.putih, langkah: lgk, mini: r.res === "K" && lgk != null && lgk < MINI,
-      rating: r.rating, opp: esc(r.opp.username), oppRating: r.opp.rating, acc: r.acc,
-      url: g.url, opening: esc(ecoNama(g.pgn)), eco: (String(g.pgn||"").match(/\[ECO "([^"]+)"\]/)||[])[1] || null });
-  });
+  // Sumber partai: Lichess saja (Chess.com dinonaktifkan).
   const L = S.data && S.data.lichess;
   if(L && L.games) L.games.forEach(g => {
     const me = (L.user||"").toLowerCase();
@@ -1828,7 +1820,7 @@ function last7(){
     cek.push(g.total <= T.gameMax);
     const patuh = Math.round(100*cek.filter(Boolean).length/cek.length);
     out.push({ dk, d, pz, games:g.total, bullet:g.byClass.bullet||0, patuh,
-               aktif: pz>0 || g.total>0 || (S.snaps[dk]&&S.snaps[dk].rushAttempts>0) });
+               aktif: pz>0 || g.total>0 });
   }
   return out;
 }
@@ -1902,8 +1894,6 @@ function ratingSeries(){
   // Chess.com tidak menyediakan riwayat rating taktik. Satu-satunya sumbernya
   // adalah foto harian yang aplikasi ini simpan sendiri.
   const hari = Object.keys(S.snaps).sort();
-  const tac = hari.filter(d => S.snaps[d].tacticsHigh).map(d => ({ t:new Date(d).getTime(), v:S.snaps[d].tacticsHigh }));
-  if(tac.length > 1) out.push({ name:tr("Chess.com taktik (tertinggi)"), color:"#8A5F14", pts:tac });
 
   const bySrc = {};
   normGames().forEach(g => {
@@ -2517,8 +2507,6 @@ function viewRencana(){
     <div class="pad">
       <div class="fields">
         <div><label>${tr("Puzzle / hari (Lichess — terverifikasi)")}</label><input type="number" id="tPuzzle" min="0"></div>
-        <div><label>${tr("Puzzle Rush / hari (Chess.com — 0 = mati)")}</label><input type="number" id="tRush" min="0"></div>
-        <div><label>${tr("Target skor Puzzle Rush")}</label><input type="number" id="tRushScore" min="0"></div>
         <div><label>${tr("Partai rapid / hari")}</label><input type="number" id="tRapid" min="0"></div>
         <div><label>${tr("Batas partai bullet / hari")}</label><input type="number" id="tBulletMax" min="0"></div>
         <div><label>${tr("Batas total partai / hari (anti-tilt)")}</label><input type="number" id="tGameMax" min="0"></div>
@@ -2764,7 +2752,6 @@ function viewAtur(){
       <div class="fields">
         <div><label>${tr("Nama anak")}</label><input id="cName"></div>
         <div><label>${tr("Zona waktu")}</label><input id="cTz" disabled></div>
-        <div><label>${tr("Username Chess.com (partai)")}</label><input id="cChess" autocapitalize="off"></div>
         <div><label>${tr("Username Lichess (puzzle)")}</label><input id="cLichess" autocapitalize="off"></div>
       </div>
       <p class="csub" style="margin:2px 0 0">${tr("Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.")}</p>
@@ -3101,7 +3088,7 @@ function renderPlatforms(){
   const dk = todayKey(), T = targets();
   const L = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || null;
   const C = (S.data && S.data.chess && S.data.chess.stats) || null;
-  const dL = siteDay("Lichess", dk), dC = siteDay("Chess.com", dk);
+  const dL = siteDay("Lichess", dk);
   const pz = puzzlesOn(dk), R = rushToday();
 
   const baris = (label, nilai, sub, kelas) =>
@@ -3134,38 +3121,8 @@ function renderPlatforms(){
         <div class="foot">${kenapa(tr("Jumlah puzzle harian TERVERIFIKASI. Rating puzzle bergerak naik dan turun — inilah angka yang paling jujur menggambarkan kemampuan taktik anak."))}</div>
       </div>`;
 
-  // ── CHESS.COM: rumah partai ──
-  const tac = C && C.tactics;
-  const rush = C && C.puzzle_rush;
-  const cc = !S.cfg.chess
-    ? `<div class="plat cc"><h3>Chess.com</h3><div class="empty">${tr("Username belum diisi.")}</div></div>`
-    : `<div class="plat cc">
-        <h3>Chess.com <em>${tr("sumber partai")}</em></h3>
-        <div class="hero">
-          <div><b style="color:${dC.n ? "var(--ink)" : "var(--soft)"}">${dC.n}</b><span>${tr("partai hari ini")}</span></div>
-          <div class="sub">${hasil(dC)}<br>${dC.acc ? tr("akurasi {a}%",{a:dC.acc.toFixed(1)}) : tr("belum dianalisis")}</div>
-        </div>
-        <dl>
-          ${baris(tr("Puzzle harian"), tr("TIDAK ADA"), tr("API Chess.com tidak menyediakannya"), "no")}
-          ${baris(tr("Rating taktik"), tac && tac.highest ? tac.highest.rating : "\u2014",
-              tac && tac.highest ? tr("TERTINGGI \u00b7 tak pernah turun") : "", "dim")}
-          ${baris(tr("Taktik terendah"), tac && tac.lowest ? tac.lowest.rating : "\u2014", "", "dim")}
-          ${baris(tr("Puzzle Rush hari ini"), R.attempts || "\u2014",
-              R.attempts ? tr("skor {a}",{a:R.score}) : (T.rush ? tr("belum dikerjakan") : tr("tidak ditargetkan")),
-              R.attempts ? "ok" : "dim")}
-          ${baris(tr("Puzzle Rush terbaik"), rush && rush.best ? rush.best.score : "\u2014", "")}
-          ${baris("Rapid", C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : "\u2014",
-              C && C.chess_rapid && C.chess_rapid.record
-                ? `${C.chess_rapid.record.win||0}M / ${C.chess_rapid.record.draw||0}R / ${C.chess_rapid.record.loss||0}K` : "")}
-          ${baris("Blitz", C && C.chess_blitz && C.chess_blitz.last ? C.chess_blitz.last.rating : "\u2014",
-              C && C.chess_blitz && C.chess_blitz.record
-                ? `${C.chess_blitz.record.win||0}M / ${C.chess_blitz.record.draw||0}R / ${C.chess_blitz.record.loss||0}K` : "")}
-          ${baris(tr("Kontrol waktu hari ini"), "\u00a0", kelas(dC), "dim")}
-        </dl>
-        <div class="foot">${kenapa(tr("Rating taktik yang ditampilkan adalah yang TERTINGGI sepanjang masa — ia tidak pernah turun, jadi ia tidak bisa memberi tahu kalau kemampuan anak menurun. Gunakan rating puzzle Lichess untuk itu."))}</div>
-      </div>`;
+  el.innerHTML = li;
 
-  el.innerHTML = li + cc;
 }
 
 /* ═══════════ RATING & TAKTIK: KEDUA SITUS BERDAMPINGAN ═══════════
@@ -3194,7 +3151,7 @@ function renderRatings(){
   const baris = [];
   [["rapid","Rapid"],["blitz","Blitz"],["bullet","Bullet"],["classical","Klasik"]].forEach(([k,label])=>{
     const a = li(k), b = cc("chess_" + k);
-    if(a || b) baris.push([label, a, b]);
+    if(a) baris.push([label, a]);
   });
 
   // ── taktik / puzzle ──
@@ -3202,20 +3159,11 @@ function renderRatings(){
   const liPuz = lp && lp.games != null
     ? { v: lp.rating + (lp.prov ? "?" : ""), s: `${lp.games} puzzle \u00b7 terverifikasi harian` }
     : null;
-  const tac = C.tactics;
-  const ccPuz = tac && (tac.highest || tac.lowest)
-    ? { v: tac.highest ? tac.highest.rating : "\u2014",
-        s: `tertinggi${tac.lowest ? " \u00b7 terendah " + tac.lowest.rating : ""} \u00b7 rating kini TIDAK tersedia di API` }
-    : null;
-  if(liPuz || ccPuz) baris.push(["Puzzle / Taktik", liPuz, ccPuz]);
+  if(liPuz) baris.push(["Puzzle", liPuz]);
 
-  const st = L.storm, rush = C.puzzle_rush;
+  const st = L.storm;
   const liStorm = st ? { v: st.score, s: `${st.runs} kali main (Puzzle Storm)` } : null;
-  const ccRush = rush && rush.best
-    ? { v: rush.best.score,
-        s: `terbaik${rush.daily ? " \u00b7 hari ini " + (rush.daily.score||0) + " dari " + (rush.daily.total_attempts||0) + " coba" : ""}` }
-    : null;
-  if(liStorm || ccRush) baris.push(["Puzzle Storm / Rush", liStorm, ccRush]);
+  if(liStorm) baris.push(["Puzzle Storm", liStorm]);
 
   if(!baris.length){ el.innerHTML = `<div class="empty">${tr("Belum ada data rating dari kedua situs.")}</div>`; return; }
 
@@ -3224,17 +3172,11 @@ function renderRatings(){
     : `<span style="color:var(--rule)">\u2014</span>`;
 
   el.innerHTML = `<table>
-    <tr><th></th>
-      <th style="color:var(--navy)">Lichess</th>
-      <th style="color:var(--gold)">Chess.com</th></tr>
-    ${baris.map(([n,a,b])=>`<tr>
+    <tr><th></th><th style="color:var(--navy)">Lichess</th></tr>
+    ${baris.map(([n,a])=>`<tr>
       <td style="font-family:var(--sans);font-size:13px;font-weight:600">${n}</td>
-      <td>${sel(a)}</td><td>${sel(b)}</td></tr>`).join("")}
-  </table>
-  <div class="empty" style="border-top:1px solid var(--rule)">
-    Rating kedua situs BUKAN skala yang sama \u2014 rapid Lichess biasanya jauh di atas rapid
-    Chess.com untuk pemain yang sama. Bandingkan naik-turunnya, bukan angkanya.
-  </div>`;
+      <td>${sel(a)}</td></tr>`).join("")}
+  </table>`;
 }
 
 /* ═══════════ RENDER BERSAMA ═══════════ */
@@ -3294,11 +3236,8 @@ function renderKPIs(){
   const pct = q.length ? Math.round(100*done/q.length) : 0;
   const pz = puzzlesOn(dk), g = gamesOn(dk), ls = losingStreakToday(), R = rushToday();
   const L = S.data && S.data.lichess ? S.data.lichess.prof : null;
-  const C = S.data && S.data.chess ? S.data.chess.stats : null;
   const lpuz = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
-  const crapid = C && C.chess_rapid && C.chess_rapid.last ? C.chess_rapid.last.rating : null;
   const lrapid = L && L.perfs && L.perfs.rapid && L.perfs.rapid.games ? L.perfs.rapid.rating : null;
-  const ctac   = C && C.tactics && C.tactics.highest ? C.tactics.highest.rating : null;
 
   const cards = [
     { v:pct, suf:"%", i:tr("kepatuhan hari ini"), s:tr("{a}/{b} tugas",{a:done,b:q.length}),
@@ -3310,14 +3249,8 @@ function renderKPIs(){
       tone: g.total>T.gameMax ? TONE.no : TONE.teal },
     { v:ls, i:tr("kalah beruntun"), s: ls>=3?tr("HENTIKAN SESI"):tr("aman"), tone: ls>=3?TONE.no:TONE.ok },
     { v:lrapid||0, i:"rapid \u00b7 lichess", s:tr("skala Lichess"), tone:TONE.carbon, raw:!lrapid },
-    { v:crapid||0, i:"rapid \u00b7 chess.com", s:tr("skala Chess.com"), tone:TONE.teal, raw:!crapid },
     { v:lpuz||0, i:tr("rating puzzle") + " \u00b7 lichess", s:tr("terverifikasi harian"), tone:TONE.carbon, raw:!lpuz },
-    { v:ctac||0, i:tr("taktik tertinggi") + " \u00b7 chess.com",
-      s: newTacticsRecordToday() ? tr("REKOR BARU HARI INI") : tr("rating kini tak tersedia di API"),
-      tone:TONE.gold, raw:!ctac },
   ];
-  if(T.rush > 0 || R.attempts > 0)
-    cards.splice(2, 0, { v:R.attempts, i:"puzzle rush", s:R.attempts?tr("skor {a}",{a:R.score}):tr("belum"), tone:TONE.gold });
 
   el.innerHTML = cards.map((c,i)=>`<div class="kpi" style="--tone:${c.tone};animation-delay:${.04*i}s">
     <b data-to="${c.v}" data-suf="${c.suf||""}">${c.raw?"\u2014":"0"}</b><i>${c.i}</i><small>${c.s}</small></div>`).join("");
@@ -3506,7 +3439,7 @@ function renderPlan(){
   $("#tierInfo").innerHTML = `<div class="note"><b>${tr("Fokus latihan")}</b>${tr(t.fokus)}</div>
     <div class="note" style="animation-delay:.05s"><b>${tr("Metode evaluasi pelatih")}</b>${tr(t.evaluasi)}</div>`;
   const T = targets();
-  $("#tPuzzle").value = T.puzzle; $("#tRush").value = T.rush||0; $("#tRushScore").value = T.rushScore||0;
+  $("#tPuzzle").value = T.puzzle;
   $("#tRapid").value = T.rapid; $("#tBulletMax").value = T.bulletMax; $("#tGameMax").value = T.gameMax;
   $("#tTemaJumlah").value = T.temaJumlah || 0; $("#tTemaPuzzle").value = T.temaPuzzle || 0;
   $("#tTemaLuar").checked = !!T.temaLuar;
@@ -3535,7 +3468,7 @@ function renderPlan(){
     .join("\n");
   sel.onchange = async e => { S.tier = +e.target.value; S.targets = null; S.manual = null; await persist(); render(); };
   $("#bTargets").onclick = async () => {
-    S.targets = { puzzle:+$("#tPuzzle").value||0, rush:+$("#tRush").value||0, rushScore:+$("#tRushScore").value||0,
+    S.targets = { puzzle:+$("#tPuzzle").value||0, rush:0, rushScore:0,
       rapid:+$("#tRapid").value||0, bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0,
       temaJumlah:+$("#tTemaJumlah").value||0, temaPuzzle:+$("#tTemaPuzzle").value||0,
       temaLuar: $("#tTemaLuar").checked };
@@ -3583,13 +3516,13 @@ function renderDaftarAnak(){
 function renderAtur(){
   renderDaftarAnak();
   if(!$("#cName")) return;
-  $("#cName").value = S.cfg.name; $("#cChess").value = S.cfg.chess;
+  $("#cName").value = S.cfg.name;
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
   $("#cCsv").value = S.cfg.csv || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $("#bFetch").onclick = async () => {
-    S.cfg.name = $("#cName").value.trim(); S.cfg.chess = $("#cChess").value.trim();
+    S.cfg.name = $("#cName").value.trim();
     S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
     S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
     await persist(); await fetchAll();
@@ -3605,7 +3538,6 @@ function renderAtur(){
   };
   $("#bTest").onclick = () => {
     S.cfg.lichess = $("#cLichess").value.trim();
-    S.cfg.chess = $("#cChess").value.trim();
     S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
     S.cfg.proxy = $("#cProxy").value.trim();
     persist(); ujiKoneksi();
