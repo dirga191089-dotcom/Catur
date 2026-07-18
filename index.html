@@ -1239,7 +1239,7 @@ function snapsDariCSV(teks){
   baris.slice(1).forEach(r => {
     let dk = (r[iTgl]||"").trim();
     // Toleran format lokal Indonesia (DD/MM/YYYY atau D/M/YYYY) -> ISO.
-    const mLoc = dk.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const mLoc = dk.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
     if(mLoc) dk = mLoc[3] + "-" + mLoc[2].padStart(2,"0") + "-" + mLoc[1].padStart(2,"0");
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return;
     out[dk] = {
