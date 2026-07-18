@@ -1055,6 +1055,7 @@ function muatAnak(){
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
   S.cfg.chess = "";      // sistem murni Lichess
   S.cfg.liToken = "";    // Token browser dibuang: verifikasi tema murni dari backend
+  if(BAKED_GS) S.cfg.csv = "";  // Backend /exec = sumber tunggal; CSV tak dipakai lagi
   if(!S.cfg.lichess) S.cfg.lichess = BAKED_LICHESS;
   _ng = null; _ngAt = "";        // WAJIB: buang cache partai anak sebelumnya
 }
@@ -1932,7 +1933,6 @@ async function ujiKoneksi(){
     }
   } else hasil.push(["warn","Lichess","username kosong."]);
 
-  if(S.cfg.csv) await uji("Sheet CSV", S.cfg.csv.trim(), false);
   if(S.cfg.gs) await uji("Apps Script", S.cfg.gs.trim(), false);
 
   const gagalSemua = hasil.filter(h=>h[0]==="no").length === hasil.filter(h=>h[0]!=="warn").length && hasil.some(h=>h[0]==="no");
@@ -2856,8 +2856,6 @@ function viewAtur(){
         <div><label>${tr("Username Lichess (puzzle)")}</label><input id="cLichess" autocapitalize="off"></div>
       </div>
       <p class="csub" style="margin:2px 0 0">${tr("Token Lichess kini disimpan di backend (Apps Script), bukan di sini \u2014 verifikasi tema otomatis tanpa perlu mengisi apa pun di browser.")}</p>
-      <label>URL Sheet CSV (File \u2192 Share \u2192 Publish to web \u2192 sheet "Harian" \u2192 CSV)</label>
-      <input id="cCsv" autocapitalize="off" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&single=true&output=csv">
       <label>URL Web App Apps Script (opsional \u2014 butuh akses "Anyone")</label>
       <input id="cGs" autocapitalize="off" placeholder="https://script.google.com/macros/s/…/exec">
       <label>Proxy CORS (hanya jika tarik langsung gagal)</label>
@@ -3605,12 +3603,11 @@ function renderAtur(){
   $("#cName").value = S.cfg.name;
   $("#cLichess").value = S.cfg.lichess; $("#cProxy").value = S.cfg.proxy;
   $("#cGs").value = S.cfg.gs || "";
-  $("#cCsv").value = S.cfg.csv || "";
   $("#cTz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
   $("#bFetch").onclick = async () => {
     S.cfg.name = $("#cName").value.trim();
     S.cfg.lichess = $("#cLichess").value.trim(); S.cfg.proxy = $("#cProxy").value.trim();
-    S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
+    S.cfg.gs = $("#cGs").value.trim();
     await persist(); await fetchAll();
   };
   $("#bExport").onclick = () => {
@@ -3624,7 +3621,7 @@ function renderAtur(){
   };
   $("#bTest").onclick = () => {
     S.cfg.lichess = $("#cLichess").value.trim();
-    S.cfg.gs = $("#cGs").value.trim(); S.cfg.csv = $("#cCsv").value.trim();
+    S.cfg.gs = $("#cGs").value.trim();
     S.cfg.proxy = $("#cProxy").value.trim();
     persist(); ujiKoneksi();
   };
