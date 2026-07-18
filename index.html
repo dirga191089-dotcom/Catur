@@ -1050,7 +1050,8 @@ function muatAnak(){
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
-  S.cfg.chess = "";   // Chess.com dinonaktifkan (murni Lichess)
+  S.cfg.chess = "";      // Chess.com dinonaktifkan (murni Lichess)
+  S.cfg.liToken = "";    // Token browser dibuang: verifikasi tema murni dari backend
   if(!S.cfg.lichess) S.cfg.lichess = BAKED_LICHESS;
   _ng = null; _ngAt = "";        // WAJIB: buang cache partai anak sebelumnya
 }
@@ -1288,6 +1289,7 @@ async function fetchAll(){
         S.snaps[k] = Object.assign({}, d.snaps[k], S.snaps[k]);
         if(d.snaps[k].tema) S.snaps[k].tema = d.snaps[k].tema;
       });
+      if(d.temaStatus) S.temaStatusBackend = d.temaStatus;
       if(d.nama && !S.cfg.name) S.cfg.name = d.nama;
     }catch(e){ out.errors.push(["Apps Script", e.message]); }
   }
@@ -2728,6 +2730,9 @@ function panelDiagnosaTema(){
     [tr("Tema hari ini dari backend"), yn(D.adaTemaToday)],
     [tr("Hari bertema tersimpan"), `<b>${D.hariBertema}</b>`],
     [tr("Status tugas tema"), D.auto ? `<span class="dg-y">${tr("OTOMATIS")}</span>` : `<span class="dg-n">${tr("MANUAL")}</span>`],
+    [tr("Token backend"), S.temaStatusBackend
+      ? (S.temaStatusBackend === "OK" ? `<span class="dg-y">OK</span>` : `<span class="dg-n">${S.temaStatusBackend}</span>`)
+      : `<span style="color:var(--soft)">\u2014</span>`],
   ];
   return `<div class="warnbox dg-box">
     <b>${tr("Diagnosa verifikasi tema")}</b>
