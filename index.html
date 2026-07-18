@@ -532,6 +532,18 @@
   .tchips{display:flex;flex-wrap:wrap;gap:5px}
   .tchip{font-family:var(--mono);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:3px 9px;color:var(--ink)}
   .cdet-lg{font-family:var(--mono);font-size:12px;color:var(--no)}
+  .coach-op{font-family:var(--sans);font-size:12px;color:var(--soft);margin:0 0 8px}
+  .coach-vonis{font-family:var(--serif);font-size:14px;line-height:1.55;color:var(--ink);
+    background:var(--paper);border-left:3px solid var(--gold);border-radius:var(--r);padding:9px 12px;margin:0 0 10px}
+  .coach-lbl{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+    text-transform:uppercase;margin:0 6px 4px 0}
+  .coach-plus{color:var(--ok)} .coach-minus{color:var(--no)}
+  .coach-ul{margin:0 0 10px;padding-left:18px}
+  .coach-ul li{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--ink);margin-bottom:3px}
+  .coach-saran{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--navy);
+    border-top:1px solid var(--rule);padding-top:8px}
+  .coach-sum{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--rule);
+    border-radius:var(--r);padding:10px 12px;margin:0 0 14px;font-family:var(--sans);font-size:12.5px;color:var(--ink)}
   .rp-list{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;margin-top:6px}
   .rp-g{display:flex;align-items:center;gap:10px;background:var(--card);padding:9px 12px}
   .rp-res{flex:0 0 auto;width:22px;height:22px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:11px;color:#fff}
@@ -618,7 +630,7 @@ const TIERS = [
   { id:1, nama:"Tier 1 — Fondasi", rating:"1200–1500",
     fokus:"Fork, Pin, Skewer, Double Check, Mat baris belakang, visi geometris",
     evaluasi:"Review akurasi puzzle mingguan",
-    target:{puzzle:30,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    target:{puzzle:30,rapid:2,bulletMax:0,gameMax:6,temaJumlah:2,temaPuzzle:10,temaLuar:false},
     manual:[
       { teks:"Drill endgame pion (Raja+Pion vs Raja, oposisi)", tema:"pawnEndgame", n:8 },
       { teks:"Ulang pola mat dasar", tema:"mateIn2", n:8 },
@@ -627,7 +639,7 @@ const TIERS = [
   { id:2, nama:"Tier 2 — Kompetisi", rating:"1500–1800",
     fokus:"Strategi posisional, lajur terbuka, outpost kuda, repertoar 1.e4 / Sicilian / KID",
     evaluasi:"Pemeriksaan anotasi mandiri anak; filter opening via API",
-    target:{puzzle:40,rapid:2,bulletMax:0,gameMax:6,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    target:{puzzle:40,rapid:2,bulletMax:0,gameMax:6,temaJumlah:2,temaPuzzle:10,temaLuar:false},
     manual:[
       { teks:"Drill endgame benteng", tema:"rookEndgame", n:10 },
       { teks:"Latih serangan mat", tema:"mate", n:10 },
@@ -637,7 +649,7 @@ const TIERS = [
   { id:3, nama:"Tier 3 — Master", rating:"2000–2200",
     fokus:"Candidate moves (Kotov), kalkulasi 4–6 langkah, prophylaxis, Lucena & Philidor",
     evaluasi:"Uji visualisasi buta; skor kelulusan modul endgame",
-    target:{puzzle:50,rapid:2,bulletMax:0,gameMax:5,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    target:{puzzle:50,rapid:2,bulletMax:0,gameMax:5,temaJumlah:2,temaPuzzle:10,temaLuar:false},
     manual:[
       { teks:"Kalkulasi panjang (tanpa menggeser bidak)", tema:"veryLong", n:8 },
       { teks:"Drill endgame teoretis", tema:"endgame", n:12 },
@@ -646,7 +658,7 @@ const TIERS = [
   { id:4, nama:"Tier 4 — Elite", rating:"2300+",
     fokus:"Deep prep anti-database, novelty langkah 15+, manajemen krisis waktu",
     evaluasi:"Simulasi tekanan waktu; persiapan lawan spesifik",
-    target:{puzzle:40,rapid:1,bulletMax:0,gameMax:4,rush:0,rushScore:0,temaJumlah:2,temaPuzzle:10,temaLuar:false},
+    target:{puzzle:40,rapid:1,bulletMax:0,gameMax:4,temaJumlah:2,temaPuzzle:10,temaLuar:false},
     manual:[
       { teks:"Kalkulasi sangat panjang", tema:"veryLong", n:10 },
       { teks:"Endgame menteri & benteng", tema:"queenEndgame", n:8 },
@@ -720,7 +732,7 @@ Object.assign(EN, {
   "Sumber: tebakan dari partai + kurikulum. Verifikasi tema kini otomatis dari backend; ini hanya saran pilihan tema.":"Source: a guess from games + curriculum. Theme verification is now automatic from the backend; this is only a theme suggestion.",
   "Tidak ada catatan terverifikasi untuk tanggal ini.":"No verified record for this date.",
   "Puzzle Lichess":"Lichess puzzles", "Rating puzzle":"Puzzle rating", "Rating rapid":"Rapid rating",
-  "Rating blitz":"Blitz rating", "Taktik tertinggi":"Tactics high",
+  "Rating blitz":"Blitz rating",
   "Riwayat":"History", "belum ada riwayat terverifikasi":"no verified history yet",
   "langsung dari tugas":"live from tasks",
   "Rekam kepatuhan tiap hari, terbaru di atas. Baris hari ini langsung dari tugas; sisanya terverifikasi dari snapshot Apps Script \u2014 termasuk hari saat dasbor tidak dibuka.":"Compliance record per day, newest first. Today is live from tasks; the rest are verified from the Apps Script snapshot \u2014 including days the dashboard was not opened.",
@@ -732,9 +744,7 @@ Object.assign(EN, {
   // tugas & pagar
   "Selesaikan {a} puzzle":"Solve {a} puzzles",
   "Lichess — terverifikasi otomatis":"Lichess — auto-verified",
-  "Chess.com + Lichess — terverifikasi otomatis":"Chess.com + Lichess — auto-verified",
-  "Puzzle Rush: minimal {a} puzzle dicoba":"Puzzle Rush: at least {a} puzzles attempted",
-  "Chess.com — terverifikasi otomatis. Skor hari ini: {a}":"Chess.com — auto-verified. Today's score: {a}",
+  "Lichess — terverifikasi otomatis":"Lichess — auto-verified",
   " (target {a})":" (target {a})",
   "Main {a} partai rapid":"Play {a} rapid games",
   "Tidak main bullet":"No bullet games",
@@ -764,9 +774,9 @@ Object.assign(EN, {
   "puzzle hari ini":"puzzles today", "target {a}":"target {a}", "butuh Lichess":"needs Lichess",
   "partai hari ini":"games today", "kalah beruntun":"losing streak",
   "HENTIKAN SESI":"STOP THE SESSION", "aman":"safe",
-  "skala Lichess":"Lichess scale", "skala Chess.com":"Chess.com scale",
+  "skala Lichess":"Lichess scale",
   "rating puzzle":"puzzle rating", "terverifikasi harian":"verified daily",
-  "taktik tertinggi":"peak tactics", "REKOR BARU HARI INI":"NEW RECORD TODAY",
+
   "rating kini tak tersedia di API":"current rating not exposed by API",
   "skor {a}":"score {a}", "belum":"not yet",
 
@@ -778,8 +788,6 @@ Object.assign(EN, {
   "{a} partai bullet (batas {b}). Bullet melatih refleks, bukan kalkulasi.":"{a} bullet games (limit {b}). Bullet trains reflexes, not calculation.",
   "{a} partai hari ini, melewati batas {b}. Kuantitas tanpa analisis tidak menaikkan rating.":"{a} games today, over the limit of {b}. Volume without analysis does not raise rating.",
   "Puzzle hari ini {a}/{b} dan sudah lewat jam 19.":"Puzzles today {a}/{b}, and it's past 7pm.",
-  "Puzzle Rush belum dikerjakan dan sudah lewat jam 19.":"Puzzle Rush not done yet, and it's past 7pm.",
-  "Rekor rating taktik baru tercatat hari ini.":"A new peak tactics rating was recorded today.",
   "Tidak ada aktivitas terdeteksi hari ini.":"No activity detected today.",
   "Rata-rata 10 partai terakhir: {a}%.":"Average of last 10 games: {a}%.",
   "Di bawah 70% biasanya berarti bermain terlalu cepat untuk kontrol waktunya.":"Below 70% usually means playing too fast for the time control.",
@@ -792,14 +800,12 @@ Object.assign(EN, {
   "akurasi {a}%":"accuracy {a}%", "belum dianalisis":"not analysed",
   "belum main":"not played", "belum ada":"none yet",
   "{a} kali main":"{a} runs", "Puzzle harian":"Daily puzzles", "TIDAK ADA":"NOT AVAILABLE",
-  "API Chess.com tidak menyediakannya":"the Chess.com API does not expose it",
   "Rating taktik":"Tactics rating", "TERTINGGI \u00b7 tak pernah turun":"PEAK \u00b7 never goes down",
-  "Taktik terendah":"Lowest tactics", "Puzzle Rush hari ini":"Puzzle Rush today",
+
   "belum dikerjakan":"not done", "tidak ditargetkan":"not targeted",
-  "Puzzle Rush terbaik":"Best Puzzle Rush", "Kontrol waktu hari ini":"Time controls today",
+  "Kontrol waktu hari ini":"Time controls today",
   "Username belum diisi.":"Username not set.",
   "Jumlah puzzle harian TERVERIFIKASI. Rating puzzle bergerak naik dan turun — inilah angka yang paling jujur menggambarkan kemampuan taktik anak.":"Daily puzzle count is VERIFIED. The puzzle rating moves both up and down — it is the most honest measure of the child's tactical ability.",
-  "Rating taktik yang ditampilkan adalah yang TERTINGGI sepanjang masa — ia tidak pernah turun, jadi ia tidak bisa memberi tahu kalau kemampuan anak menurun. Gunakan rating puzzle Lichess untuk itu.":"The tactics rating shown is the ALL-TIME PEAK — it never goes down, so it cannot tell you when the child is declining. Use the Lichess puzzle rating for that.",
 
   // rapor mingguan
   "kepatuhan rata-rata":"average compliance", "7 hari terakhir":"last 7 days",
@@ -847,8 +853,6 @@ Object.assign(EN, {
   "Tier saat ini":"Current tier", "Fokus latihan":"Training focus",
   "Metode evaluasi pelatih":"Coach evaluation method",
   "Puzzle / hari (Lichess — terverifikasi)":"Puzzles / day (Lichess — verified)",
-  "Puzzle Rush / hari (Chess.com — 0 = mati)":"Puzzle Rush / day (Chess.com — 0 = off)",
-  "Target skor Puzzle Rush":"Puzzle Rush score target",
   "Partai rapid / hari":"Rapid games / day",
   "Batas partai bullet / hari":"Bullet games limit / day",
   "Batas total partai / hari (anti-tilt)":"Total games limit / day (anti-tilt)",
@@ -857,7 +861,6 @@ Object.assign(EN, {
 
   // pengaturan
   "Nama anak":"Child's name", "Zona waktu":"Time zone",
-  "Username Chess.com (partai)":"Chess.com username (games)",
   "Username Lichess (puzzle)":"Lichess username (puzzles)",
   "Tarik data":"Fetch data", "Uji koneksi":"Test connection",
   "Ekspor JSON":"Export JSON", "Hapus semua":"Delete everything",
@@ -879,7 +882,7 @@ Object.assign(EN, {
   "Deep prep anti-database, novelty langkah 15+, manajemen krisis waktu":"Deep anti-database prep, novelties on move 15+, time-trouble management",
   "Simulasi tekanan waktu; persiapan lawan spesifik":"Time-pressure simulation; opponent-specific preparation",
 
-  "Chess.com taktik (tertinggi)":"Chess.com tactics (peak)", "Akurasi":"Accuracy",
+  "Akurasi":"Accuracy",
 
   "MINIATUR":"MINIATURE", "Kekalahan miniatur":"Miniature losses",
   "kekalahan miniatur":"miniature losses", "kalah di bawah {a} langkah":"lost in under {a} moves",
@@ -1021,7 +1024,7 @@ Object.assign(EN, {
   "Salin manual dari kotak di atas.":"Copy manually from the box above.",
 
   // footer
-  "Road To Grand Master \u00b7 data dari API publik Chess.com & Lichess. Tidak ada server. Semua tersimpan di perangkat ini.":"Road To Grand Master \u00b7 data from the public Chess.com & Lichess APIs. No server. Everything is stored on this device.",
+  "Road To Grand Master \u00b7 data dari API publik Lichess. Tidak ada server. Semua tersimpan di perangkat ini.":"Road To Grand Master \u00b7 data from the public Lichess API. No server. Everything is stored on this device.",
   "Anak tahu bahwa aktivitasnya dipantau \u2014 itu syaratnya, bukan pilihannya.":"The child knows their activity is monitored \u2014 that is the condition, not an option.",
 });
 
@@ -1050,7 +1053,7 @@ function muatAnak(){
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
-  S.cfg.chess = "";      // Chess.com dinonaktifkan (murni Lichess)
+  S.cfg.chess = "";      // sistem murni Lichess
   S.cfg.liToken = "";    // Token browser dibuang: verifikasi tema murni dari backend
   if(!S.cfg.lichess) S.cfg.lichess = BAKED_LICHESS;
   _ng = null; _ngAt = "";        // WAJIB: buang cache partai anak sebelumnya
@@ -1075,7 +1078,7 @@ let S = {
   checks:{},        // "2026-07-13": { "0":true, ... }
   notes:{},         // "2026-07-13": [ {t, text} ]
   filter:"semua",
-  snaps:{},         // "2026-07-13": { rushAttempts, rushScore, tacticsHigh, tacticsHighDate, rapid, blitz }
+  snaps:{},         // "2026-07-13": { puzzles, puzRating, kepatuhan, langgar, tema }
   temaHari:null,    // { dk, list:[tema...] } — dikunci per hari
   temaKemarin:null,
   data:null,        // hasil tarik terakhir
@@ -1086,7 +1089,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const todayKey = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD lokal
 const dayKey = d => new Date(d).toLocaleDateString("sv-SE");
-// Chess.com mengirim detik, Lichess mengirim milidetik. Deteksi sendiri, jangan berasumsi.
+// Sumber bisa mengirim detik atau milidetik. Deteksi sendiri, jangan berasumsi.
 const ms = t => (t < 1e11 ? t * 1000 : t);
 
 function tier(){ return TIERS.find(t=>t.id===S.tier) || TIERS[0]; }
@@ -1230,8 +1233,6 @@ function snapsDariCSV(teks){
   const iTgl   = kol("tanggal"),
         iPz    = kol("puzzle (lichess)"), iTot = kol("puzzle total"),
         iRate  = kol("rating puzzle"),
-        iRushA = kol("rush percobaan"), iRushS = kol("rush skor"),
-        iTac   = kol("taktik tertinggi"), iRapid = kol("rating rapid"), iBlitz = kol("rating blitz"),
         iPatuh = kol("kepatuhan"), iLang = kol("pelanggaran"), iStat = kol("status"), iTema = kol("tema");
   if(iTgl < 0) return {};
   const n = (r,i) => (i >= 0 && r[i] !== "" && r[i] != null) ? Number(r[i]) : null;
@@ -1244,8 +1245,6 @@ function snapsDariCSV(teks){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return;
     out[dk] = {
       puzzles: n(r,iPz) || 0, puzTotal: n(r,iTot), puzRating: n(r,iRate),
-      rushAttempts: n(r,iRushA) || 0, rushScore: n(r,iRushS) || 0,
-      tacticsHigh: n(r,iTac), rapid: n(r,iRapid), blitz: n(r,iBlitz),
       kepatuhan: n(r,iPatuh), langgar: iLang >= 0 ? r[iLang] : "",
       status: iStat >= 0 ? r[iStat] : "",
       tema: (function(){ const v = iTema >= 0 ? r[iTema] : ""; if(!v || !String(v).trim()) return undefined;
@@ -1282,7 +1281,6 @@ async function fetchAll(){
       gsOk = true;
       out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
       if(d.lichess) out.lichess = d.lichess;
-      if(!d.stats) out.errors.push(["Apps Script", "Endpoint hidup, tapi stats kosong \u2014 kemungkinan besar Chess.com memblokir IP Google (403). Riwayat dari Sheet tetap dipakai, tapi angka hari ini tidak akan terisi. Kalau ini menetap, hapus URL Web App dan biarkan dasbor menarik langsung dari browser."]);
       if(d.snaps) Object.keys(d.snaps).forEach(k => {
         // Gabung per-hari: field backend jadi dasar, field lokal menimpa untuk
         // field yang sama. Tema (khusus backend) selalu diambil dari backend.
@@ -1311,23 +1309,6 @@ async function fetchAll(){
     }catch(e){ out.errors.push(["Sheet CSV", e.message]); }
   }
 
-  if(S.cfg.chess && !out.chess){
-    const u = S.cfg.chess.trim().toLowerCase();
-    try{
-      // Ambil daftar arsip bulanan yang benar-benar ada, lalu tarik semuanya
-      // (maksimal 12 bulan terakhir agar sopan terhadap rate limit).
-      const [stats, arch] = await Promise.all([
-        getJSON(`https://api.chess.com/pub/player/${u}/stats`),
-        getJSON(`https://api.chess.com/pub/player/${u}/games/archives`).catch(()=>({archives:[]})),
-      ]);
-      /* Di HP, 12 permintaan berurutan = 12 kesempatan gagal + kena rate limit.
-         Ambil 3 bulan terakhir saja (cukup untuk semua analisis), paralel. */
-      const months = (arch.archives || []).slice(-3);
-      const batches = await Promise.all(
-        months.map(m => getJSON(m).then(r => r.games || []).catch(() => [])));
-      out.chess = { user:u, stats, games:batches.flat(), months:months.length };
-    }catch(e){ out.errors.push(["Chess.com", e.message]); }
-  }
   if(S.cfg.lichess && !out.lichess){
     const u = S.cfg.lichess.trim();
     try{
@@ -1380,17 +1361,14 @@ async function fetchAll(){
     }
     logLine(`${site}: ${sebab(msg, site==="Lichess"?S.cfg.lichess:S.cfg.chess)}`, "no");
   });
-  if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${out.chess.games.length} partai + ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
-  else if(out.chess) logLine(`Chess.com langsung: ${out.chess.games.length} partai dari ${out.chess.months} bulan arsip`, out.chess.games.length ? "" : "warn");
-  if(out.chess && !out.chess.games.length) logLine("Chess.com: akun ada, tapi belum ada partai terarsip. Partai baru muncul di arsip setelah selesai dimainkan.", "warn");
+  if(out.chess && out.chess.viaGs) logLine(`Apps Script: ${Object.keys(S.snaps).length} hari riwayat dari Sheet`, "");
   if(out.lichess) logLine(`Lichess: ${out.lichess.games.length} partai + ${(out.lichess.act||[]).length} hari aktivitas` +
     (out.lichess.gamesOk ? "" : " \u2014 daftar partai GAGAL ditarik, memakai feed aktivitas sebagai cadangan"),
     out.lichess.gamesOk ? "" : "warn");
-  if(S.cfg.chess && !out.chess) logLine("Data Chess.com tidak masuk.", "warn");
   if(S.cfg.lichess && !out.lichess) logLine("Data Lichess tidak masuk.", "warn");
 
   /* BUG DI HP: versi lama menimpa S.data mentah-mentah. Kalau jaringan seluler
-     putus di tengah, out.chess = null dan SELURUH data Chess.com yang tadinya
+     putus di tengah, satu sumber gagal dan SELURUH data yang tadinya
      sudah benar ikut terhapus. Sekarang: hanya bagian yang BERHASIL yang diganti;
      bagian yang gagal mempertahankan data terakhir yang baik. */
   const lama = S.data || { chess:null, lichess:null, errors:[] };
@@ -1410,10 +1388,9 @@ async function fetchAll(){
   await persist(); renderAll();
 }
 
-/* Chess.com tidak menyimpan riwayat rating taktik maupun riwayat Puzzle Rush.
-   Jadi aplikasi ini yang jadi pencatatnya: setiap kali data ditarik, keadaan
-   hari itu difoto dan disimpan. Konsekuensinya jujur: hari yang aplikasinya
-   tidak dibuka sama sekali TIDAK akan punya catatan. */
+/* Setiap kali data ditarik, keadaan hari itu difoto dan disimpan. Hari yang
+   aplikasinya tidak dibuka TIDAK punya catatan lokal — kecuali Apps Script
+   terpasang, yang mencatat tiap malam tanpa perlu dasbor dibuka. */
 function recordSnapshot(out){
   const dk = todayKey();
   S.snaps[dk] = S.snaps[dk] || {};
@@ -1425,26 +1402,7 @@ function recordSnapshot(out){
     S.snaps[dk].puzTotal  = lp.games;
     S.snaps[dk].puzRating = lp.rating;
   }
-  if(!out.chess || !out.chess.stats){ S.snaps[dk].at = Date.now(); return; }
-  const st = out.chess.stats || {};
-  const rush = st.puzzle_rush && st.puzzle_rush.daily ? st.puzzle_rush.daily : null;
-  Object.assign(S.snaps[dk], {
-    rushAttempts: rush ? (rush.total_attempts || 0) : 0,
-    rushScore:    rush ? (rush.score || 0) : 0,
-    tacticsHigh:  st.tactics && st.tactics.highest ? st.tactics.highest.rating : null,
-    tacticsHighDate: st.tactics && st.tactics.highest ? st.tactics.highest.date : null,
-    rapid: st.chess_rapid && st.chess_rapid.last ? st.chess_rapid.last.rating : null,
-    blitz: st.chess_blitz && st.chess_blitz.last ? st.chess_blitz.last.rating : null,
-    at: Date.now(),
-  });
-}
-function rushToday(){
-  const s = S.snaps[todayKey()];
-  return s ? { attempts: s.rushAttempts, score: s.rushScore } : { attempts:0, score:0 };
-}
-function newTacticsRecordToday(){
-  const s = S.snaps[todayKey()];
-  return !!(s && s.tacticsHighDate && dayKey(ms(s.tacticsHighDate)) === todayKey());
+  S.snaps[dk].at = Date.now();
 }
 
 /* ═══════════ olah data ═══════════ */
@@ -1523,16 +1481,16 @@ function lichessGamesOn(dk){
 /* ═══════════ MODEL PARTAI TERSATU ═══════════
    BUG YANG DIPERBAIKI: sebelumnya partai Lichess hanya dihitung dari feed
    aktivitas (ringkasan yang bisa kosong/terlambat), dan deret kekalahan serta
-   tabel partai hanya melihat Chess.com. Akibatnya partai rapid di Lichess
+   tabel partai hanya melihat satu situs. Akibatnya partai rapid di Lichess
    tidak muncul di mana pun. Sekarang kedua situs dinormalkan ke satu bentuk. */
 
 function ecoNama(pgn){
   const m = (pgn||"").match(/\[ECOUrl "https?:\/\/[^"]*\/openings\/([^"]+)"\]/);
   return m ? decodeURIComponent(m[1]).replace(/-/g," ").trim() : null;
 }
-/* Lichess memakai "ultraBullet"; Chess.com memakai "daily". Tanpa penyeragaman,
+/* Lichess memakai "ultraBullet" dan varian lain. Tanpa penyeragaman,
    pagar anti-bullet bisa dilewati hanya dengan bermain UltraBullet. */
-/* Jumlah langkah PENUH (bukan ply). Chess.com: dari PGN. Lichess: dari daftar SAN. */
+/* Jumlah langkah PENUH (bukan ply), dihitung dari daftar SAN Lichess. */
 function langkahCC(pgn){
   if(!pgn) return null;
   const m = String(pgn).match(/(\d+)\.\s*\S+\s*(?:\{[^}]*\})?\s*\S*\s*$/m);
@@ -1561,7 +1519,7 @@ function normGames(){
   const kunci = DB.aktif + "|" + S.fetchedAt;   // id anak IKUT jadi kunci cache
   if(_ng && _ngAt === kunci) return _ng;
   const out = [];
-  // Sumber partai: Lichess saja (Chess.com dinonaktifkan).
+  // Sumber partai: Lichess.
   const L = S.data && S.data.lichess;
   if(L && L.games) L.games.forEach(g => {
     const me = (L.user||"").toLowerCase();
@@ -1613,7 +1571,7 @@ function gamesOn(dk){
   return { total, byClass, list };
 }
 
-/* Deret kekalahan kini melihat KEDUA situs. Anak yang kalah 2x di Chess.com
+/* Deret kekalahan melihat seluruh partai Lichess. Anak yang kalah beruntun
    lalu 2x di Lichess tetap sedang tilt — dan sebelumnya tidak terdeteksi. */
 function losingStreakToday(){
   const dk = todayKey();
@@ -1632,36 +1590,11 @@ function buildQuests(){
   const bullet = (g.byClass.bullet||0);
   const q = [];
 
-  if(S.cfg.chess && T.rush > 0){
-    const R = rushToday();
-    q.push({ auto:true, ok: R.attempts >= T.rush, now:R.attempts, goal:T.rush,
-      t:tr("Puzzle Rush: minimal {a} puzzle dicoba",{a:T.rush}),
-      src:tr("Chess.com — terverifikasi otomatis. Skor hari ini: {a}",{a:R.score||0}) + (T.rushScore?tr(" (target {a})",{a:T.rushScore}):"") });
-  }
   if(S.cfg.lichess && T.puzzle > 0) q.push({ auto:true, ok: pz >= T.puzzle, now:pz, goal:T.puzzle,
     t:tr("Selesaikan {a} puzzle",{a:T.puzzle}), src:tr("Lichess — terverifikasi otomatis") });
 
-  /* TEMA HARI INI. Ini yang membuat rekomendasi pelatih berhenti jadi saran
-     dan mulai jadi TARGET. Berbeda tiap hari, dan bisa diverifikasi kalau ada token. */
-  if(S.cfg.lichess && T.temaJumlah > 0 && T.temaPuzzle > 0){
-    const hitung = temaHitung(dk);
-    pilihTema().forEach((tm, i) => {
-      const n = hitung ? (hitung[tm] || 0) : 0;
-      if(hitung){
-        q.push({ auto:true, tema:tm, ok: n >= T.temaPuzzle, now:n, goal:T.temaPuzzle,
-          t: tr("{a} puzzle tema: {b}", {a:T.temaPuzzle, b:temaNama(tm)}),
-          src: tr("Fokus hari ini — terverifikasi dari riwayat puzzle Lichess") });
-      } else {
-        q.push({ auto:false, tema:tm, idx: 100 + i,
-          ok: !!(S.checks[dk]||{})["m" + (100+i)],
-          t: tr("{a} puzzle tema: {b}", {a:T.temaPuzzle, b:temaNama(tm)}),
-          src: tr("Fokus hari ini — TIDAK bisa diverifikasi tanpa token Lichess") });
-      }
-    });
-  }
-
   if(T.rapid > 0) q.push({ auto:true, ok: rapid >= T.rapid, now:rapid, goal:T.rapid,
-    t:tr("Main {a} partai rapid",{a:T.rapid}), src:tr("Chess.com + Lichess — terverifikasi otomatis") });
+    t:tr("Main {a} partai rapid",{a:T.rapid}), src:tr("Lichess — terverifikasi otomatis") });
 
   q.push({ auto:true, ok: bullet <= T.bulletMax, now:bullet, goal:T.bulletMax, invert:true,
     t: T.bulletMax === 0 ? tr("Tidak main bullet") : tr("Bullet maksimal {a} partai",{a:T.bulletMax}),
@@ -1671,13 +1604,20 @@ function buildQuests(){
     t:tr("Total partai maksimal {a}",{a:T.gameMax}), src:tr("Pagar anti-tilt: bermain berlebihan setelah kalah menurunkan rating.") });
 
   const hitungKur = temaHitung(dk);
+  /* Batas harian: 2 tema kurikulum + 2 tema hasil review partai, masing-masing
+     TEMA_TARGET puzzle. Lebih dari itu, anak menghabiskan waktu berpindah tema
+     alih-alih mendalami satu pola. */
+  const TEMA_TARGET = 10, MAKS_KURIKULUM = 2, MAKS_REVIEW = 2;
+  let nKur = 0;
   manualTasks().forEach((m,i) => {
+    if(m.tema && nKur >= MAKS_KURIKULUM) return;   // sisa tema kurikulum ditunda
+    if(m.tema) nKur++;
     /* Kalau tugas punya tema Lichess DAN token tersedia, ia terverifikasi.
        "Drill endgame" bukan lagi janji — ia angka. */
     if(m.tema && hitungKur && m.n > 0){
-      const now = hitungKur[m.tema] || 0;
-      q.push({ auto:true, tema:m.tema, ok: now >= m.n, now, goal:m.n,
-        t: tr(m.teks) + tr(" \u2014 {a} puzzle", {a:m.n}),
+      const now = hitungKur[m.tema] || 0, goal = TEMA_TARGET;
+      q.push({ auto:true, tema:m.tema, ok: now >= goal, now, goal,
+        t: tr(m.teks) + tr(" \u2014 {a} puzzle", {a:goal}),
         src: tr("Kurikulum {a} — terverifikasi dari tema puzzle Lichess", {a:tier().nama}) });
     } else {
       q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i],
@@ -1691,19 +1631,19 @@ function buildQuests(){
   // Rekomendasi tema jadi TUGAS quest, bukan sekadar saran. Auto-verified sama
   // seperti tema lain kalau backend tema aktif; kalau belum, jatuh ke manual.
   const temaAda = new Set(q.filter(x => x.tema).map(x => x.tema));
-  rencanaPuzzle().rekom.slice(0,3).forEach((r, i) => {
+  rencanaPuzzle().rekom.slice(0, MAKS_REVIEW).forEach((r, i) => {
     if(temaAda.has(r.tema)) return;
     temaAda.add(r.tema);
     const idx = 200 + i;
     if(hitungKur){
       const now = hitungKur[r.tema] || 0;
-      q.push({ auto:true, tema:r.tema, ok: now >= r.target, now, goal:r.target,
-        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: r.target}),
+      q.push({ auto:true, tema:r.tema, ok: now >= TEMA_TARGET, now, goal:TEMA_TARGET,
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: TEMA_TARGET}),
         src: tr("Fokus dari partai rapid terakhir ({a}) \u2014 terverifikasi dari riwayat Lichess", {a: r.label}) });
     } else {
       q.push({ auto:false, tema:r.tema, idx,
         ok: !!(S.checks[dk]||{})["m"+idx],
-        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: r.target}),
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(r.tema), b: TEMA_TARGET}),
         src: tr("Fokus dari partai rapid terakhir ({a}) \u2014 butuh backend tema untuk verifikasi", {a: r.label}) });
     }
   });
@@ -1725,8 +1665,8 @@ function buildQuests(){
    membeku di bahasa awal dan tidak ikut berganti. */
 const TABS = () => ({
   anak:    [["misi",tr("Misi hari ini")], ["progres",tr("Perkembanganku")]],
-  ortu:    [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")]],
-  pelatih: [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")], ["rencana",tr("Rencana")]],
+  ortu:    [["hari",tr("Hari ini")], ["coach",tr("Coach")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")]],
+  pelatih: [["hari",tr("Hari ini")], ["coach",tr("Coach")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")], ["rencana",tr("Rencana")]],
 });
 const TONE = { ok:"var(--ok)", warn:"var(--warn)", no:"var(--no)", teal:"var(--gold)",
                coral:"var(--gold-lite)", sky:"var(--navy)", gold:"var(--gold)", carbon:"var(--navy)" };
@@ -1881,7 +1821,7 @@ function pembukaan(warna){
 }
 /* HILANG dari versi sebelumnya — tab Perkembangan & Analisis crash karenanya.
    Versi baru: riwayat resmi Lichess + rekonstruksi dari rating tiap partai
-   (Chess.com tidak menyediakan riwayat rating sama sekali). */
+   (riwayat rating resmi hanya tersedia dari Lichess). */
 function ratingSeries(){
   const out = [];
   const L = S.data && S.data.lichess;
@@ -1893,7 +1833,7 @@ function ratingSeries(){
         pts: h.points.map(p => ({ t: Date.UTC(p[0], p[1], p[2]), v: p[3] })),
       }));
   }
-  // Chess.com tidak menyediakan riwayat rating taktik. Satu-satunya sumbernya
+  // Riwayat rating diambil dari Lichess. Satu-satunya sumbernya
   // adalah foto harian yang aplikasi ini simpan sendiri.
   const hari = Object.keys(S.snaps).sort();
 
@@ -1902,10 +1842,7 @@ function ratingSeries(){
     if(!g.rating || !["rapid","blitz"].includes(g.speed)) return;
     (bySrc[`${g.site} ${g.speed}`] = bySrc[`${g.site} ${g.speed}`] || []).push({ t:g.t, v:g.rating });
   });
-  /* Navy = Lichess, emas = Chess.com. Konsisten dengan warna kolom platform,
-     supaya mata tidak perlu belajar dua sistem warna. */
-  const warna = { "Chess.com rapid":"#A8791F", "Chess.com blitz":"#D4A843",
-                  "Lichess rapid":"#1E3A5F", "Lichess blitz":"#6E7C90" };
+  const warna = { "Lichess rapid":"#1E3A5F", "Lichess blitz":"#6E7C90" };
   Object.entries(bySrc).filter(([,v]) => v.length > 1).forEach(([k,v]) => {
     // riwayat resmi Lichess lebih akurat — jangan gambar dua kali
     const speed = k.split(" ")[1];
@@ -1942,7 +1879,7 @@ async function ujiKoneksi(){
       const diblokir = /Failed to fetch|NetworkError|Load failed/i.test(m);
       if(nama === "Apps Script" && diblokir){
         hasil.push(["no", nama,
-          "Diblokir browser. Karena Lichess dan Chess.com BERHASIL, ini bukan file:// dan bukan CORS umum \u2014 " +
+          "Diblokir browser. Karena Lichess BERHASIL, ini bukan file:// dan bukan CORS umum \u2014 " +
           "penyebabnya spesifik ke Apps Script. Hampir selalu: deployment-nya belum \"Anyone\". " +
           "Google mengalihkan permintaan ke halaman login, dan browser memblokir pengalihan lintas-domain itu. " +
           "Perbaiki: Deploy \u2192 Manage deployments \u2192 \u270f\ufe0f \u2192 Who has access: Anyone (BUKAN \"Anyone with Google account\"). " +
@@ -1995,18 +1932,12 @@ async function ujiKoneksi(){
     }
   } else hasil.push(["warn","Lichess","username kosong."]);
 
-  if(S.cfg.chess){
-    const u = S.cfg.chess.trim().toLowerCase();
-    await uji("Chess.com / statistik", `https://api.chess.com/pub/player/${u}/stats`, true);
-    await uji("Chess.com / arsip", `https://api.chess.com/pub/player/${u}/games/archives`, false);
-  } else hasil.push(["warn","Chess.com","username kosong."]);
-
   if(S.cfg.csv) await uji("Sheet CSV", S.cfg.csv.trim(), false);
   if(S.cfg.gs) await uji("Apps Script", S.cfg.gs.trim(), false);
 
   const gagalSemua = hasil.filter(h=>h[0]==="no").length === hasil.filter(h=>h[0]!=="warn").length && hasil.some(h=>h[0]==="no");
   if(gagalSemua) hasil.push(["no","KESIMPULAN",
-    "SEMUA endpoint gagal \u2014 masalahnya bukan di Lichess atau Chess.com, tapi di cara file ini dibuka. " +
+    "SEMUA endpoint gagal \u2014 masalahnya bukan di Lichess, tapi di cara file ini dibuka. " +
     "Kalau alamat di bilah browser dimulai dengan file:// , browser memblokir semua permintaan keluar. Sajikan lewat http:// atau GitHub Pages."]);
 
   el.innerHTML = hasil.map(([k,n,m])=>
@@ -2082,8 +2013,8 @@ function viewMisi(){
     <div class="golinks">
       <a class="go p" href="https://lichess.org/training" target="_blank" rel="noopener">
         <b>${tr("PUZZLE BEBAS")} \u2192</b><span>Lichess &middot; ${tr("target {a} hari ini",{a:T.puzzle})}</span></a>
-      <a class="go g" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
-        <b>${tr("MAIN RAPID")} \u2192</b><span>Chess.com &middot; ${tr("{a} partai",{a:T.rapid})}</span></a>
+      <a class="go g" href="https://lichess.org/?time=rapid" target="_blank" rel="noopener">
+        <b>${tr("MAIN RAPID")} \u2192</b><span>Lichess &middot; ${tr("{a} partai",{a:T.rapid})}</span></a>
     </div>
   </section>
 
@@ -2542,10 +2473,175 @@ function viewPartai(){
   return `<section class="box">
     ${H2("board", tr("Partai terakhir"), `${tr("kedua situs")}`)}
     <div class="filt" id="filt">
-      ${[["semua",tr("Semua")],["Lichess","Lichess"],["Chess.com","Chess.com"],["mini",tr("Kekalahan miniatur")]].map(([v,l])=>
+      ${[["semua",tr("Semua")],["mini",tr("Kekalahan miniatur")]].map(([v,l])=>
         `<button data-f="${v}" class="${(S.filter||"semua")===v?"on":""}">${l}</button>`).join("")}
     </div>
     <div id="games"></div>
+  </section>`;
+}
+
+/* ═══════════ PELATIH OTOMATIS ═══════════
+   Menganalisa tiap partai rapid dari data engine Lichess: judgment per langkah
+   (blunder/kesalahan/impresisi), akurasi, fase terjadinya, pembukaan, hasil.
+   Ini analisis berbasis aturan atas data mesin sungguhan — bukan tebakan, tapi
+   juga bukan komentar bebas seperti pelatih manusia. */
+function coachPartai(hari){
+  const bts = Date.now() - (hari||7)*864e5;
+  return normGames().filter(g => g.speed === "rapid" && g.t >= bts)
+    .sort((a,b) => b.t - a.t).map(g => {
+    const b = g.blunder, acc = g.acc;
+    const serius = b ? (b.blunder + b.mistake) : null;
+    const kuat = [], lemah = [], catatan = [];
+
+    if(acc != null){
+      if(acc >= 85) kuat.push(tr("Akurasi tinggi ({a}%) \u2014 langkah konsisten dekat pilihan mesin", {a: acc.toFixed(0)}));
+      else if(acc >= 75) kuat.push(tr("Akurasi cukup baik ({a}%)", {a: acc.toFixed(0)}));
+      else if(acc >= 65) lemah.push(tr("Akurasi sedang ({a}%) \u2014 masih banyak langkah yang bisa lebih baik", {a: acc.toFixed(0)}));
+      else lemah.push(tr("Akurasi rendah ({a}%) \u2014 tanda bermain terburu-buru atau posisi di luar pemahaman", {a: acc.toFixed(0)}));
+    }
+    if(b){
+      if(serius === 0) kuat.push(tr("Nol blunder dan nol kesalahan serius sepanjang partai"));
+      if(b.op)  lemah.push(tr("{a} kesalahan serius di PEMBUKAAN (langkah 1-12) \u2014 fase yang paling bisa diperbaiki lewat hafalan pola", {a:b.op}));
+      if(b.mid) lemah.push(tr("{a} kesalahan serius di TENGAH (langkah 13-30) \u2014 fase taktik: garpu, pin, skewer terlewat", {a:b.mid}));
+      if(b.eg)  lemah.push(tr("{a} kesalahan serius di AKHIR (setelah langkah 30) \u2014 teknik konversi belum kuat", {a:b.eg}));
+      if(b.inaccuracy >= 5) lemah.push(tr("{a} impresisi \u2014 banyak langkah 'hampir benar'; biasanya karena waktu berpikir kurang", {a:b.inaccuracy}));
+      if(b.blunder === 0 && b.mistake > 0) kuat.push(tr("Tidak ada blunder besar; kesalahannya masih tingkat menengah"));
+    }
+    if(g.langkah != null){
+      if(g.res === "K" && g.langkah < 20) lemah.push(tr("Partai berakhir sangat cepat ({a} langkah) \u2014 kekalahan terjadi sebelum permainan sungguhan dimulai", {a:g.langkah}));
+      if(g.res === "M" && g.langkah > 45) kuat.push(tr("Menang lewat partai panjang ({a} langkah) \u2014 kesabaran dan stamina bagus", {a:g.langkah}));
+    }
+    if(g.oppRating != null && g.rating != null){
+      const sel = g.oppRating - g.rating;
+      if(g.res === "M" && sel >= 100) kuat.push(tr("Menang lawan yang {a} poin lebih tinggi", {a:sel}));
+      if(g.res === "K" && sel <= -100) lemah.push(tr("Kalah dari lawan {a} poin lebih rendah", {a:Math.abs(sel)}));
+    }
+
+    // Vonis utama
+    let vonis, fokus = null;
+    if(!b){
+      vonis = tr("Partai ini BELUM dianalisis mesin di Lichess. Minta 'Request computer analysis' di halaman partainya supaya review jadi tepat.");
+    } else if(serius === 0){
+      vonis = tr("Partai bersih. Tidak ada kesalahan serius \u2014 ini contoh permainan yang patut diulang polanya.");
+    } else {
+      const f = [["op",b.op],["mid",b.mid],["eg",b.eg]].sort((x,y)=>y[1]-x[1])[0];
+      fokus = f[0];
+      const nama = fokus === "op" ? tr("pembukaan") : fokus === "eg" ? tr("akhir permainan") : tr("permainan tengah");
+      vonis = tr("Titik lemah utama partai ini ada di {a}: {b} dari {c} kesalahan serius terjadi di sana.",
+        {a: nama, b: f[1], c: serius});
+    }
+    if(b && serius > 0){
+      catatan.push(fokus === "op"
+        ? tr("Latihan yang tepat: puzzle tema pembukaan + hafal 5 langkah pertama repertoar sendiri.")
+        : fokus === "eg"
+        ? tr("Latihan yang tepat: puzzle endgame benteng & pion, dan drill konversi keunggulan.")
+        : tr("Latihan yang tepat: puzzle taktik pendek (garpu, pin, skewer) dengan batas waktu."));
+    }
+    return { g, kuat, lemah, vonis, catatan, serius, fokus, dianalisis: !!b };
+  });
+}
+
+function coachRingkas(hari){
+  const L = coachPartai(hari||7);
+  const n = L.length, dian = L.filter(x=>x.dianalisis).length;
+  const accs = L.map(x=>x.g.acc).filter(v=>v!=null);
+  const accRata = accs.length ? accs.reduce((a,b)=>a+b,0)/accs.length : null;
+  const M = L.filter(x=>x.g.res==="M").length, K = L.filter(x=>x.g.res==="K").length, R = n-M-K;
+  const fase = { op:0, mid:0, eg:0 };
+  L.forEach(x => { if(x.g.blunder){ fase.op+=x.g.blunder.op; fase.mid+=x.g.blunder.mid; fase.eg+=x.g.blunder.eg; } });
+  const totalSerius = fase.op+fase.mid+fase.eg;
+  const rate = dian ? (totalSerius/dian) : null;
+  const rating = L.length ? L[0].g.rating : null;
+  const urut = Object.entries(fase).sort((a,b)=>b[1]-a[1]);
+  return { L, n, dian, accRata, M, K, R, fase, totalSerius, rate, rating, terlemah: urut[0], terkuat: urut[urut.length-1] };
+}
+
+function coachCatatanOrtu(){
+  const C = coachRingkas(7), a = anakAktif();
+  const nm = (a && a.nama) ? a.nama : tr("Anak");
+  const namaFase = f => f==="op" ? tr("pembukaan") : f==="eg" ? tr("akhir permainan") : tr("permainan tengah");
+  const L = [];
+  L.push("*" + tr("Catatan Pelatih") + " \u2014 " + nm + "*");
+  L.push(new Date().toLocaleDateString(LOCALE(), { weekday:"long", day:"numeric", month:"long", year:"numeric" }));
+  L.push("");
+  if(!C.n){ L.push(tr("Belum ada partai rapid dalam 7 hari terakhir.")); return L.join("\n"); }
+  L.push(tr("*Ringkasan 7 hari*"));
+  L.push("\u2022 " + tr("Partai rapid") + ": " + C.n + " (" + C.M + tr("M") + " / " + C.R + tr("R") + " / " + C.K + tr("K") + ")");
+  if(C.rating != null) L.push("\u2022 " + tr("Rating rapid") + ": " + C.rating);
+  if(C.accRata != null) L.push("\u2022 " + tr("Akurasi rata-rata") + ": " + C.accRata.toFixed(1) + "%");
+  if(C.dian) L.push("\u2022 " + tr("Kesalahan serius") + ": " + C.totalSerius + " (" + C.rate.toFixed(1) + " " + tr("per partai") + ")");
+  L.push("");
+  if(C.dian && C.totalSerius > 0){
+    L.push("*" + tr("Yang perlu dilatih") + ":* " + namaFase(C.terlemah[0]) + " (" + C.terlemah[1] + " " + tr("kesalahan") + ")");
+    L.push("*" + tr("Yang sudah baik") + ":* " + namaFase(C.terkuat[0]) + " (" + C.terkuat[1] + " " + tr("kesalahan") + ")");
+  } else if(!C.dian){
+    L.push(tr("Catatan: partai belum dianalisis mesin di Lichess, jadi rincian kesalahan belum tersedia."));
+  }
+  L.push("");
+  L.push("*" + tr("Rencana besok") + ":*");
+  const rek = rencanaPuzzle().rekom.slice(0,2);
+  if(rek.length) rek.forEach(r => L.push("\u2022 " + temaNama(r.tema) + " \u2014 10 " + tr("puzzle")));
+  else L.push("\u2022 " + tr("Lanjutkan kurikulum harian."));
+  L.push("");
+  L.push("_Road To Grand Master_");
+  return L.join("\n");
+}
+
+function viewCoach(){
+  const C = coachRingkas(7);
+  const badge = r => r==="M" ? ["w","M"] : r==="K" ? ["l","K"] : ["d","R"];
+  if(!C.n) return `<section class="box"><h2>${tr("Coach")}</h2>
+    <div class="empty">${tr("Belum ada partai rapid dalam 7 hari terakhir. Review muncul setelah anak main rapid di Lichess.")}</div></section>`;
+
+  const namaFase = f => f==="op" ? tr("Pembukaan") : f==="eg" ? tr("Akhir permainan") : tr("Permainan tengah");
+  const kartu = C.L.map(x => {
+    const [cls,hh] = badge(x.g.res);
+    const tgl = new Date(x.g.t).toLocaleDateString(LOCALE(), { day:"numeric", month:"short" });
+    const b = x.g.blunder;
+    return `<div class="cdetail" style="margin-bottom:10px">
+      <div class="cdet-head">
+        <div class="cdet-tgl"><span class="rp-res ${cls}" style="display:inline-flex;margin-right:6px">${hh}</span>${tgl} \u00b7 ${esc(x.g.opp||"?")}${x.g.oppRating?" ("+x.g.oppRating+")":""}</div>
+        <a href="${x.g.url}" target="_blank" rel="noopener" class="rp-link">${tr("buka")} \u2197</a>
+      </div>
+      <div class="cdet-grid">
+        ${x.g.rating!=null?`<div><span>${tr("Rating")}</span><b>${x.g.rating}</b></div>`:""}
+        ${x.g.acc!=null?`<div><span>${tr("Akurasi")}</span><b>${x.g.acc.toFixed(0)}%</b></div>`:""}
+        ${x.g.langkah!=null?`<div><span>${tr("Langkah")}</span><b>${x.g.langkah}</b></div>`:""}
+        ${b?`<div><span>${tr("Kesalahan serius")}</span><b>${x.serius}</b></div>`:""}
+      </div>
+      ${b?`<div class="cdet-tema"><div class="cdet-lbl">${tr("Sebaran kesalahan")}</div><div class="tchips">
+        <span class="tchip">${tr("Pembukaan")} ${b.op}</span>
+        <span class="tchip">${tr("Tengah")} ${b.mid}</span>
+        <span class="tchip">${tr("Akhir")} ${b.eg}</span>
+        ${b.inaccuracy?`<span class="tchip">${tr("Impresisi")} ${b.inaccuracy}</span>`:""}
+      </div></div>`:""}
+      ${x.g.opening?`<div class="coach-op">${tr("Pembukaan")}: <b>${esc(x.g.opening)}</b></div>`:""}
+      <div class="coach-vonis">${x.vonis}</div>
+      ${x.kuat.length?`<div class="coach-lbl coach-plus">${tr("Kekuatan")}</div><ul class="coach-ul">${x.kuat.map(t=>`<li>${t}</li>`).join("")}</ul>`:""}
+      ${x.lemah.length?`<div class="coach-lbl coach-minus">${tr("Kelemahan")}</div><ul class="coach-ul">${x.lemah.map(t=>`<li>${t}</li>`).join("")}</ul>`:""}
+      ${x.catatan.length?`<div class="coach-saran">${x.catatan.join(" ")}</div>`:""}
+    </div>`;
+  }).join("");
+
+  return `<section class="box">
+    <h2>${tr("Coach")}</h2>
+    <p class="csub">${tr("Review otomatis tiap partai rapid, dari analisis mesin Lichess.")}
+      ${C.dian < C.n ? `<br><b>${C.dian}/${C.n}</b> ${tr("partai punya analisis mesin. Sisanya: minta 'Request computer analysis' di Lichess agar review lengkap.")}` : ""}</p>
+    <div class="cards">
+      <div class="kpi" style="--tone:var(--navy)"><b>${C.n}</b><i>${tr("partai rapid")}</i><small>${C.M}M / ${C.R}R / ${C.K}K</small></div>
+      <div class="kpi" style="--tone:var(--sky)"><b>${C.accRata!=null?C.accRata.toFixed(1)+"%":"\u2014"}</b><i>${tr("akurasi rata-rata")}</i><small>${tr("7 hari")}</small></div>
+      <div class="kpi" style="--tone:var(--no)"><b>${C.rate!=null?C.rate.toFixed(1):"\u2014"}</b><i>${tr("kesalahan/partai")}</i><small>${tr("makin kecil makin baik")}</small></div>
+      <div class="kpi" style="--tone:var(--gold)"><b>${C.rating!=null?C.rating:"\u2014"}</b><i>${tr("rating rapid")}</i><small>${tr("terakhir")}</small></div>
+    </div>
+    ${C.dian && C.totalSerius ? `<div class="coach-sum">
+      <div><span class="coach-lbl coach-minus">${tr("Fase terlemah")}</span><b>${namaFase(C.terlemah[0])}</b> \u2014 ${C.terlemah[1]} ${tr("kesalahan")}</div>
+      <div><span class="coach-lbl coach-plus">${tr("Fase terkuat")}</span><b>${namaFase(C.terkuat[0])}</b> \u2014 ${C.terkuat[1]} ${tr("kesalahan")}</div>
+    </div>` : ""}
+    <div class="cshare nocetak">
+      <button class="btn" id="coPdf">${tr("Simpan PDF")}</button>
+      <button class="btn go" id="coWa">${tr("Kirim catatan ke orang tua")}</button>
+    </div>
+    ${kartu}
   </section>`;
 }
 
@@ -2665,11 +2761,7 @@ function kepatuhanDetail(dk){
   const rating = (sp.puzRating != null) ? sp.puzRating : (sp.puzzleRating != null ? sp.puzzleRating : null);
   const stat = [
     sp.puzzles != null ? [tr("Puzzle Lichess"), sp.puzzles] : null,
-    (sp.rushScore || sp.rushAttempts) ? [tr("Rush"), (sp.rushScore || 0) + " / " + (sp.rushAttempts || 0) + "\u00d7"] : null,
     rating != null ? [tr("Rating puzzle"), rating] : null,
-    sp.rapid != null ? [tr("Rating rapid"), sp.rapid] : null,
-    sp.blitz != null ? [tr("Rating blitz"), sp.blitz] : null,
-    sp.tacticsHigh != null ? [tr("Taktik tertinggi"), sp.tacticsHigh] : null,
   ].filter(Boolean);
   const temaChips = (sp.tema && typeof sp.tema === "object")
     ? Object.entries(sp.tema).sort((a,b)=>b[1]-a[1]).map(([k,n]) => `<span class="tchip">${esc(k)} \u00d7${n}</span>`).join("")
@@ -2692,6 +2784,10 @@ function wireKepatuhanShare(){
   const w = $("#cWa"), q = $("#cPdf");
   if(w) w.onclick = kepatuhanWA;
   if(q) q.onclick = kepatuhanPDF;
+  const cw = $("#coWa");
+  if(cw) cw.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent(coachCatatanOrtu()), "_blank");
+  const cp = $("#coPdf");
+  if(cp) cp.onclick = () => window.print();
   const t = $("#cTgl");
   if(t) t.onchange = () => { S.patuhTgl = t.value; render(); };
   const tc = $("#cTglClear");
@@ -2783,9 +2879,8 @@ function viewAtur(){
   <section class="box st2">
     ${H2("book", tr("Batas kejujuran alat ini"))}
     <div class="pad" style="font-size:13px;line-height:1.6">
-      <p style="margin-bottom:8px"><b>Terverifikasi:</b> jumlah puzzle harian (Lichess), semua partai + hasil + rating + akurasi (Chess.com), deret kekalahan, volume bermain.</p>
+      <p style="margin-bottom:8px"><b>Terverifikasi:</b> jumlah puzzle harian, tema puzzle, semua partai + hasil + rating + akurasi, deret kekalahan, volume bermain — semuanya dari Lichess.</p>
       <p style="margin-bottom:8px"><b>Tidak terlihat sama sekali:</b> pelajaran/video, waktu layar, latihan papan fisik, apakah anak dibantu mesin. Tugas manual ada untuk menutup celah ini — dan hanya sekuat kejujuran anak.</p>
-      <p><b>Chess.com tidak menyimpan riwayat</b> rating taktik maupun Puzzle Rush. Aplikasi ini yang mencatatnya. Hari yang tidak dibuka, tidak tercatat — kecuali Apps Script terpasang.</p>
     </div>
   </section>`;
 }
@@ -3070,7 +3165,7 @@ function pelatih(){
 /* ═══════════ KOLOM PER PLATFORM ═══════════
    Satu kolom untuk tiap situs. Yang TIDAK dipisah, dan alasannya:
      - kepatuhan  : target harian dipenuhi lintas situs, bukan per situs
-     - deret kalah: kalah 2x di Lichess lalu 2x di Chess.com ADALAH 4 beruntun
+     - deret kalah: 4 kekalahan berturut-turut ADALAH 4 beruntun
      - batas volume: kalau per situs, pagar bisa dilewati dengan pindah situs
    Ketiganya tetap gabungan di kartu KPI dan peringatan. */
 
@@ -3094,7 +3189,7 @@ function renderPlatforms(){
   const L = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || null;
   const C = (S.data && S.data.chess && S.data.chess.stats) || null;
   const dL = siteDay("Lichess", dk);
-  const pz = puzzlesOn(dk), R = rushToday();
+  const pz = puzzlesOn(dk);
 
   const baris = (label, nilai, sub, kelas) =>
     `<div class="r ${kelas||""}"><dt>${label}</dt><dd>${nilai}${sub?`<small>${sub}</small>`:""}</dd></div>`;
@@ -3132,7 +3227,7 @@ function renderPlatforms(){
 
 /* ═══════════ RATING & TAKTIK: KEDUA SITUS BERDAMPINGAN ═══════════
    Rating antar-situs TIDAK setara. Rapid Lichess biasanya beberapa ratus poin
-   di atas rapid Chess.com untuk pemain yang sama. Membandingkannya seolah satu
+   berbeda antar-situs untuk pemain yang sama. Membandingkannya seolah satu
    skala adalah kesalahan yang akan membuat orang tua menyimpulkan hal yang salah.
    Karena itu keduanya ditampilkan terpisah, tidak pernah dijumlahkan atau dirata-rata. */
 function renderRatings(){
@@ -3239,7 +3334,7 @@ function renderKPIs(){
   const dk = todayKey(), T = targets();
   const q = buildQuests(), done = q.filter(x=>x.ok).length;
   const pct = q.length ? Math.round(100*done/q.length) : 0;
-  const pz = puzzlesOn(dk), g = gamesOn(dk), ls = losingStreakToday(), R = rushToday();
+  const pz = puzzlesOn(dk), g = gamesOn(dk), ls = losingStreakToday();
   const L = S.data && S.data.lichess ? S.data.lichess.prof : null;
   const lpuz = L && L.perfs && L.perfs.puzzle ? L.perfs.puzzle.rating : null;
   const lrapid = L && L.perfs && L.perfs.rapid && L.perfs.rapid.games ? L.perfs.rapid.rating : null;
@@ -3265,7 +3360,7 @@ function renderKPIs(){
 function renderAlerts(){
   const el = $("#alerts"); if(!el) return;
   const dk = todayKey(), T = targets();
-  const g = gamesOn(dk), pz = puzzlesOn(dk), ls = losingStreakToday(), R = rushToday();
+  const g = gamesOn(dk), pz = puzzlesOn(dk), ls = losingStreakToday();
   const A = [];
   const jam = new Date().getHours();
 
@@ -3274,9 +3369,7 @@ function renderAlerts(){
   if(g.total > T.gameMax) A.push(["warn","VOLUME",tr("{a} partai hari ini, melewati batas {b}. Kuantitas tanpa analisis tidak menaikkan rating.",{a:g.total,b:T.gameMax})]);
   if(S.cfg.lichess && T.puzzle>0 && pz < T.puzzle && jam >= 19)
     A.push([pz===0?"no":"warn","PUZZLE",tr("Puzzle hari ini {a}/{b} dan sudah lewat jam 19.",{a:pz,b:T.puzzle})]);
-  if(S.cfg.chess && T.rush>0 && R.attempts===0 && jam >= 19) A.push(["warn","RUSH",tr("Puzzle Rush belum dikerjakan dan sudah lewat jam 19.")]);
-  if(newTacticsRecordToday()) A.push(["ok",tr("REKOR"),tr("Rekor rating taktik baru tercatat hari ini.")]);
-  if(g.total===0 && pz===0 && R.attempts===0) A.push(["warn",tr("SEPI"),tr("Tidak ada aktivitas terdeteksi hari ini.")]);
+  if(g.total===0 && pz===0) A.push(["warn",tr("SEPI"),tr("Tidak ada aktivitas terdeteksi hari ini.")]);
 
   const G = normGames().filter(x=>x.acc!=null).slice(0,10);
   if(G.length >= 5){
@@ -3368,8 +3461,7 @@ function renderStrip(){
   const el = $("#strip"); if(!el) return;
   const days = [];
   for(let i=20;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dayKey(d)); }
-  const rush = dk => (S.snaps[dk] ? S.snaps[dk].rushAttempts : 0);
-  const vals = days.map(dk => puzzlesOn(dk) + rush(dk) + gamesOn(dk).total*3);
+  const vals = days.map(dk => puzzlesOn(dk) + gamesOn(dk).total*3);
   const max = Math.max(1, ...vals);
   el.innerHTML = days.map((dk,i)=>{
     const lv = vals[i]===0 ? 0 : Math.ceil(4*vals[i]/max);
@@ -3389,20 +3481,9 @@ function renderSummary(){
     if(p.storm && p.storm.runs)   rows.push(["Puzzle Storm (Lichess)", `${p.storm.score} \u00b7 ${p.storm.runs} kali`]);
   }
   const G = normGames();
-  const cc = G.filter(g=>g.site==="Chess.com"), li = G.filter(g=>g.site==="Lichess");
+  const li = G.filter(g=>g.site==="Lichess");
   const hit = a => `${a.length} \u00b7 ${a.filter(x=>x.res==="M").length}M / ${a.filter(x=>x.res==="R").length}R / ${a.filter(x=>x.res==="K").length}K`;
   if(li.length) rows.push(["Partai (Lichess)", hit(li)]);
-  if(cc.length) rows.push(["Partai (Chess.com)", hit(cc)]);
-  if(C){
-    const st = C.stats || {};
-    if(st.chess_rapid && st.chess_rapid.last) rows.push(["Rapid (Chess.com)", st.chess_rapid.last.rating]);
-    if(st.chess_blitz && st.chess_blitz.last) rows.push(["Blitz (Chess.com)", st.chess_blitz.last.rating]);
-    if(st.tactics && st.tactics.highest)
-      rows.push(["Taktik tertinggi (Chess.com)", st.tactics.highest.rating +
-        (st.tactics.lowest ? " \u00b7 terendah " + st.tactics.lowest.rating : "")]);
-    if(st.puzzle_rush && st.puzzle_rush.best)
-      rows.push(["Puzzle Rush terbaik (Chess.com)", st.puzzle_rush.best.score]);
-  }
   rows.push(["Runtun hari aktif", streakHari()]);
   el.innerHTML = rows.length
     ? `<table>${rows.map(([a,b])=>`<tr><td style="font-family:var(--sans);font-size:13px">${a}</td><td style="text-align:right;font-weight:700">${b}</td></tr>`).join("")}</table>`
@@ -3415,7 +3496,7 @@ function renderGames(){
   const f = S.filter || "semua";
   const G = normGames().filter(g => f === "semua" || (f === "mini" ? g.mini : g.site === f));
   if(!G.length){ el.innerHTML = `<div class="empty">${f==="semua"?tr("Belum ada partai dari kedua situs."):f==="mini"?tr("Tidak ada kekalahan miniatur. Bagus."):tr("Belum ada partai di {a}.",{a:f})}</div>`; return; }
-  // Rating Lichess dan Chess.com BUKAN skala yang sama. Menaruhnya di satu kolom
+  // Rating antar-situs BUKAN skala yang sama. Menaruhnya di satu kolom
   // membuat 1462 dan 1180 terlihat sebanding — dan itu kesimpulan yang salah.
   const rows = G.slice(0,60).map(g=>{
     const cls = g.res==="M"?"w":g.res==="K"?"l":"d";
@@ -3473,7 +3554,7 @@ function renderPlan(){
     .join("\n");
   sel.onchange = async e => { S.tier = +e.target.value; S.targets = null; S.manual = null; await persist(); render(); };
   $("#bTargets").onclick = async () => {
-    S.targets = { puzzle:+$("#tPuzzle").value||0, rush:0, rushScore:0,
+    S.targets = { puzzle:+$("#tPuzzle").value||0,
       rapid:+$("#tRapid").value||0, bulletMax:+$("#tBulletMax").value||0, gameMax:+$("#tGameMax").value||0,
       temaJumlah:+$("#tTemaJumlah").value||0, temaPuzzle:+$("#tTemaPuzzle").value||0,
       temaLuar: $("#tTemaLuar").checked };
@@ -3616,7 +3697,7 @@ function render(){
   document.body.dataset.role = S.role;
   const bl = $("#bLang"); if(bl) bl.textContent = DB.lang === "en" ? "EN" : "ID";
   $$("[data-i18n]").forEach(el => { el.textContent = tr(el.dataset.i18n === "foot1"
-    ? "Road To Grand Master \u00b7 data dari API publik Chess.com & Lichess. Tidak ada server. Semua tersimpan di perangkat ini."
+    ? "Road To Grand Master \u00b7 data dari API publik Lichess. Tidak ada server. Semua tersimpan di perangkat ini."
     : el.dataset.i18n === "foot2"
     ? "Anak tahu bahwa aktivitasnya dipantau \u2014 itu syaratnya, bukan pilihannya."
     : el.dataset.i18n); });
@@ -3633,7 +3714,7 @@ function render(){
     hari: S.role==="pelatih" ? viewHariPelatih : viewHariOrtu,
     pelatih: viewPelatih,
     minggu: viewMinggu, analisis: viewAnalisis, rencana: viewRencana,
-    partai: viewPartai, patuh: viewKepatuhan, atur: viewAtur,
+    partai: viewPartai, patuh: viewKepatuhan, coach: viewCoach, atur: viewAtur,
   };
   $("#view").innerHTML = V[S.tab]();
 
