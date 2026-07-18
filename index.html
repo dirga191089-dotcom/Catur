@@ -1266,21 +1266,9 @@ async function fetchAll(){
   if(_el) _el.innerHTML = `<div class="alert-row"><b>\u2026</b><span><span class="spin"></span> menarik data\u2026</span></div>`;
   const out = { chess:null, lichess:null, errors:[] };
 
-  // Riwayat harian dari Sheet yang diterbitkan sebagai CSV. Tidak pernah kena CORS.
-  if(S.cfg.csv){
-    try{
-      const r = await fetch(S.cfg.csv.trim());
-      if(!r.ok) throw new Error("HTTP " + r.status);
-      const snaps = snapsDariCSV(await r.text());
-      const n = Object.keys(snaps).length;
-      if(!n) throw new Error("CSV terbaca tapi tidak ada baris tanggal yang sah. Pastikan yang diterbitkan adalah sheet 'Harian'.");
-      Object.keys(snaps).forEach(k => {
-        S.snaps[k] = Object.assign({}, snaps[k], S.snaps[k]);
-        if(snaps[k].tema) S.snaps[k].tema = snaps[k].tema;
-      });
-      logLine(`Sheet CSV: ${n} hari riwayat`, "");
-    }catch(e){ out.errors.push(["Sheet CSV", e.message]); }
-  }
+  // GS (Apps Script) = sumber utama. CSV kini CADANGAN, dijalankan di bawah HANYA
+  // kalau GS tak mengirim data. Jadi galat CSV tak muncul saat GS jalan.
+  let gsOk = false;
 
   // Sumber utama: Apps Script. Ia sudah punya SELURUH riwayat harian —
   // termasuk hari-hari saat dasbor ini tidak pernah dibuka.
@@ -1290,6 +1278,7 @@ async function fetchAll(){
       if(!r.ok) throw new Error("HTTP " + r.status);
       const d = await r.json();
       if(d.error) throw new Error(d.error);
+      gsOk = true;
       out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
       if(d.lichess) out.lichess = d.lichess;
       if(!d.stats) out.errors.push(["Apps Script", "Endpoint hidup, tapi stats kosong \u2014 kemungkinan besar Chess.com memblokir IP Google (403). Riwayat dari Sheet tetap dipakai, tapi angka hari ini tidak akan terisi. Kalau ini menetap, hapus URL Web App dan biarkan dasbor menarik langsung dari browser."]);
@@ -1301,6 +1290,23 @@ async function fetchAll(){
       });
       if(d.nama && !S.cfg.name) S.cfg.name = d.nama;
     }catch(e){ out.errors.push(["Apps Script", e.message]); }
+  }
+
+  // CADANGAN: CSV hanya kalau GS tak mengirim data (mis. akses GS salah tapi sheet
+  // dipublikasikan). Kalau GS sukses, blok ini dilewati -> tak ada galat CSV.
+  if(S.cfg.csv && !gsOk){
+    try{
+      const r = await fetch(S.cfg.csv.trim());
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const snaps = snapsDariCSV(await r.text());
+      const n = Object.keys(snaps).length;
+      if(!n) throw new Error("CSV terbaca tapi tidak ada baris tanggal yang sah. Pastikan yang diterbitkan adalah sheet 'Harian'.");
+      Object.keys(snaps).forEach(k => {
+        S.snaps[k] = Object.assign({}, snaps[k], S.snaps[k]);
+        if(snaps[k].tema) S.snaps[k].tema = snaps[k].tema;
+      });
+      logLine(`Sheet CSV (cadangan): ${n} hari riwayat`, "");
+    }catch(e){ out.errors.push(["Sheet CSV", e.message]); }
   }
 
   if(S.cfg.chess && !out.chess){
