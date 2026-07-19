@@ -506,6 +506,11 @@
   .cpct{grid-area:pct;font-family:var(--mono);font-weight:600;font-size:13px;text-align:right}
   .clg{grid-area:lg;font-family:var(--mono);font-size:11px;color:var(--no);line-height:1.4}
   .cok{color:var(--ok)}
+  .clibur{color:var(--sky);font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em}
+  .cskip{color:var(--warn);font-family:var(--mono);font-size:10.5px;margin-left:8px}
+  .btn-libur{margin-left:8px;font-family:var(--mono);font-size:10px;padding:2px 8px;cursor:pointer;
+    background:var(--card);color:var(--soft);border:1px solid var(--rule);border-radius:99px}
+  .btn-libur:hover{color:var(--ink);border-color:var(--soft)}
   .dg-box{border-style:solid !important;border-color:var(--navy) !important;background:rgba(37,70,107,.06)}
   .dg{display:flex;flex-direction:column;gap:4px;margin:8px 0}
   .dg-r{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink)}
@@ -723,6 +728,8 @@ Object.assign(EN, {
   "Belum ada partai rapid untuk dianalisa. Rencana muncul setelah anak main rapid.":"No rapid games to analyse yet. The plan appears after the child plays rapid.",
   "Tidak ada kelemahan menonjol dari partai rapid \u2014 lanjutkan kurikulum biasa.":"No standout weakness from rapid games \u2014 continue the usual curriculum.",
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
+  "ISTIRAHAT RESMI":"OFFICIAL REST DAY", "tandai hari libur":"mark as rest day", "batalkan libur":"undo rest day",
+  "kunci tilt dilewati {a}\u00d7":"tilt lock skipped {a}\u00d7", "tilt dilewati {a}\u00d7":"tilt skipped {a}\u00d7",
   "Diagnosa verifikasi tema":"Theme verification diagnosis", "OTOMATIS":"AUTOMATIC", "MANUAL":"MANUAL",
   "URL Web App /exec terisi":"Web App /exec URL filled", "Data termuat via /exec":"Data loaded via /exec",
   "Tema hari ini dari backend":"Today's theme from backend", "Hari bertema tersimpan":"Days with theme stored",
@@ -1043,13 +1050,15 @@ const anakKosong = (nama) => ({
   tier:1, targets:null, manual:null, checks:{}, notes:{}, snaps:{},
   data:null, fetchedAt:0, filter:"semua",
 });
-const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin"];
+const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip"];
 function anakAktif(){ return DB.anak.find(a => a.id === DB.aktif) || DB.anak[0] || null; }
 function muatAnak(){
   const a = anakAktif(); if(!a) return;
   MEDAN.forEach(k => S[k] = a[k]);
   if(a.tiltHari !== todayKey()){ a.tiltHari = todayKey(); a.tiltLewat = false; }
   S.tiltLewat = a.tiltLewat;
+  S.libur = a.libur || {};          // { "2026-07-18": true } — hari libur resmi
+  S.tiltSkip = a.tiltSkip || {};    // { "2026-07-18": 2 } — kunci tilt dilewati
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
@@ -1772,6 +1781,7 @@ function streakHari(){
   for(let i=0;i<120;i++){
     const d = new Date(); d.setDate(d.getDate()-i);
     const dk = dayKey(d);
+    if(hariLibur(dk)) continue;   // istirahat terencana tidak memutus runtun
     const aktif = puzzlesOn(dk) > 0 || gamesOn(dk).total > 0;
     if(aktif) n++;
     else if(i > 0) break;      // hari ini boleh kosong, kemarin tidak
@@ -2645,6 +2655,15 @@ function viewCoach(){
   </section>`;
 }
 
+/* Hari libur resmi: istirahat yang DIRENCANAKAN, bukan kelalaian. Istirahat bagian
+   dari program latihan; memaksa runtun tanpa jeda memicu jenuh. */
+function hariLibur(dk){ return !!(S.libur && S.libur[dk]); }
+function toggleLibur(dk){
+  S.libur = S.libur || {};
+  if(S.libur[dk]) delete S.libur[dk]; else S.libur[dk] = true;
+  persist(); render();
+}
+
 function viewKepatuhan(){
   const esc = x => String(x).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
   const ada = d => S.snaps[d] && S.snaps[d].kepatuhan !== undefined &&
@@ -2663,7 +2682,7 @@ function viewKepatuhan(){
 
   const tone = v => v >= 80 ? "var(--ok)" : v >= 50 ? "var(--warn)" : "var(--no)";
   const pct  = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
-  const rata = arr => arr.length ? Math.round(arr.reduce((a,d)=>a+pct(d),0)/arr.length) : 0;
+  const rata = arr => { const f = arr.filter(d=>!hariLibur(d)); return f.length ? Math.round(f.reduce((a,d)=>a+pct(d),0)/f.length) : 0; };
 
   // Hari ini — dihitung langsung dari tugas, tak menunggu snapshot malam.
   let live = null;
@@ -2679,7 +2698,12 @@ function viewKepatuhan(){
       <div class="cday"><b>${tgl} \u00b7 ${tr("hari ini")}</b><span>${tr("langsung dari tugas")} \u00b7 ${live.done}/${live.total}</span></div>
       <div class="cbar"><span style="width:${v}%;background:${tone(v)}"></span></div>
       <div class="cpct" style="color:${tone(v)}">${v}%</div>
-      <div class="clg"><span class="clive">\u25cf ${tr("berjalan")}</span></div>
+      <div class="clg">${hariLibur(today)
+        ? `<span class="clibur">\u2713 ${tr("ISTIRAHAT RESMI")}</span>`
+        : `<span class="clive">\u25cf ${tr("berjalan")}</span>`}
+        <button class="btn-libur nocetak" id="bLibur">${hariLibur(today) ? tr("batalkan libur") : tr("tandai hari libur")}</button>
+        ${(S.tiltSkip && S.tiltSkip[today]) ? `<span class="cskip">\u26a0 ${tr("kunci tilt dilewati {a}\u00d7", {a:S.tiltSkip[today]})}</span>` : ""}
+      </div>
     </div>`;
   })() : "";
 
@@ -2690,12 +2714,16 @@ function viewKepatuhan(){
       <div class="cday"><b>${tgl}</b><span>${d}</span></div>
       <div class="cbar"><span style="width:${v}%;background:${tone(v)}"></span></div>
       <div class="cpct" style="color:${tone(v)}">${v}%</div>
-      <div class="clg">${lg ? esc(lg) : `<span class="cok">\u2713 ${tr("tuntas")}</span>`}</div>
+      <div class="clg">${hariLibur(d)
+        ? `<span class="clibur">\u2713 ${tr("ISTIRAHAT RESMI")}</span>`
+        : (lg ? esc(lg) : `<span class="cok">\u2713 ${tr("tuntas")}</span>`)}
+        ${(S.tiltSkip && S.tiltSkip[d]) ? `<span class="cskip">\u26a0 ${tr("tilt dilewati {a}\u00d7", {a:S.tiltSkip[d]})}</span>` : ""}
+      </div>
     </div>`;
   }).join("");
 
   const l7 = hari.slice(0,7), l30 = hari.slice(0,30);
-  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+  let runtun = 0; for(const d of hari){ if(hariLibur(d)) continue; if(pct(d) >= 100) runtun++; else break; }
 
   return `<section class="box">
     <h2>${tr("Kepatuhan harian")}</h2>
@@ -2720,11 +2748,11 @@ function kepatuhanData(){
   const today = todayKey();
   const hari = Object.keys(S.snaps).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && ada(d) && d !== today).sort().reverse();
   const pct = d => Math.max(0, Math.min(100, Number(S.snaps[d].kepatuhan) || 0));
-  const rata = arr => arr.length ? Math.round(arr.reduce((a,d)=>a+pct(d),0)/arr.length) : 0;
+  const rata = arr => { const f = arr.filter(d=>!hariLibur(d)); return f.length ? Math.round(f.reduce((a,d)=>a+pct(d),0)/f.length) : 0; };
   let live = null;
   try { const q = buildQuests(); const dn = q.filter(x=>x.ok).length;
         live = { pct:q.length?Math.round(100*dn/q.length):0, done:dn, total:q.length }; } catch(e){}
-  let runtun = 0; for(const d of hari){ if(pct(d) >= 100) runtun++; else break; }
+  let runtun = 0; for(const d of hari){ if(hariLibur(d)) continue; if(pct(d) >= 100) runtun++; else break; }
   return { today, hari, pct, live, l7:rata(hari.slice(0,7)), l30:rata(hari.slice(0,30)), runtun };
 }
 
@@ -2784,6 +2812,8 @@ function wireKepatuhanShare(){
   const w = $("#cWa"), q = $("#cPdf");
   if(w) w.onclick = kepatuhanWA;
   if(q) q.onclick = kepatuhanPDF;
+  const bLb = $("#bLibur");
+  if(bLb) bLb.onclick = () => toggleLibur(todayKey());
   const cw = $("#coWa");
   if(cw) cw.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent(coachCatatanOrtu()), "_blank");
   const cp = $("#coPdf");
@@ -3679,7 +3709,11 @@ function renderKunci(){
     </div></div>`;
     const b = $("#bLewat");
     if(b) b.onclick = () => {
-      S.tiltLewat = true; persist();
+      S.tiltLewat = true;
+      const hk = todayKey();
+      S.tiltSkip = S.tiltSkip || {};
+      S.tiltSkip[hk] = (S.tiltSkip[hk] || 0) + 1;   // transparansi untuk ortu/pelatih
+      persist();
       clearInterval(jamKunci);
       el.innerHTML = ""; el.style.display = "none";
     };
