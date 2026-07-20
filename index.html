@@ -1293,7 +1293,10 @@ async function fetchAll(){
       if(d.error) throw new Error(d.error);
       gsOk = true;
       out.chess = { user:d.user, stats:d.stats, games:d.games||[], months:"-", viaGs:true };
-      if(d.lichess) out.lichess = d.lichess;
+      // JANGAN taruh ke out.lichess: backend TIDAK mengirim daftar partai
+      // (apalagi analisis engine). Kalau ditaruh, pengambilan partai dari
+      // browser dilewati dan tab Partai/Coach jadi kosong.
+      if(d.lichess) out.lichessGs = d.lichess;
       if(d.snaps) Object.keys(d.snaps).forEach(k => {
         // Backend = sumber kebenaran. Salinan lokal hanya mengisi field yang
         // TIDAK dikirim backend; kalau lokal menimpa, angka hari ini bisa basi.
@@ -1377,6 +1380,9 @@ async function fetchAll(){
   if(out.lichess) logLine(`Lichess: ${out.lichess.games.length} partai + ${(out.lichess.act||[]).length} hari aktivitas` +
     (out.lichess.gamesOk ? "" : " \u2014 daftar partai GAGAL ditarik, memakai feed aktivitas sebagai cadangan"),
     out.lichess.gamesOk ? "" : "warn");
+  // Cadangan: kalau pengambilan dari browser gagal, pakai profil dari backend
+  // (tanpa partai) supaya rating & aktivitas tetap tampil.
+  if(!out.lichess && out.lichessGs) out.lichess = out.lichessGs;
   if(S.cfg.lichess && !out.lichess) logLine("Data Lichess tidak masuk.", "warn");
 
   /* BUG DI HP: versi lama menimpa S.data mentah-mentah. Kalau jaringan seluler
