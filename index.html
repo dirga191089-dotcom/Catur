@@ -1359,7 +1359,7 @@ async function fetchAll(){
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`),
-        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true&evals=true&clocks=true`),
+        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true&evals=true&clocks=true&accuracy=true`),
         // Performa PER TEMA, 30 hari. Butuh token (puzzle:read).
         T_ ? getJSONAuth(`https://lichess.org/api/puzzle/dashboard/30`, T_)
            : Promise.reject(new Error("tanpa token")),
@@ -3666,7 +3666,8 @@ function renderGames(){
       <td>${g.opp} <span style="color:var(--soft)">${g.oppRating||""}</span></td>
       <td class="${cls}">${g.res}</td>
       <td style="text-align:right;color:var(--navy);font-weight:600">${g.rating||"\u2014"}</td>
-      <td>${g.acc!=null?g.acc.toFixed(1)+"%":`<span class="anoTag">${tr("belum dianotasi")}</span>`}</td>
+      <td>${g.acc!=null ? g.acc.toFixed(1)+"%"
+            : (belum ? `<span class="anoTag">${tr("belum dianotasi")}</span>` : "\u2014")}</td>
       <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">${belum?tr("anotasi")+" \u2197":tr("buka")}</a></td></tr>`;
   }).join("");
   el.innerHTML = `<table>
