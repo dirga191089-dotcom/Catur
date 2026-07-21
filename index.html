@@ -1447,21 +1447,6 @@ function recordSnapshot(out){
   S.snaps[dk].at = Date.now();
 }
 
-/* ═══════════ olah data ═══════════ */
-function chessGamesOn(dk){
-  const d = S.data && S.data.chess ? S.data.chess.games : [];
-  return d.filter(g => dayKey(ms(g.end_time)) === dk);
-}
-function chessResultFor(g){
-  const me = S.data.chess.user;
-  const putih = (g.white.username||"").toLowerCase() === me;
-  const side = putih ? g.white : g.black;
-  const opp  = putih ? g.black : g.white;
-  const r = side.result;
-  const res = r === "win" ? "M" : ["agreed","repetition","stalemate","insufficient","50move","timevsinsufficient"].includes(r) ? "R" : "K";
-  return { side, opp, res, putih, rating:side.rating,
-           acc: g.accuracies ? (putih ? g.accuracies.white : g.accuracies.black) : null };
-}
 function lichessDay(dk){
   const act = (S.data && S.data.lichess) ? (S.data.lichess.act||[]) : [];
   // interval.end adalah akhir hari aktivitas (detik)
@@ -1526,20 +1511,8 @@ function lichessGamesOn(dk){
    tabel partai hanya melihat satu situs. Akibatnya partai rapid di Lichess
    tidak muncul di mana pun. Sekarang kedua situs dinormalkan ke satu bentuk. */
 
-function ecoNama(pgn){
-  const m = (pgn||"").match(/\[ECOUrl "https?:\/\/[^"]*\/openings\/([^"]+)"\]/);
-  return m ? decodeURIComponent(m[1]).replace(/-/g," ").trim() : null;
-}
 /* Lichess memakai "ultraBullet" dan varian lain. Tanpa penyeragaman,
    pagar anti-bullet bisa dilewati hanya dengan bermain UltraBullet. */
-/* Jumlah langkah PENUH (bukan ply), dihitung dari daftar SAN Lichess. */
-function langkahCC(pgn){
-  if(!pgn) return null;
-  const m = String(pgn).match(/(\d+)\.\s*\S+\s*(?:\{[^}]*\})?\s*\S*\s*$/m);
-  const semua = String(pgn).match(/(\d+)\.(?!\.)/g);
-  if(!semua || !semua.length) return null;
-  return parseInt(semua[semua.length-1], 10);
-}
 function langkahLI(moves){
   if(!moves) return null;
   const ply = String(moves).trim().split(/\s+/).filter(Boolean).length;
@@ -1578,12 +1551,13 @@ function normGames(){
     const CEPAT = 5;                       // detik; di bawah ini dianggap tanpa berpikir
     let waktu = null;
     if(Array.isArray(g.clocks) && g.clocks.length && g.clock){
-      const inc = (g.clock.increment || 0), awal = (g.clock.initial || 0) * 100;
+      const inc = (g.clock.increment || 0);            // API: detik
+      const awal = (g.clock.initial || 0) * 100;       // clocks[]: centidetik
       const pakai = [];                    // detik per ply milik anak
       g.clocks.forEach((c, ply) => {
         if(((ply % 2 === 0) === isW) === false) return;
         const prev = ply >= 2 ? g.clocks[ply-2] : awal;
-        const detik = (prev - c) / 100 + inc;
+        const detik = (prev - c) / 100 + inc;          // (centi->detik) + inc detik
         pakai[ply] = detik >= 0 ? detik : null;
       });
       const ada = pakai.filter(v => v != null && isFinite(v));
@@ -2594,7 +2568,7 @@ function coachPartai(hari){
       if(b.blunder === 0 && b.mistake > 0) kuat.push(tr("Tidak ada blunder besar; kesalahannya masih tingkat menengah"));
     }
     const w = g.waktu;
-    if(w && w.total){
+    if(w && w.total && w.rata != null){
       const persenCepat = Math.round(100 * w.cepat / w.total);
       if(b && b.cepatSalah > 0)
         lemah.push(tr("{a} kesalahan serius dimainkan dalam <5 detik \u2014 bukan karena tidak tahu, tapi karena tidak berpikir", {a:b.cepatSalah}));
