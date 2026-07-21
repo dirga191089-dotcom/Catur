@@ -1103,7 +1103,15 @@ const dayKey = d => new Date(d).toLocaleDateString("sv-SE");
 const ms = t => (t < 1e11 ? t * 1000 : t);
 
 function tier(){ return TIERS.find(t=>t.id===S.tier) || TIERS[0]; }
-function targets(){ return S.targets || tier().target; }
+/* PUZZLE_MAKS: batas atas puzzle harian, apa pun tier atau isian target.
+   40 = 4 tugas tema x 10 (2 kurikulum + 2 review kesalahan). Tugas tema BUKAN
+   tambahan di atas angka ini — puzzle tema ikut menghitung total harian. */
+const PUZZLE_MAKS = 40;
+function targets(){
+  const t = Object.assign({}, S.targets || tier().target);
+  t.puzzle = Math.min(t.puzzle || 0, PUZZLE_MAKS);
+  return t;
+}
 /* Tugas kurikulum. Bentuk objek: { teks, tema?, n? }
    Kalau ada `tema`, ia BISA diverifikasi dari riwayat puzzle Lichess —
    berhenti jadi centang manual. String lama tetap diterima (data lama). */
@@ -1608,7 +1616,7 @@ function buildQuests(){
   const bullet = (g.byClass.bullet||0);
   const q = [];
 
-  if(S.cfg.lichess && T.puzzle > 0) q.push({ auto:true, ok: pz >= T.puzzle, now:pz, goal:T.puzzle,
+  if(S.cfg.lichess && T.puzzle > 0) q.push({ auto:true, ok: pz >= T.puzzle, now:pz, goal:T.puzzle, total:true,
     t:tr("Selesaikan {a} puzzle",{a:T.puzzle}), src:tr("Lichess — terverifikasi otomatis") });
 
   if(T.rapid > 0) q.push({ auto:true, ok: rapid >= T.rapid, now:rapid, goal:T.rapid,
@@ -1626,10 +1634,21 @@ function buildQuests(){
      TEMA_TARGET puzzle. Lebih dari itu, anak menghabiskan waktu berpindah tema
      alih-alih mendalami satu pola. */
   const TEMA_TARGET = 10, MAKS_KURIKULUM = 2, MAKS_REVIEW = 2;
-  let nKur = 0;
-  manualTasks().forEach((m,i) => {
-    if(m.tema && nKur >= MAKS_KURIKULUM) return;   // sisa tema kurikulum ditunda
-    if(m.tema) nKur++;
+  /* ROTASI HARIAN. Tanpa ini, hanya 2 tema kurikulum PERTAMA yang pernah muncul
+     dan sisanya tak pernah dapat giliran. Indeks digeser berdasarkan nomor hari,
+     jadi seluruh kurikulum terlewati bergantian dan berulang secara adil.
+     Pergeserannya deterministik: hari yang sama selalu memberi tema yang sama. */
+  const semuaTugas = manualTasks();
+  const idxTema = semuaTugas.map((m,i) => m.tema ? i : -1).filter(i => i >= 0);
+  const nomorHari = Math.floor(new Date(dk + "T00:00:00").getTime() / 864e5);
+  const giliran = new Set();
+  if(idxTema.length){
+    const ambil = Math.min(MAKS_KURIKULUM, idxTema.length);
+    const mulai = ((nomorHari * ambil) % idxTema.length + idxTema.length) % idxTema.length;
+    for(let k = 0; k < ambil; k++) giliran.add(idxTema[(mulai + k) % idxTema.length]);
+  }
+  semuaTugas.forEach((m,i) => {
+    if(m.tema && !giliran.has(i)) return;   // bukan giliran hari ini
     /* Kalau tugas punya tema Lichess DAN token tersedia, ia terverifikasi.
        "Drill endgame" bukan lagi janji — ia angka. */
     if(m.tema && hitungKur && m.n > 0){
