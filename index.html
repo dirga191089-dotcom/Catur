@@ -506,6 +506,8 @@
   .cpct{grid-area:pct;font-family:var(--mono);font-weight:600;font-size:13px;text-align:right}
   .clg{grid-area:lg;font-family:var(--mono);font-size:11px;color:var(--no);line-height:1.4}
   .cok{color:var(--ok)}
+  .anoTag{font-family:var(--mono);font-size:9.5px;color:var(--warn);border:1px solid var(--warn);
+    border-radius:99px;padding:1px 7px;white-space:nowrap}
   .clibur{color:var(--sky);font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em}
   .cskip{color:var(--warn);font-family:var(--mono);font-size:10.5px;margin-left:8px}
   .btn-libur{margin-left:8px;font-family:var(--mono);font-size:10px;padding:2px 8px;cursor:pointer;
@@ -538,6 +540,8 @@
   .tchip{font-family:var(--mono);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:3px 9px;color:var(--ink)}
   .cdet-lg{font-family:var(--mono);font-size:12px;color:var(--no)}
   .coach-op{font-family:var(--sans);font-size:12px;color:var(--soft);margin:0 0 8px}
+  .ev-wrap{margin:0 0 10px}
+  .ev{width:100%;height:64px;display:block;background:var(--paper);border-radius:var(--r)}
   .coach-vonis{font-family:var(--serif);font-size:14px;line-height:1.55;color:var(--ink);
     background:var(--paper);border-left:3px solid var(--gold);border-radius:var(--r);padding:9px 12px;margin:0 0 10px}
   .coach-lbl{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
@@ -729,6 +733,18 @@ Object.assign(EN, {
   "Tidak ada kelemahan menonjol dari partai rapid \u2014 lanjutkan kurikulum biasa.":"No standout weakness from rapid games \u2014 continue the usual curriculum.",
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
   "ISTIRAHAT RESMI":"OFFICIAL REST DAY", "tandai hari libur":"mark as rest day", "batalkan libur":"undo rest day",
+  "belum dianotasi":"not annotated", "anotasi":"annotate", "Rating":"Rating", "Belum ada partai.":"No games yet.",
+  "Rata-rata pikir":"Avg. think time", "rata-rata pikir":"avg. think time", "per langkah":"per move",
+  "Langkah <5 detik":"Moves under 5s", "Salah tanpa pikir":"Errors without thinking",
+  "salah tanpa pikir":"errors without thinking", "<5 detik":"under 5s",
+  "Kurva keunggulan":"Advantage curve", "jatuh terbesar di langkah {a}":"biggest drop at move {a}",
+  "{a} kesalahan serius dimainkan dalam <5 detik \u2014 bukan karena tidak tahu, tapi karena tidak berpikir":"{a} serious errors were played in under 5 seconds \u2014 not from lack of knowledge, but from not thinking",
+  "{a}% langkah dimainkan <5 detik (rata-rata {b} detik/langkah) \u2014 terlalu cepat untuk rapid":"{a}% of moves were played in under 5s (avg {b}s per move) \u2014 too fast for rapid",
+  "Tempo berpikir bagus: rata-rata {a} detik/langkah, hanya {b}% langkah terburu":"Good thinking tempo: {a}s per move on average, only {b}% rushed",
+  "Kesalahannya terjadi SETELAH berpikir panjang \u2014 ini soal kemampuan hitung, bukan ketergesaan. Latih taktik berlapis, bukan kecepatan.":"The errors came AFTER long thought \u2014 this is calculation ability, not haste. Train layered tactics, not speed.",
+  "{a} partai belum dianotasi mesin":"{a} games have no engine analysis",
+  "partai punya analisis mesin.":"games have engine analysis.",
+  "Tanpa anotasi, pelatih hanya bisa menebak dari hasil dan jumlah langkah. Buka partainya di Lichess, tekan 'Request computer analysis' (gratis), lalu tarik data lagi \u2014 review langsung jadi tepat.":"Without annotation the coach can only guess from result and move count. Open the game on Lichess, press 'Request computer analysis' (free), then pull data again \u2014 the review becomes precise.",
   "kunci tilt dilewati {a}\u00d7":"tilt lock skipped {a}\u00d7", "tilt dilewati {a}\u00d7":"tilt skipped {a}\u00d7",
   "Diagnosa verifikasi tema":"Theme verification diagnosis", "OTOMATIS":"AUTOMATIC", "MANUAL":"MANUAL",
   "URL Web App /exec terisi":"Web App /exec URL filled", "Data termuat via /exec":"Data loaded via /exec",
@@ -1343,7 +1359,7 @@ async function fetchAll(){
         getJSON(`https://lichess.org/api/user/${u}`),
         getJSON(`https://lichess.org/api/user/${u}/activity`),
         getJSON(`https://lichess.org/api/user/${u}/rating-history`),
-        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true&evals=true`),
+        getNDJSON(`https://lichess.org/api/games/user/${u}?max=100&opening=true&evals=true&clocks=true`),
         // Performa PER TEMA, 30 hari. Butuh token (puzzle:read).
         T_ ? getJSONAuth(`https://lichess.org/api/puzzle/dashboard/30`, T_)
            : Promise.reject(new Error("tanpa token")),
@@ -1557,25 +1573,58 @@ function normGames(){
     let res = "R";
     if(g.winner) res = (g.winner === (isW ? "white" : "black")) ? "M" : "K";
     const lgk = langkahLI(g.moves);
-    let blunder = null;
+    /* WAKTU BERPIKIR. clocks[] = sisa waktu (centidetik) SETELAH tiap ply.
+       Waktu yang dipakai pada ply-i = sisa sebelumnya \u2212 sisa sekarang + increment. */
+    const CEPAT = 5;                       // detik; di bawah ini dianggap tanpa berpikir
+    let waktu = null;
+    if(Array.isArray(g.clocks) && g.clocks.length && g.clock){
+      const inc = (g.clock.increment || 0), awal = (g.clock.initial || 0) * 100;
+      const pakai = [];                    // detik per ply milik anak
+      g.clocks.forEach((c, ply) => {
+        if(((ply % 2 === 0) === isW) === false) return;
+        const prev = ply >= 2 ? g.clocks[ply-2] : awal;
+        const detik = (prev - c) / 100 + inc;
+        pakai[ply] = detik >= 0 ? detik : null;
+      });
+      const ada = pakai.filter(v => v != null && isFinite(v));
+      waktu = {
+        perPly: pakai,
+        rata: ada.length ? ada.reduce((a,b)=>a+b,0) / ada.length : null,
+        cepat: ada.filter(v => v < CEPAT).length,
+        total: ada.length,
+        kontrol: g.clock.initial || null,
+      };
+    }
+
+    let blunder = null, evalSeri = null;
     if(Array.isArray(g.analysis) && g.analysis.length){
-      blunder = { op:0, mid:0, eg:0, blunder:0, mistake:0, inaccuracy:0 };
+      blunder = { op:0, mid:0, eg:0, blunder:0, mistake:0, inaccuracy:0, cepatSalah:0, dalamSalah:0, gratis:0 };
+      evalSeri = [];
       g.analysis.forEach((a, ply) => {
-        if(!a || !a.judgment) return;
+        if(!a) return;
+        // Kurva eval dari sudut pandang ANAK (positif = anak unggul).
+        let ev = a.mate != null ? (a.mate > 0 ? 1000 : -1000)
+               : (a.eval != null ? Math.max(-1000, Math.min(1000, a.eval)) : null);
+        if(ev != null) evalSeri.push(isW ? ev : -ev);
+        if(!a.judgment) return;
         if(((ply % 2 === 0) === isW) === false) return;
         const nm = a.judgment.name;
         if(nm === "Inaccuracy"){ blunder.inaccuracy++; return; }
         if(nm === "Blunder") blunder.blunder++; else blunder.mistake++;
         const mv = Math.floor(ply/2) + 1;
         blunder[mv <= 12 ? "op" : mv <= 30 ? "mid" : "eg"]++;
+        // Kesalahan yang dimainkan TANPA berpikir vs setelah berpikir panjang.
+        const dt = waktu && waktu.perPly ? waktu.perPly[ply] : null;
+        if(dt != null){ if(dt < CEPAT) blunder.cepatSalah++; else if(dt >= 20) blunder.dalamSalah++; }
       });
+      if(!evalSeri.length) evalSeri = null;
     }
     out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
       putih: isW, langkah: lgk, mini: res === "K" && lgk != null && lgk < MINI,
       rating: my.rating, opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
       acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
       url: "https://lichess.org/" + g.id, opening: g.opening ? esc(g.opening.name) : null,
-      eco: g.opening ? g.opening.eco : null, blunder });
+      eco: g.opening ? g.opening.eco : null, blunder, waktu, evalSeri });
   });
   _ng = out.sort((a,b)=>b.t-a.t); _ngAt = kunci;
   return _ng;
@@ -2544,6 +2593,18 @@ function coachPartai(hari){
       if(b.inaccuracy >= 5) lemah.push(tr("{a} impresisi \u2014 banyak langkah 'hampir benar'; biasanya karena waktu berpikir kurang", {a:b.inaccuracy}));
       if(b.blunder === 0 && b.mistake > 0) kuat.push(tr("Tidak ada blunder besar; kesalahannya masih tingkat menengah"));
     }
+    const w = g.waktu;
+    if(w && w.total){
+      const persenCepat = Math.round(100 * w.cepat / w.total);
+      if(b && b.cepatSalah > 0)
+        lemah.push(tr("{a} kesalahan serius dimainkan dalam <5 detik \u2014 bukan karena tidak tahu, tapi karena tidak berpikir", {a:b.cepatSalah}));
+      if(persenCepat >= 50)
+        lemah.push(tr("{a}% langkah dimainkan <5 detik (rata-rata {b} detik/langkah) \u2014 terlalu cepat untuk rapid", {a:persenCepat, b:w.rata.toFixed(1)}));
+      else if(persenCepat <= 20 && w.rata >= 8)
+        kuat.push(tr("Tempo berpikir bagus: rata-rata {a} detik/langkah, hanya {b}% langkah terburu", {a:w.rata.toFixed(1), b:persenCepat}));
+      if(b && b.dalamSalah > 0 && b.cepatSalah === 0)
+        catatan.push(tr("Kesalahannya terjadi SETELAH berpikir panjang \u2014 ini soal kemampuan hitung, bukan ketergesaan. Latih taktik berlapis, bukan kecepatan."));
+    }
     if(g.langkah != null){
       if(g.res === "K" && g.langkah < 20) lemah.push(tr("Partai berakhir sangat cepat ({a} langkah) \u2014 kekalahan terjadi sebelum permainan sungguhan dimulai", {a:g.langkah}));
       if(g.res === "M" && g.langkah > 45) kuat.push(tr("Menang lewat partai panjang ({a} langkah) \u2014 kesabaran dan stamina bagus", {a:g.langkah}));
@@ -2589,8 +2650,11 @@ function coachRingkas(hari){
   const totalSerius = fase.op+fase.mid+fase.eg;
   const rate = dian ? (totalSerius/dian) : null;
   const rating = L.length ? L[0].g.rating : null;
+  const wl = L.map(x=>x.g.waktu).filter(Boolean);
+  const tempo = wl.length ? wl.reduce((a,w)=>a+(w.rata||0),0)/wl.length : null;
+  const cepatSalah = L.some(x=>x.g.blunder) ? L.reduce((a,x)=>a+((x.g.blunder&&x.g.blunder.cepatSalah)||0),0) : null;
   const urut = Object.entries(fase).sort((a,b)=>b[1]-a[1]);
-  return { L, n, dian, accRata, M, K, R, fase, totalSerius, rate, rating, terlemah: urut[0], terkuat: urut[urut.length-1] };
+  return { L, n, dian, accRata, M, K, R, fase, totalSerius, rate, rating, tempo, cepatSalah, terlemah: urut[0], terkuat: urut[urut.length-1] };
 }
 
 function coachCatatanOrtu(){
@@ -2624,6 +2688,34 @@ function coachCatatanOrtu(){
   return L.join("\n");
 }
 
+/* Kurva eval: menunjukkan KAPAN partai berbalik, dari sudut pandang anak.
+   Sumbu Y dipotong di +-1000cp; garis nol = posisi seimbang. */
+function kurvaEval(g){
+  const E = g.evalSeri;
+  if(!E || E.length < 4) return "";
+  const W = 320, H = 64, pad = 2;
+  const n = E.length;
+  const x = i => pad + (W - 2*pad) * (i / (n - 1));
+  const y = v => H/2 - (Math.max(-1000, Math.min(1000, v)) / 1000) * (H/2 - pad);
+  const d = E.map((v,i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+  const area = d + ` L ${x(n-1).toFixed(1)} ${H/2} L ${x(0).toFixed(1)} ${H/2} Z`;
+  // Titik jatuh terbesar (dari sudut anak) — momen partai berbalik.
+  let jatuh = 0, idx = -1;
+  for(let i = 1; i < n; i++){ const dd = E[i-1] - E[i]; if(dd > jatuh){ jatuh = dd; idx = i; } }
+  const tanda = (idx > 0 && jatuh >= 200)
+    ? `<circle cx="${x(idx).toFixed(1)}" cy="${y(E[idx]).toFixed(1)}" r="3.5" fill="var(--no)"/>` : "";
+  const lgkJatuh = idx > 0 ? Math.floor(idx/2) + 1 : null;
+  return `<div class="ev-wrap">
+    <div class="cdet-lbl">${tr("Kurva keunggulan")}${lgkJatuh ? ` \u00b7 ${tr("jatuh terbesar di langkah {a}", {a:lgkJatuh})}` : ""}</div>
+    <svg class="ev" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="var(--rule)" stroke-width="1"/>
+      <path d="${area}" fill="var(--navy)" opacity=".10"/>
+      <path d="${d}" fill="none" stroke="var(--navy)" stroke-width="1.6" stroke-linejoin="round"/>
+      ${tanda}
+    </svg>
+  </div>`;
+}
+
 function viewCoach(){
   const C = coachRingkas(7);
   const badge = r => r==="M" ? ["w","M"] : r==="K" ? ["l","K"] : ["d","R"];
@@ -2652,6 +2744,12 @@ function viewCoach(){
         <span class="tchip">${tr("Akhir")} ${b.eg}</span>
         ${b.inaccuracy?`<span class="tchip">${tr("Impresisi")} ${b.inaccuracy}</span>`:""}
       </div></div>`:""}
+      ${x.g.waktu && x.g.waktu.total ? `<div class="cdet-grid" style="margin-top:0">
+        <div><span>${tr("Rata-rata pikir")}</span><b>${x.g.waktu.rata.toFixed(1)}s</b></div>
+        <div><span>${tr("Langkah <5 detik")}</span><b>${x.g.waktu.cepat}/${x.g.waktu.total}</b></div>
+        ${b && b.cepatSalah ? `<div><span>${tr("Salah tanpa pikir")}</span><b style="color:var(--no)">${b.cepatSalah}</b></div>` : ""}
+      </div>` : ""}
+      ${kurvaEval(x.g)}
       ${x.g.opening?`<div class="coach-op">${tr("Pembukaan")}: <b>${esc(x.g.opening)}</b></div>`:""}
       <div class="coach-vonis">${x.vonis}</div>
       ${x.kuat.length?`<div class="coach-lbl coach-plus">${tr("Kekuatan")}</div><ul class="coach-ul">${x.kuat.map(t=>`<li>${t}</li>`).join("")}</ul>`:""}
@@ -2663,12 +2761,16 @@ function viewCoach(){
   return `<section class="box">
     <h2>${tr("Coach")}</h2>
     <p class="csub">${tr("Review otomatis tiap partai rapid, dari analisis mesin Lichess.")}
-      ${C.dian < C.n ? `<br><b>${C.dian}/${C.n}</b> ${tr("partai punya analisis mesin. Sisanya: minta 'Request computer analysis' di Lichess agar review lengkap.")}` : ""}</p>
+      ${C.dian < C.n ? `<br><b>${C.dian}/${C.n}</b> ${tr("partai punya analisis mesin.")}` : ""}</p>
+    ${C.dian < C.n ? `<div class="warnbox" style="margin-bottom:14px"><b>${tr("{a} partai belum dianotasi mesin", {a: C.n - C.dian})}</b>
+      ${tr("Tanpa anotasi, pelatih hanya bisa menebak dari hasil dan jumlah langkah. Buka partainya di Lichess, tekan 'Request computer analysis' (gratis), lalu tarik data lagi \u2014 review langsung jadi tepat.")}</div>` : ""}
     <div class="cards">
       <div class="kpi" style="--tone:var(--navy)"><b>${C.n}</b><i>${tr("partai rapid")}</i><small>${C.M}M / ${C.R}R / ${C.K}K</small></div>
       <div class="kpi" style="--tone:var(--sky)"><b>${C.accRata!=null?C.accRata.toFixed(1)+"%":"\u2014"}</b><i>${tr("akurasi rata-rata")}</i><small>${tr("7 hari")}</small></div>
       <div class="kpi" style="--tone:var(--no)"><b>${C.rate!=null?C.rate.toFixed(1):"\u2014"}</b><i>${tr("kesalahan/partai")}</i><small>${tr("makin kecil makin baik")}</small></div>
       <div class="kpi" style="--tone:var(--gold)"><b>${C.rating!=null?C.rating:"\u2014"}</b><i>${tr("rating rapid")}</i><small>${tr("terakhir")}</small></div>
+      ${C.tempo!=null?`<div class="kpi" style="--tone:var(--teal)"><b>${C.tempo.toFixed(1)}s</b><i>${tr("rata-rata pikir")}</i><small>${tr("per langkah")}</small></div>`:""}
+      ${C.cepatSalah!=null?`<div class="kpi" style="--tone:var(--no)"><b>${C.cepatSalah}</b><i>${tr("salah tanpa pikir")}</i><small>${tr("<5 detik")}</small></div>`:""}
     </div>
     ${C.dian && C.totalSerius ? `<div class="coach-sum">
       <div><span class="coach-lbl coach-minus">${tr("Fase terlemah")}</span><b>${namaFase(C.terlemah[0])}</b> \u2014 ${C.terlemah[1]} ${tr("kesalahan")}</div>
@@ -3550,26 +3652,26 @@ function renderGames(){
   $$("#filt button").forEach(b => b.onclick = () => { S.filter = b.dataset.f; persist(); render(); });
   const f = S.filter || "semua";
   const G = normGames().filter(g => f === "semua" || (f === "mini" ? g.mini : g.site === f));
-  if(!G.length){ el.innerHTML = `<div class="empty">${f==="semua"?tr("Belum ada partai dari kedua situs."):f==="mini"?tr("Tidak ada kekalahan miniatur. Bagus."):tr("Belum ada partai di {a}.",{a:f})}</div>`; return; }
+  if(!G.length){ el.innerHTML = `<div class="empty">${f==="semua"?tr("Belum ada partai."):f==="mini"?tr("Tidak ada kekalahan miniatur. Bagus."):tr("Belum ada partai di {a}.",{a:f})}</div>`; return; }
   // Rating antar-situs BUKAN skala yang sama. Menaruhnya di satu kolom
   // membuat 1462 dan 1180 terlihat sebanding — dan itu kesimpulan yang salah.
   const rows = G.slice(0,60).map(g=>{
     const cls = g.res==="M"?"w":g.res==="K"?"l":"d";
-    const li = g.site === "Lichess";
+    /* Partai tanpa analisis mesin membuat pelatih otomatis menebak. Ditandai
+       supaya pelatih/ortu tahu harus menekan "Request computer analysis". */
+    const belum = !g.blunder;
     return `<tr class="${g.mini?"mini":""}">
       <td>${new Date(g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"2-digit"})}</td>
       <td>${g.speed}${g.langkah!=null?` <span style="color:var(--soft)">${g.langkah}\u2113</span>`:""}${g.mini?`<span class="miniTag">${tr("MINIATUR")}</span>`:""}</td>
       <td>${g.opp} <span style="color:var(--soft)">${g.oppRating||""}</span></td>
       <td class="${cls}">${g.res}</td>
-      <td style="text-align:right;color:var(--navy);font-weight:${li?600:400}">${li ? g.rating||"\u2014" : ""}</td>
-      <td style="text-align:right;color:var(--gold);font-weight:${li?400:600}">${li ? "" : g.rating||"\u2014"}</td>
-      <td>${g.acc!=null?g.acc.toFixed(1)+"%":"\u2014"}</td>
-      <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">${tr("buka")}</a></td></tr>`;
+      <td style="text-align:right;color:var(--navy);font-weight:600">${g.rating||"\u2014"}</td>
+      <td>${g.acc!=null?g.acc.toFixed(1)+"%":`<span class="anoTag">${tr("belum dianotasi")}</span>`}</td>
+      <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">${belum?tr("anotasi")+" \u2197":tr("buka")}</a></td></tr>`;
   }).join("");
   el.innerHTML = `<table>
     <tr><th>${tr("Tgl")}</th><th>${tr("Kontrol")}</th><th>${tr("Lawan")}</th><th>${tr("Hasil")}</th>
-      <th style="text-align:right;color:var(--navy)">${tr("Rating LI")}</th>
-      <th style="text-align:right;color:var(--gold)">${tr("Rating CC")}</th>
+      <th style="text-align:right;color:var(--navy)">${tr("Rating")}</th>
       <th>${tr("Akurasi")}</th><th></th></tr>${rows}</table>`;
 }
 
