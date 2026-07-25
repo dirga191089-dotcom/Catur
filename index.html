@@ -540,6 +540,18 @@
   .tchip{font-family:var(--mono);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:3px 9px;color:var(--ink)}
   .cdet-lg{font-family:var(--mono);font-size:12px;color:var(--no)}
   .coach-op{font-family:var(--sans);font-size:12px;color:var(--soft);margin:0 0 8px}
+  .refl{display:flex;flex-direction:column;gap:8px}
+  .refl-b{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+    font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--card);
+    border:1px solid var(--rule);border-radius:var(--r);padding:11px 13px;min-height:48px;
+    transition:border-color .15s,background .15s}
+  .refl-b:hover{border-color:var(--soft)}
+  .refl-b.on{border-color:var(--gold);border-left-width:3px;background:var(--paper);font-weight:600}
+  .refl-e{font-size:20px;line-height:1}
+  .refl-lock{margin:0 0 12px}
+  .refl-lock .refl-b{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.22)}
+  .refl-lock .refl-b.on{background:rgba(255,255,255,.14);border-color:var(--gold-lite)}
+  .refl-say{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:14px;color:var(--ink)}
   .ev-wrap{margin:0 0 10px}
   .ev{width:100%;height:64px;display:block;background:var(--paper);border-radius:var(--r)}
   .coach-vonis{font-family:var(--serif);font-size:14px;line-height:1.55;color:var(--ink);
@@ -734,6 +746,17 @@ Object.assign(EN, {
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
   "ISTIRAHAT RESMI":"OFFICIAL REST DAY", "tandai hari libur":"mark as rest day", "batalkan libur":"undo rest day",
   "belum dianotasi":"not annotated", "anotasi":"annotate", "Rating":"Rating", "Belum ada partai.":"No games yet.",
+  "Bagaimana permainanmu hari ini?":"How did you play today?",
+  "Jawab jujur \u2014 tidak ada yang salah. Ini untuk kamu sendiri.":"Answer honestly \u2014 there is no wrong answer. This is for you.",
+  "Saya main terlalu terburu-buru":"I played too fast",
+  "Saya salah hitung taktik/ancaman":"I miscalculated tactics/threats",
+  "Saya sedang lelah/jenuh":"I was tired/bored",
+  "Sambil menunggu, menurutmu apa yang terjadi tadi?":"While you wait \u2014 what do you think happened?",
+  "Kata anak hari ini":"What the child said today",
+  "Gunakan ini sebagai pembuka obrolan, bukan sebagai bukti anak keliru.":"Use this to open a conversation, not as proof the child was wrong.",
+  "Data setuju: {a}% langkah dimainkan di bawah 5 detik.":"The data agrees: {a}% of moves were played under 5 seconds.",
+  "Data setuju: kesalahannya terjadi setelah berpikir panjang \u2014 ini memang soal kemampuan hitung.":"The data agrees: the errors came after long thought \u2014 this really is about calculation.",
+  "Kalau ini berulang, pertimbangkan menandai hari libur resmi di tab Kepatuhan \u2014 istirahat terencana bagian dari latihan.":"If this repeats, consider marking an official rest day in the Compliance tab \u2014 planned rest is part of training.",
   "Rata-rata pikir":"Avg. think time", "rata-rata pikir":"avg. think time", "per langkah":"per move",
   "Langkah <5 detik":"Moves under 5s", "Salah tanpa pikir":"Errors without thinking",
   "salah tanpa pikir":"errors without thinking", "<5 detik":"under 5s",
@@ -1066,7 +1089,7 @@ const anakKosong = (nama) => ({
   tier:1, targets:null, manual:null, checks:{}, notes:{}, snaps:{},
   data:null, fetchedAt:0, filter:"semua",
 });
-const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip"];
+const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip","refleksi"];
 function anakAktif(){ return DB.anak.find(a => a.id === DB.aktif) || DB.anak[0] || null; }
 function muatAnak(){
   const a = anakAktif(); if(!a) return;
@@ -1075,6 +1098,7 @@ function muatAnak(){
   S.tiltLewat = a.tiltLewat;
   S.libur = a.libur || {};          // { "2026-07-18": true } — hari libur resmi
   S.tiltSkip = a.tiltSkip || {};    // { "2026-07-18": 2 } — kunci tilt dilewati
+  S.refleksi = a.refleksi || {};    // { "2026-07-18": "cepat"|"hitung"|"lelah" }
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
@@ -1653,39 +1677,28 @@ function buildQuests(){
     t:tr("Total partai maksimal {a}",{a:T.gameMax}), src:tr("Pagar anti-tilt: bermain berlebihan setelah kalah menurunkan rating.") });
 
   const hitungKur = temaHitung(dk);
-  /* Batas harian: 2 tema kurikulum + 2 tema hasil review partai, masing-masing
-     TEMA_TARGET puzzle. Lebih dari itu, anak menghabiskan waktu berpindah tema
-     alih-alih mendalami satu pola. */
-  const TEMA_TARGET = 10, MAKS_KURIKULUM = 2, MAKS_REVIEW = 2;
-  /* ROTASI HARIAN. Tanpa ini, hanya 2 tema kurikulum PERTAMA yang pernah muncul
-     dan sisanya tak pernah dapat giliran. Indeks digeser berdasarkan nomor hari,
-     jadi seluruh kurikulum terlewati bergantian dan berulang secara adil.
-     Pergeserannya deterministik: hari yang sama selalu memberi tema yang sama. */
-  const semuaTugas = manualTasks();
-  const idxTema = semuaTugas.map((m,i) => m.tema ? i : -1).filter(i => i >= 0);
-  const nomorHari = Math.floor(new Date(dk + "T00:00:00").getTime() / 864e5);
-  const giliran = new Set();
-  if(idxTema.length){
-    const ambil = Math.min(MAKS_KURIKULUM, idxTema.length);
-    const mulai = ((nomorHari * ambil) % idxTema.length + idxTema.length) % idxTema.length;
-    for(let k = 0; k < ambil; k++) giliran.add(idxTema[(mulai + k) % idxTema.length]);
-  }
-  semuaTugas.forEach((m,i) => {
-    if(m.tema && !giliran.has(i)) return;   // bukan giliran hari ini
-    /* Kalau tugas punya tema Lichess DAN token tersedia, ia terverifikasi.
-       "Drill endgame" bukan lagi janji — ia angka. */
-    if(m.tema && hitungKur && m.n > 0){
-      const now = hitungKur[m.tema] || 0, goal = TEMA_TARGET;
-      q.push({ auto:true, tema:m.tema, ok: now >= goal, now, goal,
-        t: tr(m.teks) + tr(" \u2014 {a} puzzle", {a:goal}),
-        src: tr("Kurikulum {a} — terverifikasi dari tema puzzle Lichess", {a:tier().nama}) });
+  const TEMA_TARGET = 10, MAKS_REVIEW = 2;
+  /* KURIKULUM HARIAN dipilih COACH dari kolam tema tier, berotasi tiap hari.
+     Tak lagi bergantung pada daftar tema yang diketik manual. */
+  kurikulumHariIni(dk).forEach((tm, i) => {
+    const idx = 400 + i;
+    if(hitungKur){
+      const now = hitungKur[tm] || 0;
+      q.push({ auto:true, tema:tm, ok: now >= TEMA_TARGET, now, goal:TEMA_TARGET,
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(tm), b: TEMA_TARGET}),
+        src: tr("Kurikulum {a} \u2014 dipilih coach hari ini, terverifikasi dari Lichess", {a:tier().nama}) });
     } else {
-      q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i],
-        tema: m.tema || null, t: tr(m.teks),
-        src: m.tema
-          ? tr("Kurikulum — butuh token Lichess untuk diverifikasi. Sementara ini: centang manual.")
-          : tr("Manual — dicentang pelatih atau orang tua") });
+      q.push({ auto:false, tema:tm, idx, ok: !!(S.checks[dk]||{})["m"+idx],
+        t: tr("Latih {a}: {b} puzzle", {a: temaNama(tm), b: TEMA_TARGET}),
+        src: tr("Kurikulum {a} \u2014 dipilih coach hari ini (butuh backend tema untuk verifikasi)", {a:tier().nama}) });
     }
+  });
+  /* Tugas kurikulum LURING (tanpa tema) dari daftar tetap tampil sebagai centang
+     manual: baca partai, anotasi sendiri, analisis bersama pelatih. */
+  manualTasks().forEach((m,i) => {
+    if(m.tema) return;   // tema kini dipilih coach dari kolam, bukan daftar manual
+    q.push({ auto:false, idx:i, ok: !!(S.checks[dk]||{})["m"+i],
+      tema:null, t: tr(m.teks), src: tr("Manual \u2014 dicentang pelatih atau orang tua") });
   });
   // ── Fokus dari analisa partai rapid terakhir (rencanaPuzzle) ──
   // Rekomendasi tema jadi TUGAS quest, bukan sekadar saran. Auto-verified sama
@@ -2005,6 +2018,65 @@ async function ujiKoneksi(){
 }
 
 /* ═══════════ TAMPILAN: ANAK ═══════════ */
+/* ═══════════ JURNAL REFLEKSI ═══════════
+   Anak menilai dirinya sendiri; mesin menilai datanya. Selisih keduanya jadi
+   bahan obrolan, bukan penghakiman. Sengaja hanya 3 pilihan: anak lelah setelah
+   kalah, dan daftar panjang tidak akan diisi jujur. */
+const REFLEKSI = [
+  { id:"cepat",  emo:"\ud83c\udfc3", teks:"Saya main terlalu terburu-buru" },
+  { id:"hitung", emo:"\ud83e\udde0", teks:"Saya salah hitung taktik/ancaman" },
+  { id:"lelah",  emo:"\ud83e\udd71", teks:"Saya sedang lelah/jenuh" },
+];
+function refleksiHari(dk){ return (S.refleksi || {})[dk || todayKey()] || null; }
+function setRefleksi(id){
+  S.refleksi = S.refleksi || {};
+  const dk = todayKey();
+  if(S.refleksi[dk] === id) delete S.refleksi[dk]; else S.refleksi[dk] = id;
+  persist(); render();
+}
+function kartuRefleksi(){
+  const dk = todayKey(), pilih = refleksiHari(dk);
+  const g = gamesOn(dk);
+  if(!g.total && !pilih) return "";        // belum main: tak perlu ditanya
+  return `<section class="box st2">
+    ${H2("edit", tr("Bagaimana permainanmu hari ini?"))}
+    <p class="csub">${tr("Jawab jujur \u2014 tidak ada yang salah. Ini untuk kamu sendiri.")}</p>
+    <div class="refl">
+      ${REFLEKSI.map(r => `<button class="refl-b${pilih===r.id?" on":""}" data-refl="${r.id}">
+        <span class="refl-e">${r.emo}</span><span>${tr(r.teks)}</span></button>`).join("")}
+    </div>
+  </section>`;
+}
+/* Bandingkan pengakuan anak dengan data mesin. Tujuannya BUKAN membuktikan anak
+   salah, tapi memberi ortu/pelatih pembuka obrolan yang berbasis fakta. */
+function refleksiVsMesin(dk){
+  const pilih = refleksiHari(dk);
+  if(!pilih) return null;
+  const L = coachPartai(1).filter(x => dayKey(x.g.t) === dk);
+  if(!L.length) return { pilih, catatan:null };
+  let cepatSalah = 0, totalCepat = 0, totalLangkah = 0, dalamSalah = 0;
+  L.forEach(x => {
+    if(x.g.blunder){ cepatSalah += x.g.blunder.cepatSalah || 0; dalamSalah += x.g.blunder.dalamSalah || 0; }
+    if(x.g.waktu){ totalCepat += x.g.waktu.cepat || 0; totalLangkah += x.g.waktu.total || 0; }
+  });
+  const persen = totalLangkah ? Math.round(100*totalCepat/totalLangkah) : null;
+  let catatan = null, cocok = null;
+  if(pilih === "cepat"){
+    cocok = persen != null && persen >= 35;
+    catatan = persen == null ? null : cocok
+      ? tr("Data setuju: {a}% langkah dimainkan di bawah 5 detik.", {a:persen})
+      : tr("Menariknya data tidak menunjukkan itu \u2014 hanya {a}% langkah di bawah 5 detik. Mungkin yang terasa terburu-buru sebenarnya beberapa langkah kunci saja.", {a:persen});
+  } else if(pilih === "hitung"){
+    cocok = cepatSalah === 0 && dalamSalah > 0;
+    catatan = cepatSalah > 0
+      ? tr("Perlu dibicarakan: {a} kesalahan justru dimainkan di bawah 5 detik. Sebagian mungkin bukan soal hitungan, tapi soal waktu berpikir.", {a:cepatSalah})
+      : (dalamSalah > 0 ? tr("Data setuju: kesalahannya terjadi setelah berpikir panjang \u2014 ini memang soal kemampuan hitung.") : null);
+  } else if(pilih === "lelah"){
+    catatan = tr("Kalau ini berulang, pertimbangkan menandai hari libur resmi di tab Kepatuhan \u2014 istirahat terencana bagian dari latihan.");
+  }
+  return { pilih, catatan, cocok, persen, cepatSalah, dalamSalah };
+}
+
 function viewMisi(){
   const dk = todayKey(), T = targets();
   const P = pelatih();
@@ -2096,6 +2168,7 @@ function viewProgres(){
     <div class="strip" id="strip"></div>
   </section>
   <div class="plats" id="plats"></div>
+  ${kartuRefleksi()}
   <section class="box st3">
     ${H2("chart", tr("Angkamu"))}
     <div id="summary"></div>
@@ -2750,6 +2823,17 @@ function viewCoach(){
       <div><span class="coach-lbl coach-minus">${tr("Fase terlemah")}</span><b>${namaFase(C.terlemah[0])}</b> \u2014 ${C.terlemah[1]} ${tr("kesalahan")}</div>
       <div><span class="coach-lbl coach-plus">${tr("Fase terkuat")}</span><b>${namaFase(C.terkuat[0])}</b> \u2014 ${C.terkuat[1]} ${tr("kesalahan")}</div>
     </div>` : ""}
+    ${(function(){
+      const R = refleksiVsMesin(todayKey());
+      if(!R) return "";
+      const r = REFLEKSI.find(x => x.id === R.pilih) || {};
+      return `<div class="cdetail" style="margin-bottom:14px">
+        <div class="cdet-lbl">${tr("Kata anak hari ini")}</div>
+        <div class="refl-say"><span class="refl-e">${r.emo||""}</span><b>${tr(r.teks||"")}</b></div>
+        ${R.catatan ? `<div class="coach-vonis" style="margin-top:8px">${R.catatan}</div>` : ""}
+        <div class="coach-saran">${tr("Gunakan ini sebagai pembuka obrolan, bukan sebagai bukti anak keliru.")}</div>
+      </div>`;
+    })()}
     <div class="cshare nocetak">
       <button class="btn" id="coPdf">${tr("Simpan PDF")}</button>
       <button class="btn go" id="coWa">${tr("Kirim catatan ke orang tua")}</button>
@@ -2915,6 +2999,7 @@ function wireKepatuhanShare(){
   const w = $("#cWa"), q = $("#cPdf");
   if(w) w.onclick = kepatuhanWA;
   if(q) q.onclick = kepatuhanPDF;
+  $$("[data-refl]").forEach(b => b.onclick = () => setRefleksi(b.dataset.refl));
   const bLb = $("#bLibur");
   if(bLb) bLb.onclick = () => toggleLibur(todayKey());
   const cw = $("#coWa");
@@ -3064,6 +3149,20 @@ const TEMA_TIER = {
   3: ["quietMove","defensiveMove","interference","zugzwang","xRayAttack","long","rookEndgame"],
   4: ["veryLong","zugzwang","quietMove","endgame","rookEndgame","queenEndgame","defensiveMove"],
 };
+
+/* Kurikulum harian: coach memilih 2 tema dari kolam tier (TEMA_TIER) secara
+   berotasi menurut nomor hari. Hasilnya BERBEDA tiap hari, semua tema kolam
+   kebagian bergiliran, dan tetap "sesuai kurikulum yang sudah ada" (tier).
+   Deterministik: tanggal yang sama selalu memberi tema yang sama di semua perangkat. */
+function kurikulumHariIni(dk){
+  const pool = TEMA_TIER[tier().id] || TEMA_TIER[1];
+  const ambil = Math.min(2, pool.length);
+  const hari = Math.floor(new Date(dk + "T00:00:00").getTime() / 864e5);
+  const mulai = ((hari * ambil) % pool.length + pool.length) % pool.length;
+  const out = [];
+  for(let k = 0; k < ambil; k++) out.push(pool[(mulai + k) % pool.length]);
+  return out;
+}
 
 function kemarinKey(){
   const d = new Date(); d.setDate(d.getDate()-1);
@@ -3809,6 +3908,11 @@ function renderKunci(){
       <p>${tr("Berdiri. Minum air. Lihat ke luar jendela. Jangan buka papan catur.")}</p>
       <div class="fine">${tr("Setelah tiga kekalahan beruntun, otak berhenti menghitung dan mulai membalas dendam. Ini terjadi pada semua orang, termasuk grandmaster. Yang membedakan pemain kuat bukan karena mereka tidak pernah tilt — tapi karena mereka berhenti.")}</div>
       <div class="fine">${tr("Layar ini tidak bisa menghentikanmu bermain. Kamu bisa membuka Lichess sekarang juga dan tidak ada yang mencegahmu. Ini bukan penjara — ini pengingat. Yang memutuskan tetap kamu.")}</div>
+      <div class="fine" style="margin-bottom:6px">${tr("Sambil menunggu, menurutmu apa yang terjadi tadi?")}</div>
+      <div class="refl refl-lock">
+        ${REFLEKSI.map(r => `<button class="refl-b${refleksiHari()===r.id?" on":""}" data-refl="${r.id}">
+          <span class="refl-e">${r.emo}</span><span>${tr(r.teks)}</span></button>`).join("")}
+      </div>
       <button id="bLewat">${tr("Saya mengerti, dan tetap ingin lanjut")}</button>
     </div></div>`;
     const b = $("#bLewat");
