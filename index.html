@@ -746,6 +746,10 @@ Object.assign(EN, {
   "Cek tanggal":"Check date", "Semua tanggal":"All dates", "Tema dikerjakan":"Themes done",
   "ISTIRAHAT RESMI":"OFFICIAL REST DAY", "tandai hari libur":"mark as rest day", "batalkan libur":"undo rest day",
   "belum dianotasi":"not annotated", "anotasi":"annotate", "Rating":"Rating", "Belum ada partai.":"No games yet.",
+  "Review partai rapid":"Rapid game review",
+  "disesuaikan coach otomatis":"auto-adjusted by coach",
+  "Diterapkan otomatis oleh coach \u2014 tak perlu tombol.":"Applied automatically by the coach \u2014 no button needed.",
+  "Target tidak diubah hari ini. Konsistensi lebih berharga daripada penyesuaian harian.":"Targets unchanged today. Consistency matters more than daily tweaks.",
   "Bagaimana permainanmu hari ini?":"How did you play today?",
   "Jawab jujur \u2014 tidak ada yang salah. Ini untuk kamu sendiri.":"Answer honestly \u2014 there is no wrong answer. This is for you.",
   "Saya main terlalu terburu-buru":"I played too fast",
@@ -1089,7 +1093,7 @@ const anakKosong = (nama) => ({
   tier:1, targets:null, manual:null, checks:{}, notes:{}, snaps:{},
   data:null, fetchedAt:0, filter:"semua",
 });
-const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip","refleksi"];
+const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip","refleksi","targetHari","targetLalu","targetAlasan"];
 function anakAktif(){ return DB.anak.find(a => a.id === DB.aktif) || DB.anak[0] || null; }
 function muatAnak(){
   const a = anakAktif(); if(!a) return;
@@ -1099,6 +1103,9 @@ function muatAnak(){
   S.libur = a.libur || {};          // { "2026-07-18": true } — hari libur resmi
   S.tiltSkip = a.tiltSkip || {};    // { "2026-07-18": 2 } — kunci tilt dilewati
   S.refleksi = a.refleksi || {};    // { "2026-07-18": "cepat"|"hitung"|"lelah" }
+  S.targetHari = a.targetHari || "";        // tanggal target harian terakhir diterapkan
+  S.targetLalu = a.targetLalu || null;      // target sebelum penyesuaian hari ini
+  S.targetAlasan = a.targetAlasan || [];
   S.cfg.name = a.nama;
   // Konfigurasi bakuan menang atas localStorage lama -> tak perlu input di HP/perangkat baru.
   if(BAKED_GS) S.cfg.gs = BAKED_GS;             // URL backend: dipaksa (sumber tunggal = file)
@@ -1655,6 +1662,20 @@ function losingStreakToday(){
 }
 
 /* ═══════════ render: tugas harian ═══════════ */
+/* Target harian diterapkan OTOMATIS, sekali sehari (tanpa tombol). Penjaga
+   tanggal WAJIB: penyesuaian seperti gameMax bersifat relatif terhadap target
+   saat ini, jadi kalau diterapkan berulang ia akan melorot terus. Snapshot lama
+   + alasan disimpan agar tampilan menunjukkan perubahan tanpa menghitung ulang. */
+function terapkanTargetHarian(){
+  if(S.targetHari === todayKey()) return;
+  const P = pelatih();
+  S.targetLalu = { ...targets() };
+  S.targets = { ...P.usul };
+  S.targetAlasan = P.alasanTarget || [];
+  S.targetHari = todayKey();
+  persist();
+}
+
 function buildQuests(){
   const dk = todayKey(), T = targets();
   const g = gamesOn(dk);
@@ -1738,8 +1759,8 @@ function buildQuests(){
    membeku di bahasa awal dan tidak ikut berganti. */
 const TABS = () => ({
   anak:    [["misi",tr("Misi hari ini")], ["progres",tr("Perkembanganku")]],
-  ortu:    [["hari",tr("Hari ini")], ["coach",tr("Coach")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")]],
-  pelatih: [["hari",tr("Hari ini")], ["coach",tr("Coach")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")], ["rencana",tr("Rencana")]],
+  ortu:    [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["minggu",tr("Rapor mingguan")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")]],
+  pelatih: [["hari",tr("Hari ini")], ["pelatih",tr("Pelatih")], ["analisis",tr("Analisis")], ["patuh",tr("Kepatuhan")], ["partai",tr("Partai")], ["rencana",tr("Rencana")]],
 });
 const TONE = { ok:"var(--ok)", warn:"var(--warn)", no:"var(--no)", teal:"var(--gold)",
                coral:"var(--gold-lite)", sky:"var(--navy)", gold:"var(--gold)", carbon:"var(--navy)" };
@@ -2405,13 +2426,15 @@ function viewPelatih(){
   const P = pelatih();
   const K = P.K, T = targets();
 
+  const lalu = (S.targetHari === todayKey() && S.targetLalu) ? S.targetLalu : T;
   const barisUsul = [
-    ["puzzle", tr("Puzzle"), T.puzzle, P.usul.puzzle],
-    ["rapid", tr("Partai rapid"), T.rapid, P.usul.rapid],
-    ["gameMax", tr("Batas partai"), T.gameMax, P.usul.gameMax],
-    ["bulletMax", tr("Batas bullet"), T.bulletMax, P.usul.bulletMax],
+    ["puzzle", tr("Puzzle"), lalu.puzzle, T.puzzle],
+    ["rapid", tr("Partai rapid"), lalu.rapid, T.rapid],
+    ["gameMax", tr("Batas partai"), lalu.gameMax, T.gameMax],
+    ["bulletMax", tr("Batas bullet"), lalu.bulletMax, T.bulletMax],
   ];
   const adaUbahan = barisUsul.some(([k,l,a,b]) => a !== b);
+  const alasanT = (S.targetHari === todayKey() && S.targetAlasan) ? S.targetAlasan : [];
 
   return `
   <section class="box">
@@ -2424,7 +2447,7 @@ function viewPelatih(){
   </section>
 
   <section class="box st1">
-    ${H2("target", tr("Target hari ini"), `${adaUbahan?tr("diubah dari kemarin"):tr("tidak berubah")}`)}
+    ${H2("target", tr("Target hari ini"), `${adaUbahan?tr("disesuaikan coach otomatis"):tr("tidak berubah")}`)}
     <div class="usul">
       ${barisUsul.map(([k,label,lama,baru])=>`
         <div class="${lama!==baru?"ubah":""}">
@@ -2432,12 +2455,10 @@ function viewPelatih(){
           <dd>${lama!==baru?`<s>${lama}</s>`:""}${baru}</dd>
         </div>`).join("")}
     </div>
-    ${P.alasanTarget.length ? `<div style="padding:0 12px 12px">
-      ${P.alasanTarget.map(a=>`<div class="note" style="margin-bottom:6px">${a}</div>`).join("")}
-    </div>` : `<div class="empty">${tr("Tidak ada alasan untuk mengubah target. Konsistensi lebih berharga daripada penyesuaian harian.")}</div>`}
-    ${adaUbahan && S.role === "pelatih" ? `<div class="pad" style="border-top:1px solid var(--rule)">
-      <button class="btn go" id="bTerapkan">${tr("Terapkan target ini")}</button>
-    </div>` : ""}
+    ${alasanT.length ? `<div style="padding:0 12px 12px">
+      ${alasanT.map(a=>`<div class="note" style="margin-bottom:6px">${a}</div>`).join("")}
+    </div>` : `<div class="empty">${tr("Target tidak diubah hari ini. Konsistensi lebih berharga daripada penyesuaian harian.")}</div>`}
+    <div class="empty" style="border-top:1px solid var(--rule)">${tr("Diterapkan otomatis oleh coach \u2014 tak perlu tombol.")}</div>
   </section>
 
   <section class="box st2">
@@ -2763,10 +2784,16 @@ function kurvaEval(g){
   </div>`;
 }
 
+/* Coach + Pelatih digabung: tak ada pelatih manusia, jadi satu tab pelatih AI.
+   Urutan: perencanaan (penilaian, target, fokus tema) lalu review partai. */
+function viewPelatihGabung(){
+  return viewPelatih() + viewCoach();
+}
+
 function viewCoach(){
   const C = coachRingkas(7);
   const badge = r => r==="M" ? ["w","M"] : r==="K" ? ["l","K"] : ["d","R"];
-  if(!C.n) return `<section class="box"><h2>${tr("Coach")}</h2>
+  if(!C.n) return `<section class="box"><h2>${tr("Review partai rapid")}</h2>
     <div class="empty">${tr("Belum ada partai rapid dalam 7 hari terakhir. Review muncul setelah anak main rapid di Lichess.")}</div></section>`;
 
   const namaFase = f => f==="op" ? tr("Pembukaan") : f==="eg" ? tr("Akhir permainan") : tr("Permainan tengah");
@@ -2806,7 +2833,7 @@ function viewCoach(){
   }).join("");
 
   return `<section class="box">
-    <h2>${tr("Coach")}</h2>
+    <h2>${tr("Review partai rapid")}</h2>
     <p class="csub">${tr("Review otomatis tiap partai rapid, dari analisis mesin Lichess.")}
       ${C.dian < C.n ? `<br><b>${C.dian}/${C.n}</b> ${tr("partai punya analisis mesin.")}` : ""}</p>
     ${C.dian < C.n ? `<div class="warnbox" style="margin-bottom:14px"><b>${tr("{a} partai belum dianotasi mesin", {a: C.n - C.dian})}</b>
@@ -3951,9 +3978,9 @@ function render(){
   const V = {
     misi: viewMisi, progres: viewProgres,
     hari: S.role==="pelatih" ? viewHariPelatih : viewHariOrtu,
-    pelatih: viewPelatih,
+    pelatih: viewPelatihGabung,
     minggu: viewMinggu, analisis: viewAnalisis, rencana: viewRencana,
-    partai: viewPartai, patuh: viewKepatuhan, coach: viewCoach, atur: viewAtur,
+    partai: viewPartai, patuh: viewKepatuhan, coach: viewPelatihGabung, atur: viewAtur,
   };
   $("#view").innerHTML = V[S.tab]();
 
@@ -3970,12 +3997,6 @@ function render(){
   if(qd) qd.textContent = new Date().toLocaleDateString(LOCALE(),{weekday:"long",day:"numeric",month:"long"});
 
   renderPilihAnak(); renderBagi();
-  const bTp = $("#bTerapkan");
-  if(bTp) bTp.onclick = async () => {
-    S.targets = { ...pelatih().usul };
-    await persist();
-    S.tab = "hari"; render();
-  };
   renderTodos(); renderKPIs(); renderAlerts(); renderNotes(); renderPlatforms(); renderRatings();
   renderStrip(); renderSummary(); renderGames(); renderPlan(); renderAtur(); wireKepatuhanShare();
   if($("#chart")) renderChart("chart", ratingSeries(), false);
@@ -4106,6 +4127,7 @@ document.addEventListener("visibilitychange", () => {
   S.role = DB.role || "ortu";
   S.tab  = DB.tab  || "hari";
   muatAnak();
+  terapkanTargetHarian();
 
   $$(".who button[data-role]").forEach(x=>x.classList.toggle("on", x.dataset.role===S.role));
   terapkanTema();
@@ -4120,6 +4142,7 @@ async function gantiAnak(id){
   simpanAnak();
   DB.aktif = id;
   muatAnak();
+  terapkanTargetHarian();
   await Store.save(DB);
   render();
   if((S.cfg.chess||S.cfg.lichess||S.cfg.gs||S.cfg.csv) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
