@@ -4074,6 +4074,14 @@ addEventListener("resize", () => {
 
 function renderAll(){ render(); }   // dipanggil oleh fetchAll()
 
+/* Kembali ke tab/aplikasi (mis. buka lagi PWA di HP) dihitung sebagai "dibuka".
+   Jeda 90 detik mencegah tarik-berulang saat berpindah aplikasi sekejap. */
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible"
+     && (S.cfg.lichess || S.cfg.gs)
+     && Date.now() - S.fetchedAt > 90000) fetchAll();
+});
+
 (async () => {
   const saved = await Store.load();
 
@@ -4103,7 +4111,8 @@ function renderAll(){ render(); }   // dipanggil oleh fetchAll()
   terapkanTema();
   document.documentElement.lang = DB.lang || "id";
   render();
-  if((S.cfg.chess||S.cfg.lichess||S.cfg.gs||S.cfg.csv) && Date.now()-S.fetchedAt > 15*60000) fetchAll();
+  // Selalu tarik data segar SETIAP web dibuka, bukan hanya kalau sudah 15 menit.
+  if(S.cfg.lichess || S.cfg.gs) fetchAll();
 })();
 
 /* Berganti anak = simpan yang lama, muat yang baru, gambar ulang, tarik kalau basi. */
