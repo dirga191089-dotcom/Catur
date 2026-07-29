@@ -617,7 +617,7 @@
 <div id="view"></div>
 
 <footer>
-  <div>Road To Grand Master \u00b7 data dari API publik Lichess. Tidak ada server. Semua tersimpan di perangkat ini.</div>
+  <div>Road To Grand Master · data dari API publik Lichess. Tidak ada server. Semua tersimpan di perangkat ini.</div>
   <div style="margin-top:6px">Anak tahu bahwa aktivitasnya dipantau — itu syaratnya, bukan pilihannya.</div>
 </footer>
 </div>
@@ -1445,12 +1445,22 @@ async function fetchAll(){
      sudah benar ikut terhapus. Sekarang: hanya bagian yang BERHASIL yang diganti;
      bagian yang gagal mempertahankan data terakhir yang baik. */
   const lama = S.data || { chess:null, lichess:null, errors:[] };
+  /* Kalau daftar partai GAGAL (mis. rate-limit 429) tapi profil berhasil,
+     out.lichess tetap objek dengan games:[] dan gamesOk:false. Tanpa penjagaan
+     ini, partai lama yang masih baik akan ditimpa jadi KOSONG — inilah "data
+     tiba-tiba hilang". Solusi: pertahankan partai lama saat gamesOk=false. */
+  let liBaru = out.lichess || lama.lichess || null;
+  let partaiDipertahankan = false;
+  if(out.lichess && !out.lichess.gamesOk && lama.lichess && lama.lichess.games && lama.lichess.games.length){
+    liBaru = { ...out.lichess, games: lama.lichess.games, gamesOk: true };
+    partaiDipertahankan = true;
+  }
   const baru = {
-    chess:   out.chess   || lama.chess   || null,
-    lichess: out.lichess || lama.lichess || null,
+    chess:   out.chess || lama.chess || null,
+    lichess: liBaru,
     errors:  out.errors,
   };
-  const pakaiLama = (!out.chess && lama.chess) || (!out.lichess && lama.lichess);
+  const pakaiLama = (!out.chess && lama.chess) || (!out.lichess && lama.lichess) || partaiDipertahankan;
   if(pakaiLama) logLine("Sebagian gagal \u2014 data lama dipertahankan, tidak dihapus. " +
     "Angka yang kamu lihat mungkin bukan dari tarikan barusan.", "warn");
 
@@ -2532,7 +2542,7 @@ function viewAnalisis(){
   </section>
 
   <section class="box st2">
-    ${H2("board", tr("Repertoar pembukaan"), `${tr("kedua situs \u00b7 pisah per warna")}`)}
+    ${H2("board", tr("Repertoar pembukaan"), `${tr("Lichess \u00b7 pisah per warna")}`)}
     <div class="hbars" style="padding-bottom:0">
       ${["putih","hitam"].map(w=>{
         const b = pembukaan(w);
@@ -2625,7 +2635,7 @@ function viewRencana(){
 
 function viewPartai(){
   return `<section class="box">
-    ${H2("board", tr("Partai terakhir"), `${tr("kedua situs")}`)}
+    ${H2("board", tr("Partai terakhir"), `${tr("Lichess")}`)}
     <div class="filt" id="filt">
       ${[["semua",tr("Semua")],["mini",tr("Kekalahan miniatur")]].map(([v,l])=>
         `<button data-f="${v}" class="${(S.filter||"semua")===v?"on":""}">${l}</button>`).join("")}
@@ -3522,7 +3532,7 @@ function renderRatings(){
   const liStorm = st ? { v: st.score, s: `${st.runs} kali main (Puzzle Storm)` } : null;
   if(liStorm) baris.push(["Puzzle Storm", liStorm]);
 
-  if(!baris.length){ el.innerHTML = `<div class="empty">${tr("Belum ada data rating dari kedua situs.")}</div>`; return; }
+  if(!baris.length){ el.innerHTML = `<div class="empty">${tr("Belum ada data rating Lichess.")}</div>`; return; }
 
   const sel = x => x
     ? `<b style="font-family:var(--mono);font-size:15px">${x.v}</b><br><span style="font-family:var(--mono);font-size:9.5px;color:var(--soft)">${x.s}</span>`
@@ -3952,6 +3962,14 @@ function renderKunci(){
       clearInterval(jamKunci);
       el.innerHTML = ""; el.style.display = "none";
     };
+    // Wiring refleksi di layar kunci: pakai gambar() (bukan render) agar pilihan
+    // langsung tampak, dan tak terhapus oleh redraw 1 detik.
+    $$("[data-refl]").forEach(x => x.onclick = () => {
+      const hk = todayKey();
+      S.refleksi = S.refleksi || {};
+      if(S.refleksi[hk] === x.dataset.refl) delete S.refleksi[hk]; else S.refleksi[hk] = x.dataset.refl;
+      persist(); gambar();
+    });
   };
   gambar();
   jamKunci = setInterval(gambar, 1000);
@@ -4100,7 +4118,7 @@ function renderAll(){ render(); }   // dipanggil oleh fetchAll()
 document.addEventListener("visibilitychange", () => {
   if(document.visibilityState === "visible"
      && (S.cfg.lichess || S.cfg.gs)
-     && Date.now() - S.fetchedAt > 90000) fetchAll();
+     && Date.now() - S.fetchedAt > 300000) fetchAll();   // 5 menit: cukup segar, hindari rate-limit
 });
 
 (async () => {
