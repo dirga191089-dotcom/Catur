@@ -458,6 +458,7 @@
   .lr-mode.on{background:var(--navy);color:#fff;border-color:var(--navy)}
   .lr-doc{max-width:820px;margin:0 auto;padding:24px 20px;font-family:var(--sans);color:var(--ink)}
   .lr-head{border-bottom:3px solid var(--gold);padding-bottom:12px;margin-bottom:20px}
+  .lr-rating{margin-top:8px;font-family:var(--mono);font-size:13px;color:var(--ink)} .lr-rating b{color:var(--navy)}
   .lr-title{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--navy);letter-spacing:.02em}
   .lr-sub{font-family:var(--mono);font-size:12px;color:var(--soft);margin-top:4px}
   .lr-sec{margin-bottom:24px;break-inside:avoid}
@@ -474,6 +475,9 @@
   .lr-tab th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--rule);padding:5px 6px}
   .lr-tab td{border-bottom:1px solid var(--rule);padding:5px 6px;vertical-align:top}
   .lr-vonis{font-size:11px;color:var(--soft);line-height:1.4}
+  .lr-op{font-family:var(--sans);font-size:10.5px;color:var(--soft);margin-top:2px;line-height:1.45}
+  .lr-warna{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:1px 6px;border-radius:99px;border:1px solid var(--rule);vertical-align:middle}
+  .lr-warna.w{background:#fff;color:#333;border-color:#bbb} .lr-warna.b{background:#333;color:#fff;border-color:#333}
   .lr-foot{border-top:1px solid var(--rule);margin-top:24px;padding-top:12px;font-family:var(--mono);font-size:10px;color:var(--soft)}
   @media(max-width:700px){ .lr-grid{grid-template-columns:repeat(2,1fr)} .lr-two{grid-template-columns:1fr} }
   @media print{
@@ -784,6 +788,8 @@ Object.assign(EN, {
   "1. Ringkasan":"1. Summary", "2. Kepatuhan":"2. Compliance", "3. Kekuatan & Kelemahan":"3. Strengths & Weaknesses",
   "4. Review Per Partai":"4. Per-Game Review", "5. Refleksi Anak":"5. Child Reflection", "6. Rekomendasi Latihan":"6. Training Recommendations",
   "Rata-rata periode":"Period average", "hari tercatat":"days recorded", "beruntun":"streak", "Patuh":"Compliant",
+  "Rating terakhir":"Latest rating", "Puzzle/hari (rata)":"Puzzles/day (avg)", "Puzzle":"Puzzles",
+  "Lawan & pembukaan":"Opponent & opening", "Putih":"White", "Hitam":"Black", "Pembukaan tak dikenal":"Unknown opening",
   "Catatan":"Notes", "Istirahat resmi":"Official rest", "Belum ada riwayat kepatuhan.":"No compliance history yet.",
   "Fokus utama":"Main focus", "Belum cukup data.":"Not enough data.", "Kata anak":"Child said",
   "Anak belum mengisi refleksi.":"The child has not filled in any reflection.",
@@ -2862,6 +2868,11 @@ function laporanLengkap(mode){
   const C = coachRingkas(hariN), KD = kepatuhanData();
   const hariP = KD.hari.filter(d => d >= batasKey);
   const rataP = (() => { const f = hariP.filter(d => !hariLibur(d)); return f.length ? Math.round(f.reduce((x,d)=>x+KD.pct(d),0)/f.length) : 0; })();
+  const perf = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || {};
+  const ratingRapid = (perf.rapid && perf.rapid.rating != null) ? perf.rapid.rating : C.rating;
+  const ratingPuzzle = (perf.puzzle && perf.puzzle.rating != null) ? perf.puzzle.rating : null;
+  const tPz = targets().puzzle;
+  const avgPz = hariP.length ? Math.round(hariP.reduce((x,d)=>x+puzzlesOn(d),0)/hariP.length) : 0;
   const namaFase = f => f==="op" ? tr("Pembukaan") : f==="eg" ? tr("Akhir permainan") : tr("Permainan tengah");
   const badge = r => r==="M" ? "M" : r==="K" ? "K" : "R";
   const tglkini = new Date().toLocaleString(LOCALE(), { weekday:"long", day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" });
@@ -2869,18 +2880,18 @@ function laporanLengkap(mode){
   const kuatTop = hitung("kuat"), lemahTop = hitung("lemah");
   const kpi = (v,l) => `<div class="lr-kpi"><b>${v}</b><span>${l}</span></div>`;
   const sec = (judul, isi) => `<section class="lr-sec"><h2>${judul}</h2>${isi}</section>`;
-  const ringkasan = `<div class="lr-grid">${kpi(rataP + "%", tr("Kepatuhan"))}${kpi(KD.runtun, tr("Hari beruntun tuntas"))}${kpi(C.n, tr("Partai rapid"))}${kpi(C.rating != null ? C.rating : "\u2014", tr("Rating rapid"))}${kpi(C.accRata != null ? C.accRata.toFixed(1)+"%" : "\u2014", tr("Akurasi rata-rata"))}${kpi(C.rate != null ? C.rate.toFixed(1) : "\u2014", tr("Kesalahan / partai"))}${kpi(C.tempo != null ? C.tempo.toFixed(1)+"s" : "\u2014", tr("Tempo berpikir"))}${kpi(C.cepatSalah != null ? C.cepatSalah : "\u2014", tr("Salah tanpa pikir"))}</div>`;
+  const ringkasan = `<div class="lr-grid">${kpi(rataP + "%", tr("Kepatuhan"))}${kpi(KD.runtun, tr("Hari beruntun tuntas"))}${kpi(C.n, tr("Partai rapid"))}${kpi(ratingRapid != null ? ratingRapid : "\u2014", tr("Rating rapid"))}${kpi(C.accRata != null ? C.accRata.toFixed(1)+"%" : "\u2014", tr("Akurasi rata-rata"))}${kpi(C.rate != null ? C.rate.toFixed(1) : "\u2014", tr("Kesalahan / partai"))}${kpi(C.tempo != null ? C.tempo.toFixed(1)+"s" : "\u2014", tr("Tempo berpikir"))}${kpi(C.cepatSalah != null ? C.cepatSalah : "\u2014", tr("Salah tanpa pikir"))}${kpi(avgPz + "/" + tPz, tr("Puzzle/hari (rata)"))}</div>`;
   const barisPatuh = hariP.slice(0,31).map(d => {
-    const pc = KD.pct(d), lg = S.snaps[d].langgar;
-    return `<tr><td>${new Date(d).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td style="text-align:right;font-weight:600;color:${pc>=100?"#2e7d32":pc>=50?"#b8860b":"#b23"}">${pc}%</td><td>${hariLibur(d) ? tr("Istirahat resmi") : (lg || "\u2014")}</td></tr>`;
-  }).join("") || `<tr><td colspan="3">${tr("Belum ada riwayat kepatuhan.")}</td></tr>`;
-  const patuh = `<p class="lr-p">${tr("Rata-rata periode")}: <b>${rataP}%</b> \u00b7 ${tr("beruntun")}: <b>${KD.runtun}</b> \u00b7 ${tr("hari tercatat")}: <b>${hariP.length}</b></p><table class="lr-tab"><tr><th>${tr("Tgl")}</th><th style="text-align:right">${tr("Patuh")}</th><th>${tr("Catatan")}</th></tr>${barisPatuh}</table>`;
+    const pc = KD.pct(d), lg = S.snaps[d].langgar, pz = puzzlesOn(d);
+    return `<tr><td>${new Date(d).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td style="text-align:right;font-weight:600;color:${pc>=100?"#2e7d32":pc>=50?"#b8860b":"#b23"}">${pc}%</td><td style="text-align:center;font-family:var(--mono);color:${(pz>=tPz||hariLibur(d))?"#2e7d32":"#b23"}">${pz}/${tPz}</td><td>${hariLibur(d) ? tr("Istirahat resmi") : (lg || "\u2014")}</td></tr>`;
+  }).join("") || `<tr><td colspan="4">${tr("Belum ada riwayat kepatuhan.")}</td></tr>`;
+  const patuh = `<p class="lr-p">${tr("Rata-rata periode")}: <b>${rataP}%</b> \u00b7 ${tr("beruntun")}: <b>${KD.runtun}</b> \u00b7 ${tr("hari tercatat")}: <b>${hariP.length}</b></p><table class="lr-tab"><tr><th>${tr("Tgl")}</th><th style="text-align:right">${tr("Patuh")}</th><th style="text-align:center">${tr("Puzzle")}</th><th>${tr("Catatan")}</th></tr>${barisPatuh}</table>`;
   const kl = `<div class="lr-two"><div><h3 style="color:#2e7d32">${tr("Kekuatan")}</h3>${kuatTop.length ? "<ul>"+kuatTop.map(([t,n])=>`<li>${t}${n>1?` <b>(${n}\u00d7)</b>`:""}</li>`).join("")+"</ul>" : `<p class="lr-p">${tr("Belum cukup data.")}</p>`}</div><div><h3 style="color:#b23">${tr("Kelemahan")}</h3>${lemahTop.length ? "<ul>"+lemahTop.map(([t,n])=>`<li>${t}${n>1?` <b>(${n}\u00d7)</b>`:""}</li>`).join("")+"</ul>" : `<p class="lr-p">${tr("Belum cukup data.")}</p>`}</div></div>${C.dian && C.totalSerius ? `<p class="lr-p"><b>${tr("Fokus utama")}:</b> ${namaFase(C.terlemah[0])} \u2014 ${C.terlemah[1]} ${tr("kesalahan serius")}. ${tr("Fase terkuat")}: ${namaFase(C.terkuat[0])} (${C.terkuat[1]}).</p>` : ""}`;
   const barisPartai = C.L.map(x => {
     const b = x.g.blunder;
-    return `<tr><td>${new Date(x.g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${esc(x.g.opp||"?")}${x.g.oppRating?" ("+x.g.oppRating+")":""}</td><td style="text-align:center;font-weight:700;color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"}">${badge(x.g.res)}</td><td style="text-align:right">${x.g.acc!=null?x.g.acc.toFixed(0)+"%":"\u2014"}</td><td style="text-align:center">${b?`${b.op}/${b.mid}/${b.eg}`:"\u2014"}</td><td class="lr-vonis">${x.vonis}</td></tr>`;
+    return `<tr><td>${new Date(x.g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${esc(x.g.opp||"?")}${x.g.oppRating?" ("+x.g.oppRating+")":""}<div class="lr-op"><span class="lr-warna ${x.g.putih?"w":"b"}">${x.g.putih?tr("Putih"):tr("Hitam")}</span> ${x.g.opening ? x.g.opening : tr("Pembukaan tak dikenal")}${x.g.eco?` \u00b7 ${x.g.eco}`:""}</div></td><td style="text-align:center;font-weight:700;color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"}">${badge(x.g.res)}</td><td style="text-align:right">${x.g.acc!=null?x.g.acc.toFixed(0)+"%":"\u2014"}</td><td style="text-align:center">${b?`${b.op}/${b.mid}/${b.eg}`:"\u2014"}</td><td class="lr-vonis">${x.vonis}</td></tr>`;
   }).join("") || `<tr><td colspan="6">${tr("Belum ada partai rapid.")}</td></tr>`;
-  const partai = `<p class="lr-p">${C.dian}/${C.n} ${tr("partai punya analisis mesin. Kolom kesalahan = pembukaan/tengah/akhir.")}</p><table class="lr-tab"><tr><th>${tr("Tgl")}</th><th>${tr("Lawan")}</th><th>${tr("Hasil")}</th><th style="text-align:right">${tr("Akurasi")}</th><th>${tr("Salah")}</th><th>${tr("Catatan")}</th></tr>${barisPartai}</table>`;
+  const partai = `<p class="lr-p">${C.dian}/${C.n} ${tr("partai punya analisis mesin. Kolom kesalahan = pembukaan/tengah/akhir.")}</p><table class="lr-tab"><tr><th>${tr("Tgl")}</th><th>${tr("Lawan & pembukaan")}</th><th>${tr("Hasil")}</th><th style="text-align:right">${tr("Akurasi")}</th><th>${tr("Salah")}</th><th>${tr("Catatan")}</th></tr>${barisPartai}</table>`;
   const refBaris = hariP.concat([KD.today]).filter(d=>refleksiHari(d)).map(d => {
     const r = REFLEKSI.find(x=>x.id===refleksiHari(d)) || {};
     return `<tr><td>${new Date(d).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${r.emo||""} ${tr(r.teks||"")}</td></tr>`;
@@ -2889,7 +2900,7 @@ function laporanLengkap(mode){
   const rek = rencanaPuzzle().rekom.slice(0,2);
   const kur = kurikulumHariIni(todayKey());
   const rekomendasi = `<p class="lr-p"><b>${tr("Fokus review (dari kesalahan partai)")}:</b> ${rek.length ? rek.map(r=>temaNama(r.tema)).join(", ") : tr("belum ada")}</p><p class="lr-p"><b>${tr("Kurikulum hari ini")}:</b> ${kur.map(t=>temaNama(t)).join(", ")}</p>${C.cepatSalah ? `<p class="lr-p"><b>${tr("Perhatian")}:</b> ${tr("{a} kesalahan dimainkan tanpa berpikir (<5 detik). Aturan besok: minimal 10 detik sebelum melangkah di posisi ramai.", {a:C.cepatSalah})}</p>` : ""}`;
-  return `<div class="lr-doc"><div class="lr-head"><div class="lr-title">${tr("LAPORAN LENGKAP")}</div><div class="lr-sub">${nm} \u00b7 ${labelPeriode} \u00b7 ${tglkini}</div></div>${sec(tr("1. Ringkasan"), ringkasan)}${sec(tr("2. Kepatuhan"), patuh)}${sec(tr("3. Kekuatan & Kelemahan"), kl)}${sec(tr("4. Review Per Partai"), partai)}${sec(tr("5. Refleksi Anak"), refleksi)}${sec(tr("6. Rekomendasi Latihan"), rekomendasi)}<div class="lr-foot">${tr("Road To Grand Master")} \u00b7 ${tr("Analisa dari data engine Lichess. Bukan pengganti pelatih manusia untuk penjelasan posisional.")}</div></div>`;
+  return `<div class="lr-doc"><div class="lr-head"><div class="lr-title">${tr("LAPORAN LENGKAP")}</div><div class="lr-sub">${nm} \u00b7 ${labelPeriode} \u00b7 ${tglkini}</div><div class="lr-rating">${tr("Rating terakhir")}: <b>Rapid ${ratingRapid != null ? ratingRapid : "\u2014"}</b>${ratingPuzzle != null ? ` \u00b7 <b>Puzzle ${ratingPuzzle}</b>` : ""}</div></div>${sec(tr("1. Ringkasan"), ringkasan)}${sec(tr("2. Kepatuhan"), patuh)}${sec(tr("3. Kekuatan & Kelemahan"), kl)}${sec(tr("4. Review Per Partai"), partai)}${sec(tr("5. Refleksi Anak"), refleksi)}${sec(tr("6. Rekomendasi Latihan"), rekomendasi)}<div class="lr-foot">${tr("Road To Grand Master")} \u00b7 ${tr("Analisa dari data engine Lichess. Bukan pengganti pelatih manusia untuk penjelasan posisional.")}</div></div>`;
 }
 function bukaLaporan(mode){
   mode = mode || "7";
