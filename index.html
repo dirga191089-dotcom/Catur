@@ -2951,8 +2951,8 @@ function laporanLengkap(mode){
   const tglkini = new Date().toLocaleString(LOCALE(), { weekday:"long", day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" });
   const hitung = key => { const m = {}; C.L.forEach(x => x[key].forEach(t => m[t] = (m[t]||0)+1)); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,5); };
   const kuatTop = hitung("kuat"), lemahTop = hitung("lemah");
-  const kpi = (v,l) => `<div class="lr-kpi"><b>${v}</b><span>${l}</span></div>`;
-  const sec = (judul, isi) => `<section class="lr-sec"><h2>${judul}</h2>${isi}</section>`;
+  function kpi(v,l){ return `<div class="lr-kpi"><b>${v}</b><span>${l}</span></div>`; }
+  function sec(judul, isi){ return `<section class="lr-sec"><h2>${judul}</h2>${isi}</section>`; }
   const ringkasan = `<div class="lr-grid">${kpi(rataP + "%", tr("Kepatuhan"))}${kpi(KD.runtun, tr("Hari beruntun tuntas"))}${kpi(C.n, tr("Partai rapid"))}${kpi(ratingRapid != null ? ratingRapid : "\u2014", tr("Rating rapid"))}${kpi(C.accRata != null ? C.accRata.toFixed(1)+"%" : "\u2014", tr("Akurasi rata-rata"))}${kpi(C.rate != null ? C.rate.toFixed(1) : "\u2014", tr("Kesalahan / partai"))}${kpi(C.tempo != null ? C.tempo.toFixed(1)+"s" : "\u2014", tr("Tempo berpikir"))}${kpi(C.cepatSalah != null ? C.cepatSalah : "\u2014", tr("Salah tanpa pikir"))}${kpi(avgPz + "/" + tPz, tr("Puzzle/hari (rata)"))}</div>`;
   const barisPatuh = hariP.slice(0,31).map(d => {
     const pc = KD.pct(d), lg = S.snaps[d].langgar, pz = puzzlesOn(d);
@@ -3320,7 +3320,10 @@ function viewLaporan(){
   fetchHasilRapid();
   const mode = S._lapMode || "minggu";
   const tb = (m,l) => `<button class="lr-mode${m===mode?" on":""}" data-lap="${m}">${l}</button>`;
-  return `<div class="lapbar"><div class="lr-modes">${tb("hari",tr("Harian"))}${tb("minggu",tr("Mingguan"))}${tb("bulan",tr("Bulanan"))}${tb("tahun",tr("Tahunan"))}</div><button class="btn go" id="lapCetak">${tr("Cetak / Simpan PDF")}</button></div>${laporanLengkap(mode)}`;
+  let isi;
+  try { isi = laporanLengkap(mode); }
+  catch(e){ isi = `<section class="box"><div class="empty">${tr("Laporan gagal dimuat.")} ${esc(String(e && e.message || e))}</div></section>`; }
+  return `<div class="lapbar"><div class="lr-modes">${tb("hari",tr("Harian"))}${tb("minggu",tr("Mingguan"))}${tb("bulan",tr("Bulanan"))}${tb("tahun",tr("Tahunan"))}</div><button class="btn go" id="lapCetak">${tr("Cetak / Simpan PDF")}</button></div>${isi}`;
 }
 function viewAtur(){
   return `
