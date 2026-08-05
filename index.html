@@ -789,6 +789,10 @@ Object.assign(EN, {
   "4. Review Per Partai":"4. Per-Game Review", "5. Refleksi Anak":"5. Child Reflection", "6. Rekomendasi Latihan":"6. Training Recommendations",
   "Rata-rata periode":"Period average", "hari tercatat":"days recorded", "beruntun":"streak", "Patuh":"Compliant",
   "Rating terakhir":"Latest rating", "Puzzle/hari (rata)":"Puzzles/day (avg)", "Puzzle":"Puzzles",
+  "Tahun ini":"This year", "Tahunan":"Yearly", "Hasil Pertandingan Rapid":"Rapid Match Results",
+  "Main (rapid)":"Games (rapid)", "Menang":"Wins", "Kalah":"Losses", "Seri":"Draws", "Persentase menang":"Win rate",
+  "(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)":"(counted from fetched games; open Yearly mode to pull the full count)",
+  "Bulan":"Month", "Main":"Games", "M":"W", "K":"L", "S":"D",
   "Lawan & pembukaan":"Opponent & opening", "Putih":"White", "Hitam":"Black", "Pembukaan tak dikenal":"Unknown opening",
   "Catatan":"Notes", "Istirahat resmi":"Official rest", "Belum ada riwayat kepatuhan.":"No compliance history yet.",
   "Fokus utama":"Main focus", "Belum cukup data.":"Not enough data.", "Kata anak":"Child said",
@@ -2851,6 +2855,20 @@ function viewPelatihGabung(){
   return viewPelatih() + viewCoach();
 }
 
+function rapidRekap(batasKey){
+  let m=0,k=0,r=0;
+  const H = S.hasilRapid && S.hasilRapid.perHari;
+  if(H){ for(const dk in H){ if(dk >= batasKey){ m+=H[dk].m; k+=H[dk].k; r+=H[dk].r; } } }
+  else { normGames().forEach(g=>{ if(g.speed==="rapid" && dayKey(g.t)>=batasKey){ if(g.res==="M")m++; else if(g.res==="K")k++; else r++; } }); }
+  return { m, k, r, total:m+k+r, lengkap: !!H };
+}
+function rapidPerBulan(tahun){
+  const B = Array.from({length:12},()=>({m:0,k:0,r:0}));
+  const H = S.hasilRapid && S.hasilRapid.perHari;
+  if(H){ for(const dk in H){ const d=new Date(dk); if(d.getFullYear()===tahun){ const b=B[d.getMonth()]; b.m+=H[dk].m; b.k+=H[dk].k; b.r+=H[dk].r; } } }
+  else { normGames().forEach(g=>{ if(g.speed!=="rapid") return; const d=new Date(g.t); if(d.getFullYear()!==tahun) return; const b=B[d.getMonth()]; if(g.res==="M")b.m++; else if(g.res==="K")b.k++; else b.r++; }); }
+  return B;
+}
 function laporanLengkap(mode){
   mode = mode || "7";
   const now = new Date();
@@ -2859,6 +2877,10 @@ function laporanLengkap(mode){
     const awal = new Date(now.getFullYear(), now.getMonth(), 1);
     hariN = Math.round((now - awal)/864e5) + 1;
     labelPeriode = tr("Bulan ini"); batasKey = dayKey(awal);
+  } else if(mode === "tahun"){
+    const awal = new Date(now.getFullYear(), 0, 1);
+    hariN = Math.round((now - awal)/864e5) + 1;
+    labelPeriode = tr("Tahun ini"); batasKey = dayKey(awal);
   } else if(mode === "30"){
     hariN = 30; labelPeriode = tr("30 hari terakhir"); batasKey = dayKey(now.getTime() - 29*864e5);
   } else {
@@ -2873,6 +2895,13 @@ function laporanLengkap(mode){
   const ratingPuzzle = (perf.puzzle && perf.puzzle.rating != null) ? perf.puzzle.rating : null;
   const tPz = targets().puzzle;
   const avgPz = hariP.length ? Math.round(hariP.reduce((x,d)=>x+puzzlesOn(d),0)/hariP.length) : 0;
+  const RR = rapidRekap(batasKey);
+  const winPct = RR.total ? Math.round(RR.m/RR.total*100) : 0;
+  const rekapHtml = `<div class="lr-grid" style="grid-template-columns:repeat(4,1fr)">${kpi(RR.total, tr("Main (rapid)"))}${kpi(`<span style="color:#2e7d32">${RR.m}</span>`, tr("Menang"))}${kpi(`<span style="color:#b23">${RR.k}</span>`, tr("Kalah"))}${kpi(RR.r, tr("Seri"))}</div><p class="lr-p">${tr("Persentase menang")}: <b>${winPct}%</b>${RR.lengkap ? "" : ` \u00b7 <i>${tr("(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)")}</i>`}</p>${mode==="tahun" ? (() => {
+    const B = rapidPerBulan(now.getFullYear());
+    const rows = B.map((b,i)=>{ const t=b.m+b.k+b.r; return t ? `<tr><td>${new Date(now.getFullYear(), i, 1).toLocaleDateString(LOCALE(),{month:"short"})}</td><td style="text-align:right">${t}</td><td style="text-align:right;color:#2e7d32">${b.m}</td><td style="text-align:right;color:#b23">${b.k}</td><td style="text-align:right">${b.r}</td></tr>` : ""; }).join("");
+    return rows ? `<table class="lr-tab" style="margin-top:10px"><tr><th>${tr("Bulan")}</th><th style="text-align:right">${tr("Main")}</th><th style="text-align:right">${tr("M")}</th><th style="text-align:right">${tr("K")}</th><th style="text-align:right">${tr("S")}</th></tr>${rows}</table>` : "";
+  })() : ""}`;
   const namaFase = f => f==="op" ? tr("Pembukaan") : f==="eg" ? tr("Akhir permainan") : tr("Permainan tengah");
   const badge = r => r==="M" ? "M" : r==="K" ? "K" : "R";
   const tglkini = new Date().toLocaleString(LOCALE(), { weekday:"long", day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" });
@@ -2900,14 +2929,38 @@ function laporanLengkap(mode){
   const rek = rencanaPuzzle().rekom.slice(0,2);
   const kur = kurikulumHariIni(todayKey());
   const rekomendasi = `<p class="lr-p"><b>${tr("Fokus review (dari kesalahan partai)")}:</b> ${rek.length ? rek.map(r=>temaNama(r.tema)).join(", ") : tr("belum ada")}</p><p class="lr-p"><b>${tr("Kurikulum hari ini")}:</b> ${kur.map(t=>temaNama(t)).join(", ")}</p>${C.cepatSalah ? `<p class="lr-p"><b>${tr("Perhatian")}:</b> ${tr("{a} kesalahan dimainkan tanpa berpikir (<5 detik). Aturan besok: minimal 10 detik sebelum melangkah di posisi ramai.", {a:C.cepatSalah})}</p>` : ""}`;
-  return `<div class="lr-doc"><div class="lr-head"><div class="lr-title">${tr("LAPORAN LENGKAP")}</div><div class="lr-sub">${nm} \u00b7 ${labelPeriode} \u00b7 ${tglkini}</div><div class="lr-rating">${tr("Rating terakhir")}: <b>Rapid ${ratingRapid != null ? ratingRapid : "\u2014"}</b>${ratingPuzzle != null ? ` \u00b7 <b>Puzzle ${ratingPuzzle}</b>` : ""}</div></div>${sec(tr("1. Ringkasan"), ringkasan)}${sec(tr("2. Kepatuhan"), patuh)}${sec(tr("3. Kekuatan & Kelemahan"), kl)}${sec(tr("4. Review Per Partai"), partai)}${sec(tr("5. Refleksi Anak"), refleksi)}${sec(tr("6. Rekomendasi Latihan"), rekomendasi)}<div class="lr-foot">${tr("Road To Grand Master")} \u00b7 ${tr("Analisa dari data engine Lichess. Bukan pengganti pelatih manusia untuk penjelasan posisional.")}</div></div>`;
+  return `<div class="lr-doc"><div class="lr-head"><div class="lr-title">${tr("LAPORAN LENGKAP")}</div><div class="lr-sub">${nm} \u00b7 ${labelPeriode} \u00b7 ${tglkini}</div><div class="lr-rating">${tr("Rating terakhir")}: <b>Rapid ${ratingRapid != null ? ratingRapid : "\u2014"}</b>${ratingPuzzle != null ? ` \u00b7 <b>Puzzle ${ratingPuzzle}</b>` : ""}</div></div>${sec(tr("1. Ringkasan"), ringkasan)}${sec(tr("Hasil Pertandingan Rapid"), rekapHtml)}${sec(tr("2. Kepatuhan"), patuh)}${sec(tr("3. Kekuatan & Kelemahan"), kl)}${sec(tr("4. Review Per Partai"), partai)}${sec(tr("5. Refleksi Anak"), refleksi)}${sec(tr("6. Rekomendasi Latihan"), rekomendasi)}<div class="lr-foot">${tr("Road To Grand Master")} \u00b7 ${tr("Analisa dari data engine Lichess. Bukan pengganti pelatih manusia untuk penjelasan posisional.")}</div></div>`;
+}
+async function fetchHasilRapid(){
+  const u = (S.cfg.lichess || "").trim(); if(!u) return;
+  const now = Date.now();
+  // cache 6 jam: fetch tahunan hanya sekali per sesi, tidak tiap buka.
+  if(S.hasilRapid && S.hasilRapid.u === u && now - S.hasilRapid.at < 6*3600e3) return;
+  try{
+    const sejak = new Date(new Date().getFullYear()-1, 0, 1).getTime();
+    // RINGAN: hasil saja, tanpa langkah/analisis/jam. Tak membebani seperti fetch berat.
+    const arr = await getNDJSON(`https://lichess.org/api/games/user/${u}?since=${sejak}&perfType=rapid&max=600&moves=false&tags=false&clocks=false&evals=false&opening=false`);
+    const perHari = {};
+    arr.forEach(g => {
+      const w = g.players && g.players.white && g.players.white.user && g.players.white.user.name;
+      const isW = w && w.toLowerCase() === u.toLowerCase();
+      const dk = dayKey(g.lastMoveAt || g.createdAt);
+      const rec = perHari[dk] || (perHari[dk] = { m:0, k:0, r:0 });
+      if(!g.winner) rec.r++; else if(g.winner === (isW ? "white" : "black")) rec.m++; else rec.k++;
+    });
+    S.hasilRapid = { u, at: now, perHari };
+    const el = $("#laporan");
+    if(el && el.style.display === "block") bukaLaporan(S._lapMode || "7");
+  }catch(e){ /* diam: laporan pakai fallback dari partai yang sudah tertarik */ }
 }
 function bukaLaporan(mode){
   mode = mode || "7";
+  S._lapMode = mode;
+  fetchHasilRapid();
   let el = $("#laporan");
   if(!el){ el = document.createElement("div"); el.id = "laporan"; document.body.appendChild(el); }
   const tabBtn = (m,lbl) => `<button class="lr-mode${m===mode?" on":""}" data-m="${m}">${lbl}</button>`;
-  el.innerHTML = `<div class="lr-bar nocetak"><div class="lr-modes">${tabBtn("7", tr("7 hari"))}${tabBtn("30", tr("30 hari"))}${tabBtn("bulan", tr("Bulan ini"))}</div><div class="lr-act"><button class="btn go" id="lrCetak">${tr("Cetak / Simpan PDF")}</button><button class="btn" id="lrTutup">${tr("Tutup")}</button></div></div>${laporanLengkap(mode)}`;
+  el.innerHTML = `<div class="lr-bar nocetak"><div class="lr-modes">${tabBtn("7", tr("7 hari"))}${tabBtn("30", tr("30 hari"))}${tabBtn("bulan", tr("Bulan ini"))}${tabBtn("tahun", tr("Tahunan"))}</div><div class="lr-act"><button class="btn go" id="lrCetak">${tr("Cetak / Simpan PDF")}</button><button class="btn" id="lrTutup">${tr("Tutup")}</button></div></div>${laporanLengkap(mode)}`;
   el.style.display = "block"; document.body.style.overflow = "hidden";
   el.querySelectorAll(".lr-mode").forEach(b => b.onclick = () => bukaLaporan(b.dataset.m));
   $("#lrCetak").onclick = () => { document.body.classList.add("mode-laporan"); window.print(); setTimeout(() => document.body.classList.remove("mode-laporan"), 600); };
