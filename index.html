@@ -792,7 +792,7 @@ Object.assign(EN, {
   "Rata-rata periode":"Period average", "hari tercatat":"days recorded", "beruntun":"streak", "Patuh":"Compliant",
   "Rating terakhir":"Latest rating", "Puzzle/hari (rata)":"Puzzles/day (avg)", "Puzzle":"Puzzles",
   "Tahun ini":"This year", "Tahunan":"Yearly", "Harian":"Daily", "Mingguan":"Weekly", "Bulanan":"Monthly", "Minggu ini (7 hari)":"This week (7 days)", "Hasil Pertandingan Rapid":"Rapid Match Results",
-  "Main (rapid)":"Games (rapid)", "Menang":"Wins", "Kalah":"Losses", "Seri":"Draws", "Persentase menang":"Win rate",
+  "Main (rapid)":"Games (rapid)", "Menang":"Wins", "Kalah":"Losses", "Seri":"Draws", "Persentase menang":"Win rate", "Perubahan poin":"Point change",
   "(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)":"(counted from fetched games; open Yearly mode to pull the full count)",
   "Bulan":"Month", "Main":"Games", "M":"W", "K":"L", "S":"D",
   "Statistik Rapid":"Rapid Statistics", "sepanjang masa":"all-time", "dari partai terbaru":"from recent games",
@@ -1696,7 +1696,7 @@ function normGames(){
     }
     out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
       putih: isW, langkah: lgk, mini: res === "K" && lgk != null && lgk < MINI,
-      rating: my.rating, opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
+      rating: my.rating, poin: (my.ratingDiff != null ? my.ratingDiff : null), opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
       acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
       url: "https://lichess.org/" + g.id, opening: g.opening ? esc(g.opening.name) : null,
       eco: g.opening ? g.opening.eco : null, blunder, waktu, evalSeri });
@@ -2900,11 +2900,11 @@ function viewPelatihGabung(){
 }
 
 function rapidRekap(batasKey){
-  let m=0,k=0,r=0;
+  let m=0,k=0,r=0,poin=0;
   const H = S.hasilRapid && S.hasilRapid.perHari;
-  if(H){ for(const dk in H){ if(dk >= batasKey){ m+=H[dk].m; k+=H[dk].k; r+=H[dk].r; } } }
-  else { normGames().forEach(g=>{ if(g.speed==="rapid" && dayKey(g.t)>=batasKey){ if(g.res==="M")m++; else if(g.res==="K")k++; else r++; } }); }
-  return { m, k, r, total:m+k+r, lengkap: !!H };
+  if(H){ for(const dk in H){ if(dk >= batasKey){ m+=H[dk].m; k+=H[dk].k; r+=H[dk].r; poin+=(H[dk].poin||0); } } }
+  else { normGames().forEach(g=>{ if(g.speed==="rapid" && dayKey(g.t)>=batasKey){ if(g.res==="M")m++; else if(g.res==="K")k++; else r++; if(g.poin!=null)poin+=g.poin; } }); }
+  return { m, k, r, poin, total:m+k+r, lengkap: !!H };
 }
 function rapidPerBulan(tahun){
   const B = Array.from({length:12},()=>({m:0,k:0,r:0}));
@@ -2941,7 +2941,7 @@ function laporanLengkap(mode){
   const avgPz = hariP.length ? Math.round(hariP.reduce((x,d)=>x+puzzlesOn(d),0)/hariP.length) : 0;
   const RR = rapidRekap(batasKey);
   const winPct = RR.total ? Math.round(RR.m/RR.total*100) : 0;
-  const rekapHtml = `<div class="lr-grid" style="grid-template-columns:repeat(4,1fr)">${kpi(RR.total, tr("Main (rapid)"))}${kpi(`<span style="color:#2e7d32">${RR.m}</span>`, tr("Menang"))}${kpi(`<span style="color:#b23">${RR.k}</span>`, tr("Kalah"))}${kpi(RR.r, tr("Seri"))}</div><p class="lr-p">${tr("Persentase menang")}: <b>${winPct}%</b>${RR.lengkap ? "" : ` \u00b7 <i>${tr("(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)")}</i>`}</p>${mode==="tahun" ? (() => {
+  const rekapHtml = `<div class="lr-grid" style="grid-template-columns:repeat(4,1fr)">${kpi(RR.total, tr("Main (rapid)"))}${kpi(`<span style="color:#2e7d32">${RR.m}</span>`, tr("Menang"))}${kpi(`<span style="color:#b23">${RR.k}</span>`, tr("Kalah"))}${kpi(RR.r, tr("Seri"))}</div><p class="lr-p">${tr("Persentase menang")}: <b>${winPct}%</b> \u00b7 ${tr("Perubahan poin")}: <b style="color:${RR.poin>=0?"#2e7d32":"#b23"}">${RR.poin>=0?"+":""}${RR.poin}</b>${RR.lengkap ? "" : ` \u00b7 <i>${tr("(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)")}</i>`}</p>${mode==="tahun" ? (() => {
     const B = rapidPerBulan(now.getFullYear());
     const rows = B.map((b,i)=>{ const t=b.m+b.k+b.r; return t ? `<tr><td>${new Date(now.getFullYear(), i, 1).toLocaleDateString(LOCALE(),{month:"short"})}</td><td style="text-align:right">${t}</td><td style="text-align:right;color:#2e7d32">${b.m}</td><td style="text-align:right;color:#b23">${b.k}</td><td style="text-align:right">${b.r}</td></tr>` : ""; }).join("");
     return rows ? `<table class="lr-tab" style="margin-top:10px"><tr><th>${tr("Bulan")}</th><th style="text-align:right">${tr("Main")}</th><th style="text-align:right">${tr("M")}</th><th style="text-align:right">${tr("K")}</th><th style="text-align:right">${tr("S")}</th></tr>${rows}</table>` : "";
@@ -2962,7 +2962,7 @@ function laporanLengkap(mode){
   const kl = `<div class="lr-two"><div><h3 style="color:#2e7d32">${tr("Kekuatan")}</h3>${kuatTop.length ? "<ul>"+kuatTop.map(([t,n])=>`<li>${t}${n>1?` <b>(${n}\u00d7)</b>`:""}</li>`).join("")+"</ul>" : `<p class="lr-p">${tr("Belum cukup data.")}</p>`}</div><div><h3 style="color:#b23">${tr("Kelemahan")}</h3>${lemahTop.length ? "<ul>"+lemahTop.map(([t,n])=>`<li>${t}${n>1?` <b>(${n}\u00d7)</b>`:""}</li>`).join("")+"</ul>" : `<p class="lr-p">${tr("Belum cukup data.")}</p>`}</div></div>${C.dian && C.totalSerius ? `<p class="lr-p"><b>${tr("Fokus utama")}:</b> ${namaFase(C.terlemah[0])} \u2014 ${C.terlemah[1]} ${tr("kesalahan serius")}. ${tr("Fase terkuat")}: ${namaFase(C.terkuat[0])} (${C.terkuat[1]}).</p>` : ""}`;
   const barisPartai = C.L.map(x => {
     const b = x.g.blunder;
-    return `<tr><td>${new Date(x.g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${esc(x.g.opp||"?")}${x.g.oppRating?" ("+x.g.oppRating+")":""}<div class="lr-op"><span class="lr-warna ${x.g.putih?"w":"b"}">${x.g.putih?tr("Putih"):tr("Hitam")}</span> ${x.g.opening ? x.g.opening : tr("Pembukaan tak dikenal")}${x.g.eco?` \u00b7 ${x.g.eco}`:""}</div></td><td style="text-align:center;font-weight:700;color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"}">${badge(x.g.res)}</td><td style="text-align:right">${x.g.acc!=null?x.g.acc.toFixed(0)+"%":"\u2014"}</td><td style="text-align:center">${b?`${b.op}/${b.mid}/${b.eg}`:"\u2014"}</td><td class="lr-vonis">${x.vonis}</td></tr>`;
+    return `<tr><td>${new Date(x.g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${esc(x.g.opp||"?")}${x.g.oppRating?" ("+x.g.oppRating+")":""}<div class="lr-op"><span class="lr-warna ${x.g.putih?"w":"b"}">${x.g.putih?tr("Putih"):tr("Hitam")}</span> ${x.g.opening ? x.g.opening : tr("Pembukaan tak dikenal")}${x.g.eco?` \u00b7 ${x.g.eco}`:""}</div></td><td style="text-align:center;font-weight:700;color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"}">${badge(x.g.res)}${x.g.poin!=null?`<div style="font-weight:600;font-family:var(--mono);font-size:10px;color:${x.g.poin>=0?"#2e7d32":"#b23"}">${x.g.poin>=0?"+":""}${x.g.poin}</div>`:""}</td><td style="text-align:right">${x.g.acc!=null?x.g.acc.toFixed(0)+"%":"\u2014"}</td><td style="text-align:center">${b?`${b.op}/${b.mid}/${b.eg}`:"\u2014"}</td><td class="lr-vonis">${x.vonis}</td></tr>`;
   }).join("") || `<tr><td colspan="6">${tr("Belum ada partai rapid.")}</td></tr>`;
   const partai = `<p class="lr-p">${C.dian}/${C.n} ${tr("partai punya analisis mesin. Kolom kesalahan = pembukaan/tengah/akhir.")}</p><table class="lr-tab"><tr><th>${tr("Tgl")}</th><th>${tr("Lawan & pembukaan")}</th><th>${tr("Hasil")}</th><th style="text-align:right">${tr("Akurasi")}</th><th>${tr("Salah")}</th><th>${tr("Catatan")}</th></tr>${barisPartai}</table>`;
   const refBaris = hariP.concat([KD.today]).filter(d=>refleksiHari(d)).map(d => {
@@ -2985,14 +2985,17 @@ async function fetchHasilRapid(){
     // max=900 partai rapid terbaru = praktis seluruh riwayat untuk pemain anak.
     const arr = await getNDJSON(`https://lichess.org/api/games/user/${u}?perfType=rapid&max=900&moves=false&tags=false&clocks=false&evals=false&opening=true`);
     const perHari = {};
-    const AT = { m:0, k:0, r:0, byColor:{ w:{m:0,k:0,r:0}, b:{m:0,k:0,r:0} }, byOpening:{} };
+    const AT = { m:0, k:0, r:0, poin:0, byColor:{ w:{m:0,k:0,r:0}, b:{m:0,k:0,r:0} }, byOpening:{} };
     arr.forEach(g => {
       const w = g.players && g.players.white && g.players.white.user && g.players.white.user.name;
       const isW = w && w.toLowerCase() === u.toLowerCase();
       const dk = dayKey(g.lastMoveAt || g.createdAt);
       const o = !g.winner ? "r" : (g.winner === (isW ? "white" : "black")) ? "m" : "k";
-      (perHari[dk] || (perHari[dk] = { m:0, k:0, r:0 }))[o]++;
-      AT[o]++;
+      const me = g.players && (isW ? g.players.white : g.players.black);
+      const dp = (me && me.ratingDiff != null) ? me.ratingDiff : 0;
+      const rec = (perHari[dk] || (perHari[dk] = { m:0, k:0, r:0, poin:0 }));
+      rec[o]++; rec.poin = (rec.poin||0) + dp;
+      AT[o]++; AT.poin += dp;
       AT.byColor[isW ? "w" : "b"][o]++;
       if(g.opening && g.opening.name){ (AT.byOpening[g.opening.name] || (AT.byOpening[g.opening.name] = { m:0, k:0, r:0 }))[o]++; }
     });
@@ -4008,7 +4011,7 @@ function renderGames(){
       <td>${g.speed}${g.langkah!=null?` <span style="color:var(--soft)">${g.langkah}\u2113</span>`:""}${g.mini?`<span class="miniTag">${tr("MINIATUR")}</span>`:""}</td>
       <td>${g.opp} <span style="color:var(--soft)">${g.oppRating||""}</span></td>
       <td class="${cls}">${g.res}</td>
-      <td style="text-align:right;color:var(--navy);font-weight:600">${g.rating||"\u2014"}</td>
+      <td style="text-align:right;color:var(--navy);font-weight:600">${g.rating||"\u2014"}${g.poin!=null?` <span style="color:${g.poin>=0?"#2e7d32":"#b23"};font-weight:700">${g.poin>=0?"+":""}${g.poin}</span>`:""}</td>
       <td>${g.acc!=null ? g.acc.toFixed(1)+"%"
             : (belum ? `<span class="anoTag">${tr("belum dianotasi")}</span>` : "\u2014")}</td>
       <td><a href="${g.url}" target="_blank" rel="noopener" style="color:var(--accent)">${belum?tr("anotasi")+" \u2197":tr("buka")}</a></td></tr>`;
