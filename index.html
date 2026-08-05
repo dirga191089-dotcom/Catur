@@ -791,7 +791,7 @@ Object.assign(EN, {
   "4. Review Per Partai":"4. Per-Game Review", "5. Refleksi Anak":"5. Child Reflection", "6. Rekomendasi Latihan":"6. Training Recommendations",
   "Rata-rata periode":"Period average", "hari tercatat":"days recorded", "beruntun":"streak", "Patuh":"Compliant",
   "Rating terakhir":"Latest rating", "Puzzle/hari (rata)":"Puzzles/day (avg)", "Puzzle":"Puzzles",
-  "Tahun ini":"This year", "Tahunan":"Yearly", "Hasil Pertandingan Rapid":"Rapid Match Results",
+  "Tahun ini":"This year", "Tahunan":"Yearly", "Harian":"Daily", "Mingguan":"Weekly", "Bulanan":"Monthly", "Minggu ini (7 hari)":"This week (7 days)", "Hasil Pertandingan Rapid":"Rapid Match Results",
   "Main (rapid)":"Games (rapid)", "Menang":"Wins", "Kalah":"Losses", "Seri":"Draws", "Persentase menang":"Win rate",
   "(dihitung dari partai yang tertarik; buka mode Tahunan untuk menarik hitungan penuh)":"(counted from fetched games; open Yearly mode to pull the full count)",
   "Bulan":"Month", "Main":"Games", "M":"W", "K":"L", "S":"D",
@@ -2917,7 +2917,9 @@ function laporanLengkap(mode){
   mode = mode || "7";
   const now = new Date();
   let hariN, labelPeriode, batasKey;
-  if(mode === "bulan"){
+  if(mode === "hari"){
+    hariN = 1; labelPeriode = tr("Hari ini"); batasKey = dayKey(now.getTime());
+  } else if(mode === "bulan"){
     const awal = new Date(now.getFullYear(), now.getMonth(), 1);
     hariN = Math.round((now - awal)/864e5) + 1;
     labelPeriode = tr("Bulan ini"); batasKey = dayKey(awal);
@@ -2925,10 +2927,8 @@ function laporanLengkap(mode){
     const awal = new Date(now.getFullYear(), 0, 1);
     hariN = Math.round((now - awal)/864e5) + 1;
     labelPeriode = tr("Tahun ini"); batasKey = dayKey(awal);
-  } else if(mode === "30"){
-    hariN = 30; labelPeriode = tr("30 hari terakhir"); batasKey = dayKey(now.getTime() - 29*864e5);
   } else {
-    hariN = 7; labelPeriode = tr("7 hari terakhir"); batasKey = dayKey(now.getTime() - 6*864e5);
+    hariN = 7; labelPeriode = tr("Minggu ini (7 hari)"); batasKey = dayKey(now.getTime() - 6*864e5);
   }
   const a = anakAktif(), nm = (a && a.nama) || tr("Anak");
   const C = coachRingkas(hariN), KD = kepatuhanData();
@@ -2999,7 +2999,7 @@ async function fetchHasilRapid(){
     AT.total = AT.m + AT.k + AT.r;
     S.hasilRapid = { u, at: now, perHari, allTime: AT, n: arr.length };
     const el = $("#laporan");
-    if(el && el.style.display === "block") bukaLaporan(S._lapMode || "7");
+    if(el && el.style.display === "block") bukaLaporan(S._lapMode || "minggu");
     else render();
   }catch(e){ /* diam: laporan pakai fallback dari partai yang sudah tertarik */ }
 }
@@ -3010,7 +3010,7 @@ function bukaLaporan(mode){
   let el = $("#laporan");
   if(!el){ el = document.createElement("div"); el.id = "laporan"; document.body.appendChild(el); }
   const tabBtn = (m,lbl) => `<button class="lr-mode${m===mode?" on":""}" data-m="${m}">${lbl}</button>`;
-  el.innerHTML = `<div class="lr-bar nocetak"><div class="lr-modes">${tabBtn("7", tr("7 hari"))}${tabBtn("30", tr("30 hari"))}${tabBtn("bulan", tr("Bulan ini"))}${tabBtn("tahun", tr("Tahunan"))}</div><div class="lr-act"><button class="btn go" id="lrCetak">${tr("Cetak / Simpan PDF")}</button><button class="btn" id="lrTutup">${tr("Tutup")}</button></div></div>${laporanLengkap(mode)}`;
+  el.innerHTML = `<div class="lr-bar nocetak"><div class="lr-modes">${tabBtn("hari", tr("Harian"))}${tabBtn("minggu", tr("Mingguan"))}${tabBtn("bulan", tr("Bulanan"))}${tabBtn("tahun", tr("Tahunan"))}</div><div class="lr-act"><button class="btn go" id="lrCetak">${tr("Cetak / Simpan PDF")}</button><button class="btn" id="lrTutup">${tr("Tutup")}</button></div></div>${laporanLengkap(mode)}`;
   el.style.display = "block"; document.body.style.overflow = "hidden";
   el.querySelectorAll(".lr-mode").forEach(b => b.onclick = () => bukaLaporan(b.dataset.m));
   $("#lrCetak").onclick = () => { document.body.classList.add("mode-laporan"); window.print(); setTimeout(() => document.body.classList.remove("mode-laporan"), 600); };
@@ -3255,10 +3255,10 @@ function wireKepatuhanShare(){
   if(q) q.onclick = kepatuhanPDF;
   $$("[data-refl]").forEach(b => b.onclick = () => setRefleksi(b.dataset.refl));
   const bLp = $("#bLaporan");
-  if(bLp) bLp.onclick = () => bukaLaporan("7");
+  if(bLp) bLp.onclick = () => bukaLaporan("minggu");
   $$("[data-lap]").forEach(b => b.onclick = () => { S._lapMode = b.dataset.lap; render(); });
   const lapC = $("#lapCetak");
-  if(lapC) lapC.onclick = () => bukaLaporan(S._lapMode || "7");
+  if(lapC) lapC.onclick = () => bukaLaporan(S._lapMode || "minggu");
   const bLb = $("#bLibur");
   if(bLb) bLb.onclick = () => toggleLibur(todayKey());
   const cw = $("#coWa");
@@ -3318,9 +3318,9 @@ function viewPartaiAnalisa(){ return viewPartai() + viewCoach() + viewAnalisis()
 function viewPenilaianRencana(){ return viewPelatih() + viewRencana(); }
 function viewLaporan(){
   fetchHasilRapid();
-  const mode = S._lapMode || "7";
+  const mode = S._lapMode || "minggu";
   const tb = (m,l) => `<button class="lr-mode${m===mode?" on":""}" data-lap="${m}">${l}</button>`;
-  return `<div class="lapbar"><div class="lr-modes">${tb("7",tr("7 hari"))}${tb("30",tr("30 hari"))}${tb("bulan",tr("Bulan ini"))}${tb("tahun",tr("Tahunan"))}</div><button class="btn go" id="lapCetak">${tr("Cetak / Simpan PDF")}</button></div>${laporanLengkap(mode)}`;
+  return `<div class="lapbar"><div class="lr-modes">${tb("hari",tr("Harian"))}${tb("minggu",tr("Mingguan"))}${tb("bulan",tr("Bulanan"))}${tb("tahun",tr("Tahunan"))}</div><button class="btn go" id="lapCetak">${tr("Cetak / Simpan PDF")}</button></div>${laporanLengkap(mode)}`;
 }
 function viewAtur(){
   return `
