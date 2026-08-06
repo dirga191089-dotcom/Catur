@@ -2647,6 +2647,35 @@ function viewRencanaPuzzleCard(){
   </section>`;
 }
 
+async function mintaCoachAI(){
+  const out = $("#coachAIout"); if(!out) return;
+  const u = BAKED_GS || S.cfg.gs;
+  if(!u){ out.innerHTML = `<div class="warnbox">${tr("Backend belum tersambung.")}</div>`; return; }
+  const C = coachRingkas(30);
+  const RR = rapidRekap(dayKey(Date.now()-29*864e5));
+  const fase = C.terlemah ? ({op:tr("pembukaan"),mid:tr("permainan tengah"),eg:tr("akhir permainan")}[C.terlemah[0]] || C.terlemah[0]) : null;
+  const rt = (S.data&&S.data.lichess&&S.data.lichess.prof&&S.data.lichess.prof.perfs&&S.data.lichess.prof.perfs.rapid&&S.data.lichess.prof.perfs.rapid.rating) || C.rating || null;
+  const stats = {
+    periode:"30 hari", partai_rapid:C.n,
+    menang_persen: RR.total?Math.round(RR.m/RR.total*100):null,
+    menang:RR.m, kalah:RR.k, seri:RR.r, perubahan_poin:RR.poin,
+    akurasi_rata: C.accRata!=null?+C.accRata.toFixed(1):null,
+    kesalahan_serius_per_partai: C.rate!=null?+C.rate.toFixed(1):null,
+    fase_terlemah: fase, salah_dimainkan_tanpa_pikir: C.cepatSalah,
+    tempo_berpikir_detik: C.tempo!=null?+C.tempo.toFixed(1):null,
+    rating_rapid: rt
+  };
+  out.innerHTML = `<div class="empty">${tr("Meminta ulasan pelatih AI\u2026 (beberapa detik)")}</div>`;
+  try{
+    const url = u + (u.indexOf("?")>=0?"&":"?") + "ai=1&t=" + Date.now() + "&d=" + encodeURIComponent(JSON.stringify(stats));
+    const r = await fetch(url, { cache:"no-store" });
+    const j = await r.json();
+    const txt = (j && j.ai) || tr("Tidak ada respons.");
+    if(String(txt).indexOf("ERROR")===0){ out.innerHTML = `<div class="warnbox">${esc(String(txt))}</div>`; return; }
+    out.innerHTML = `<div class="coach-vonis" style="white-space:pre-wrap">${esc(String(txt))}</div>`
+      + `<p class="csub" style="margin-top:8px">${tr("Pendapat AI dari angka yang dikirim \u2014 tanpa nama atau partai spesifik. Bisa keliru; perlakukan sebagai masukan, bukan kebenaran.")}</p>`;
+  }catch(e){ out.innerHTML = `<div class="warnbox">${tr("Gagal menghubungi pelatih AI.")} ${esc(String(e))}</div>`; }
+}
 function viewPelatih(){
   const P = pelatih();
   const K = P.K, T = targets();
@@ -2662,6 +2691,11 @@ function viewPelatih(){
   const alasanT = (S.targetHari === todayKey() && S.targetAlasan) ? S.targetAlasan : [];
 
   return `
+  <section class="box">
+    ${H2("coach", tr("Pelatih AI"), tr("Gemini · gratis"))}
+    <div class="cshare"><button class="btn go" id="bCoachAI">🧠 ${tr("Minta ulasan pelatih AI")}</button></div>
+    <div id="coachAIout"><p class="csub" style="margin:0">${tr("Menekan tombol mengirim angka performa (tanpa nama) ke Gemini dan menampilkan ulasannya di sini.")}</p></div>
+  </section>
   <section class="box">
     ${H2("coach", tr("Penilaian kemarin"), `${K.dk}`)}
     <div>${P.diag.map(([k,judul,alasan],i)=>`
@@ -3448,6 +3482,8 @@ function wireKepatuhanShare(){
   $$("[data-refl]").forEach(b => b.onclick = () => setRefleksi(b.dataset.refl));
   const bLp = $("#bLaporan");
   if(bLp) bLp.onclick = () => bukaLaporan("minggu");
+  const bAI = $("#bCoachAI");
+  if(bAI) bAI.onclick = () => mintaCoachAI();
   const gj=$("#goalJenis"), gt=$("#goalTarget"), gd=$("#goalTenggat");
   if(gj && S.goal){ gj.value=S.goal.jenis||"rating"; if(gt)gt.value=S.goal.target||""; if(gd)gd.value=S.goal.tenggat||""; }
   const gs=$("#goalSimpan"); if(gs) gs.onclick=()=>{ const v={ jenis:(gj&&gj.value)||"rating", target:+((gt&&gt.value)||0), tenggat:(gd&&gd.value)||"" }; if(!v.target){ alert(tr("Isi angka target dulu.")); return; } S.goal=v; persist(); render(); };
