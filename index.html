@@ -1196,7 +1196,7 @@ const anakKosong = (nama) => ({
   tier:1, targets:null, manual:null, checks:{}, notes:{}, snaps:{},
   data:null, fetchedAt:0, filter:"semua",
 });
-const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip","refleksi","targetHari","targetLalu","targetAlasan"];
+const MEDAN = ["cfg","tier","targets","manual","checks","notes","snaps","data","fetchedAt","filter","tiltLewat","tiltHari","temaHari","temaKemarin","libur","tiltSkip","refleksi","targetHari","targetLalu","targetAlasan","goal"];
 function anakAktif(){ return DB.anak.find(a => a.id === DB.aktif) || DB.anak[0] || null; }
 function muatAnak(){
   const a = anakAktif(); if(!a) return;
@@ -2290,8 +2290,81 @@ function viewMisi(){
   </section>`;
 }
 
+function blokTargetProgres(){
+  const g = S.goal;
+  if(!g || !g.target) return `<section class="box"><div id="lapDoc"><section style="margin:0"><p class="eyebrow">${tr("Target")}</p><h2>${tr("Belum ada target")}</h2><p class="sub" style="margin:0">${tr("Set satu sasaran bertenggat di tab Pengaturan \u2014 mengubah pemantauan pasif jadi tujuan.")}</p></section></div></section>`;
+  const now=new Date(), b0=dayKey(new Date(now.getFullYear(),now.getMonth(),1));
+  const perf=(S.data&&S.data.lichess&&S.data.lichess.prof&&S.data.lichess.prof.perfs)||{};
+  let cur=0, judul="";
+  if(g.jenis==="rating"){ cur=(perf.rapid&&perf.rapid.rating)||0; judul=tr("Rating rapid"); }
+  else if(g.jenis==="bersih"){ coachPartai(370).forEach(x=>{ if(dayKey(x.g.t)>=b0){ const bl=x.g.blunder; if(bl && (bl.blunder+bl.mistake)===0) cur++; } }); judul=tr("Partai bersih bulan ini"); }
+  else { Object.keys(S.snaps||{}).forEach(d=>{ if(d>=b0) cur+=puzzlesOn(d); }); judul=tr("Puzzle bulan ini"); }
+  const pct=g.target?Math.min(100,Math.round(cur/g.target*100)):0;
+  const sisa=g.tenggat?Math.ceil((new Date(g.tenggat)-now)/864e5):null;
+  const capai=cur>=g.target;
+  return `<section class="box"><div id="lapDoc"><section style="margin:0"><p class="eyebrow">${tr("Target bertenggat")}</p><h2>${judul}: ${cur} / ${g.target}</h2>
+    <div class="bar" style="height:18px;margin:10px 0;border-radius:3px"><i style="width:${pct}%;background:${capai?"#2e7d32":"var(--gold-deep,#9A7B2E)"}"></i></div>
+    <p class="sub" style="margin:0">${capai?tr("Tercapai \ud83c\udf89"):`${pct}% \u00b7 `+(sisa!=null?(sisa>=0?tr("{a} hari lagi",{a:sisa}):tr("tenggat lewat {a} hari",{a:-sisa})):tr("tanpa tenggat"))}</p>
+  </section></div></section>`;
+}
+function blokRekor(){
+  const G = normGames().filter(g=>g.speed==="rapid");
+  if(!G.length) return "";
+  let accMax=null, ratMax=null, lawanMax=null, runMax=0, run=0;
+  [...G].sort((a,b)=>a.t-b.t).forEach(g=>{
+    if(g.acc!=null && (accMax==null||g.acc>accMax)) accMax=g.acc;
+    if(g.rating!=null && (ratMax==null||g.rating>ratMax)) ratMax=g.rating;
+    if(g.res==="M" && g.oppRating!=null && (lawanMax==null||g.oppRating>lawanMax)) lawanMax=g.oppRating;
+    const b=g.blunder; if(b){ const s=(b.blunder||0)+(b.mistake||0); if(s===0){ run++; if(run>runMax)runMax=run; } else run=0; }
+  });
+  const rec=(v,lab,sub)=>`<div class="badge"><span>${lab}</span><b>${v}</b><p>${sub}</p></div>`;
+  return `<section class="box"><div id="lapDoc"><div class="hero" style="margin:0"><p class="eyebrow" style="color:var(--gold)">${tr("Rekor pribadi")}</p>
+    <div class="badges" style="grid-template-columns:repeat(2,1fr);margin-top:12px">
+    ${rec(ratMax!=null?ratMax:"\u2014", tr("Rating rapid tertinggi"), tr("Puncak yang pernah dicapai."))}
+    ${rec(accMax!=null?accMax.toFixed(0)+"%":"\u2014", tr("Akurasi tertinggi"), tr("Partai paling dekat mesin."))}
+    ${rec(runMax||"\u2014", tr("Runtun partai bersih"), tr("Nol kesalahan serius beruntun."))}
+    ${rec(lawanMax!=null?lawanMax:"\u2014", tr("Lawan terkuat dikalahkan"), tr("Rating lawan tertinggi yang tumbang."))}
+  </div></div></div></section>`;
+}
+function blokPembukaan(){
+  const G = normGames().filter(g=>g.speed==="rapid" && g.opening);
+  if(G.length<3) return "";
+  const map={};
+  G.forEach(g=>{ const nm=g.opening; const o=map[nm]||(map[nm]={m:0,k:0,r:0,w:{m:0,k:0,r:0},b:{m:0,k:0,r:0}});
+    const res=g.res==="M"?"m":g.res==="K"?"k":"r"; o[res]++; o[g.putih?"w":"b"][res]++; });
+  const arr=Object.entries(map).filter(x=>x[1].m+x[1].k+x[1].r>=3).sort((a,b)=>b[1].k-a[1].k).slice(0,6);
+  if(!arr.length) return "";
+  const rows=arr.map(x=>{ const nm=x[0],o=x[1],t=o.m+o.k+o.r,wp=Math.round(o.m/t*100);
+    return `<tr><td>${esc(nm)}<div class="lop">${tr("Putih")} ${o.w.m}-${o.w.k}-${o.w.r} \u00b7 ${tr("Hitam")} ${o.b.m}-${o.b.k}-${o.b.r}</div></td><td class="num">${t}</td><td class="num" style="color:${wp>=50?"#2e7d32":"#b23"}">${wp}%</td></tr>`; }).join("");
+  return `<section class="box"><div id="lapDoc"><section style="margin:0"><p class="eyebrow">${tr("Analisa Pembukaan")}</p><h2>${tr("Di mana repertoar menahan hasil")}</h2>
+    <p class="sub">${tr("Dari partai yang pembukaannya dikenali Lichess. Keluarga dengan < 3 partai disembunyikan. Diurut dari yang paling sering kalah.")}</p>
+    <table class="lap"><tr><th>${tr("Pembukaan")}</th><th class="num">${tr("Main")}</th><th class="num">${tr("Menang")}%</th></tr>${rows}</table></section></div></section>`;
+}
+function blokProgres(){
+  const G = coachPartai(28), now=Date.now();
+  const wk=[0,1,2,3].map(i=>({lab:i===0?tr("Ini"):"-"+i, from:now-(i+1)*7*864e5, to:now-i*7*864e5, m:0,k:0,r:0,as:0,an:0,eo:0,mo:0}));
+  G.forEach(x=>{ const w=wk.find(w=>x.g.t>=w.from && x.g.t<w.to); if(!w)return;
+    if(x.g.res==="M")w.m++; else if(x.g.res==="K")w.k++; else w.r++;
+    if(x.g.acc!=null){ w.as+=x.g.acc; w.an++; }
+    const b=x.g.blunder; if(b){ w.eo+=b.op||0; w.mo+=Math.min(Math.ceil((x.g.langkah||0)/2),12); } });
+  const W=wk.slice().reverse();
+  if(!W.some(w=>w.m+w.k+w.r>0)) return "";
+  const win=w=>{const t=w.m+w.k+w.r; return t?Math.round(w.m/t*100):null;};
+  const acc=w=>w.an?Math.round(w.as/w.an):null;
+  const op1=w=>w.mo?+(w.eo/w.mo*100).toFixed(1):null;
+  const first=fn=>{ for(const w of W){ const v=fn(w); if(v!=null) return v; } return null; };
+  const last =fn=>{ for(let i=W.length-1;i>=0;i--){ const v=fn(W[i]); if(v!=null) return v; } return null; };
+  const arah=(fn,hb)=>{ const a=first(fn),b=last(fn); if(a==null||b==null||a===b) return `<span style="color:var(--soft)">${tr("datar")}</span>`;
+    const baik=hb?(b>a):(b<a); return `<span style="color:${baik?"#2e7d32":"#b23"};font-weight:600">${baik?tr("membaik"):tr("memburuk")}</span>`; };
+  const row=(lab,fn,hb,suf)=>`<tr><td>${lab}</td>${W.map(w=>{const v=fn(w);return v==null?`<td class="num" style="color:var(--soft)">\u2014</td>`:`<td class="num">${v}${suf||""}</td>`;}).join("")}<td>${arah(fn,hb)}</td></tr>`;
+  return `<section class="box"><div id="lapDoc"><section style="margin:0"><p class="eyebrow">${tr("Pelacak Perkembangan")}</p><h2>${tr("Apakah latihan berhasil?")}</h2>
+    <p class="sub">${tr("Empat minggu terakhir. Yang penting bukan angka satu minggu, tapi arahnya.")}</p>
+    <table class="lap"><tr><th>${tr("Metrik")}</th>${W.map(w=>`<th class="num">${w.lab}</th>`).join("")}<th>${tr("Arah")}</th></tr>
+    ${row(tr("Menang %"),win,true,"%")}${row(tr("Akurasi"),acc,true,"%")}${row(tr("Salah buka/100"),op1,false,"")}</table>
+    <p class="sub" style="margin:10px 0 0;font-size:11px">${tr("\u201cSalah buka/100\u201d makin kecil makin baik. Kolom kiri = paling lama, kanan = minggu ini.")}</p></section></div></section>`;
+}
 function viewProgres(){
-  return `
+  return `${blokRekor()}${blokTargetProgres()}
   <section class="box">
     ${H2("chart", tr("Ratingmu"))}
     <svg class="chart" id="chart" role="img" aria-label="Grafik rating"></svg>
@@ -2353,7 +2426,7 @@ function viewHariOrtu(){
     ${tr("Isi username di tab Pengaturan, lalu tekan Tarik data.")}</div>
   <div class="cards" id="kpis"></div>
   <div class="plats" id="plats"></div>
-  ${blokHasilRapid()}
+  ${blokHasilRapid()}${blokProgres()}${blokTargetProgres()}
   <section class="box st1">
     ${H2("check", tr("Tugas hari ini"), `<span id="questDate"></span>`)}
     <div id="todos"></div>
@@ -2472,7 +2545,7 @@ function viewHariPelatih(){
     ${tr("Isi username di tab Pengaturan, lalu tekan Tarik data.")}</div>
   <div class="cards" id="kpis"></div>
   <div class="plats" id="plats"></div>
-  ${blokHasilRapid()}
+  ${blokHasilRapid()}${blokProgres()}${blokTargetProgres()}
   <section class="box st1">
     ${H2("check", tr("Tugas hari ini"), `<span id="questDate"></span>`)}
     <div id="todos"></div>
@@ -3375,6 +3448,10 @@ function wireKepatuhanShare(){
   $$("[data-refl]").forEach(b => b.onclick = () => setRefleksi(b.dataset.refl));
   const bLp = $("#bLaporan");
   if(bLp) bLp.onclick = () => bukaLaporan("minggu");
+  const gj=$("#goalJenis"), gt=$("#goalTarget"), gd=$("#goalTenggat");
+  if(gj && S.goal){ gj.value=S.goal.jenis||"rating"; if(gt)gt.value=S.goal.target||""; if(gd)gd.value=S.goal.tenggat||""; }
+  const gs=$("#goalSimpan"); if(gs) gs.onclick=()=>{ const v={ jenis:(gj&&gj.value)||"rating", target:+((gt&&gt.value)||0), tenggat:(gd&&gd.value)||"" }; if(!v.target){ alert(tr("Isi angka target dulu.")); return; } S.goal=v; persist(); render(); };
+  const gh=$("#goalHapus"); if(gh) gh.onclick=()=>{ S.goal=null; persist(); render(); };
   $$("[data-lap]").forEach(b => b.onclick = () => { S._lapMode = b.dataset.lap; render(); });
   const lapC = $("#lapCetak");
   if(lapC) lapC.onclick = () => bukaLaporan(S._lapMode || "minggu");
@@ -3433,7 +3510,7 @@ function panelDiagnosaTema(){
   </div>`;
 }
 
-function viewPartaiAnalisa(){ return viewPartai() + viewCoach() + viewAnalisis(); }
+function viewPartaiAnalisa(){ return viewPartai() + viewCoach() + viewAnalisis() + blokPembukaan(); }
 function viewPenilaianRencana(){ return viewPelatih() + viewRencana(); }
 function viewLaporan(){
   fetchHasilRapid();
@@ -3480,6 +3557,19 @@ function viewAtur(){
   <section class="box st2">
     ${H2("gear", tr("Diagnosis"), `${tr("uji tiap endpoint terpisah")}`)}
     <div id="testLog"><div class="empty">${tr('Tekan "Uji koneksi" untuk memeriksa setiap alamat satu per satu.')}</div></div>
+  </section>
+  <section class="box">
+    ${H2("target", tr("Target bertenggat"))}
+    <div class="pad" style="font-size:13px">
+      <p style="margin:0 0 10px;color:var(--soft)">${tr("Satu sasaran konkret dengan tenggat. Tampil di Ringkasan dan Perkembanganku dengan bar kemajuan.")}</p>
+      <label style="display:block;margin-bottom:8px">${tr("Jenis")}<br><select id="goalJenis" style="width:100%;padding:8px;margin-top:3px">
+        <option value="rating">${tr("Rating rapid")}</option>
+        <option value="bersih">${tr("Partai bersih / bulan")}</option>
+        <option value="puzzle">${tr("Puzzle / bulan")}</option></select></label>
+      <label style="display:block;margin-bottom:8px">${tr("Target (angka)")}<br><input id="goalTarget" type="number" inputmode="numeric" style="width:100%;padding:8px;margin-top:3px"></label>
+      <label style="display:block;margin-bottom:10px">${tr("Tenggat")}<br><input id="goalTenggat" type="date" style="width:100%;padding:8px;margin-top:3px"></label>
+      <div style="display:flex;gap:8px"><button class="btn go" id="goalSimpan">${tr("Simpan target")}</button><button class="btn" id="goalHapus">${tr("Hapus")}</button></div>
+    </div>
   </section>
   <section class="box st2">
     ${H2("book", tr("Batas kejujuran alat ini"))}
