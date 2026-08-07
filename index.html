@@ -528,6 +528,14 @@
     body.mode-laporan > *:not(#laporan){display:none!important}
     body.mode-laporan #laporan{position:static;display:block;overflow:visible;height:auto;padding:0}
     body.mode-laporan .lr-bar{display:none!important}
+    @page{ margin:14mm; }
+    /* Jangan pisahkan judul dari isinya, jangan potong blok di tengah. */
+    #lapDoc .eyebrow, #lapDoc h2, #lapDoc h3, #lapDoc .sub{ break-after:avoid; page-break-after:avoid; }
+    #lapDoc .lcard, #lapDoc .hero, #lapDoc .plan, #lapDoc .grid3, #lapDoc .two, #lapDoc .badges, #lapDoc .phase, #lapDoc .badge, #lapDoc .lr-kpi, #lapDoc table.lap tr{ break-inside:avoid; page-break-inside:avoid; }
+    #lapDoc section{ break-inside:auto; }
+    /* Paksa warna latar (hero/plan/bar) ikut tercetak. */
+    #lapDoc .hero, #lapDoc .plan, #lapDoc .badge, #lapDoc .bar, #lapDoc .bar i, #lapDoc table.lap th{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #lapDoc{ max-width:none; }
 
     body{background:#fff;padding:0;background-image:none}
     body::before{display:none}
