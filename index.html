@@ -3220,7 +3220,8 @@ function laporanLengkap(mode){
 
   // ===== LAMPIRAN =====
   const badge=r=>r==="M"?"M":r==="K"?"K":"R";
-  const rows = games.slice(0,40).map(x=>{ const b=x.g.blunder;
+  const _capN = mode==="tahun" ? 9999 : mode==="bulan" ? 300 : 80;
+  const rows = games.slice(0,_capN).map(x=>{ const b=x.g.blunder;
     return `<tr><td>${new Date(x.g.t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td>
       <td>${esc(x.g.opp||"?")}${x.g.oppRating?` <small style="color:var(--soft)">${x.g.oppRating}</small>`:""}<div class="lop">${x.g.putih?tr("Putih"):tr("Hitam")} \u00b7 ${x.g.opening?x.g.opening:tr("Pembukaan tak dikenal")}</div></td>
       <td class="num" style="color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"};font-weight:700">${badge(x.g.res)}${x.g.poin!=null?`<div style="font-size:9px">${x.g.poin>=0?"+":""}${x.g.poin}</div>`:""}</td>
