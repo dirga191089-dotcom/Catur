@@ -584,17 +584,12 @@ function kirimLaporan_(tanggal, b) {
         '  (' + b.li.benar + ' benar, ' + b.li.salah + ' salah' +
         (b.li.ratingPuzzle ? ', rating ' + b.li.ratingPuzzle : '') + ')'
       : '',
-    T.rushPercobaan > 0
-      ? lulus(b.rushPercobaan >= T.rushPercobaan) + ' Puzzle Rush: ' + b.rushPercobaan + '/' + T.rushPercobaan +
-        ' (skor ' + b.rushSkor + ', target ' + T.rushSkor + ')'
-      : '',
     lulus(b.r.rapid >= T.rapid) + ' Partai rapid: ' + b.r.rapid + '/' + T.rapid,
     lulus(b.r.bullet <= T.bulletMaks) + ' Bullet: ' + b.r.bullet + ' (batas ' + T.bulletMaks + ')',
     lulus(b.r.total <= T.partaiMaks) + ' Total partai: ' + b.r.total + ' (batas ' + T.partaiMaks + ')',
     '',
     'Hasil hari ini: ' + b.r.menang + 'M / ' + b.r.seri + 'R / ' + b.r.kalah + 'K' +
       (b.r.akurasi ? '  ·  akurasi rata-rata ' + b.r.akurasi + '%' : ''),
-    b.rekorBaru ? 'REKOR RATING TAKTIK BARU HARI INI.' : '',
     '',
     b.langgar.length ? 'PERLU PERHATIAN:\n- ' + b.langgar.join('\n- ') : 'Tidak ada pelanggaran.',
     '',
