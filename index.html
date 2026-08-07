@@ -3121,6 +3121,7 @@ function laporanLengkap(mode){
   const rataP = (() => { const f = hariP.filter(d => !hariLibur(d)); return f.length ? Math.round(f.reduce((x,d)=>x+KD.pct(d),0)/f.length) : 0; })();
   const perf = (S.data && S.data.lichess && S.data.lichess.prof && S.data.lichess.prof.perfs) || {};
   const ratingRapid = (perf.rapid && perf.rapid.rating != null) ? perf.rapid.rating : C.rating;
+  const _liUser = (S.data && S.data.lichess && S.data.lichess.user) || (S.cfg && S.cfg.lichess) || "";
   const ratingPuzzle = (perf.puzzle && perf.puzzle.rating != null) ? perf.puzzle.rating : null;
   const tPz = targets().puzzle;
   const RR = rapidRekap(batasKey);
@@ -3167,16 +3168,16 @@ function laporanLengkap(mode){
   // ===== HERO =====
   const verdict = RR.total===0
     ? `${tr("Belum ada partai rapid")} <em>${labelPeriode.toLowerCase()}</em>.`
-    : (RR.poin>=0 ? `${tr("Naik")} <em>${tanda(RR.poin)}</em> ${tr("poin")}.` : `${tr("Turun")} <em>${RR.poin}</em> ${tr("poin")} \u2014 ${tr("baca dulu di bawah")}.`);
+    : `${tr("Menang")} <em>${winPct}%</em> ${tr("dari")} ${RR.total} ${tr("partai rapid")}.`;
   const badgeH = `<div class="badges">
     <div class="badge"><span>${tr("Partai bersih")}</span><b>${bersih}</b><p>${tr("Nol kesalahan serius, dari {a} partai teranalisis.",{a:dian})}</p></div>
     <div class="badge"><span>${tr("Menang lawan 1400+")}</span><b>${menang1400}\u00d7</b><p>${tr("Kemenangan atas lawan kuat.")}</p></div>
     <div class="badge"><span>${tr("Puzzle diselesaikan")}</span><b>${pzTot}</b><p>${tr("Dalam {a} hari periode.",{a:hariP.length})}</p></div>
   </div>`;
-  const hero = `<div class="hero"><div class="hero-top"><span>Road To Grand Master \u00b7 <b>${esc(nm)}</b></span><span>${tr("Rapid")} <b>${ratingRapid!=null?ratingRapid:"\u2014"}</b>${ratingPuzzle!=null?` \u00b7 ${tr("Puzzle")} <b>${ratingPuzzle}</b>`:""}</span></div>
+  const hero = `<div class="hero"><div class="hero-top"><span>Road To Grand Master \u00b7 <b>${esc(nm)}</b>${_liUser?` \u00b7 <b style="color:var(--gold)">@${esc(_liUser)}</b>`:""}</span><span>${tr("Rapid")} <b>${ratingRapid!=null?ratingRapid:"\u2014"}</b>${ratingPuzzle!=null?` \u00b7 ${tr("Puzzle")} <b>${ratingPuzzle}</b>`:""}</span></div>
     <p class="eyebrow" style="color:var(--gold);margin-top:14px">${tr("Laporan")} \u00b7 ${labelPeriode}</p>
     <h1 class="verdict">${verdict}</h1>
-    <p class="verdict-note">${RR.m} ${tr("menang")}, ${RR.k} ${tr("kalah")}, ${RR.r} ${tr("seri")} ${tr("dari")} ${RR.total} ${tr("partai rapid")} \u00b7 ${tr("Persentase menang")} <strong>${winPct}%</strong>${RR.lengkap?"":` \u00b7 ${tr("(angka periode panjang lengkap setelah data tahunan tertarik)")}`}</p>
+    <p class="verdict-note">${RR.m} ${tr("menang")}, ${RR.k} ${tr("kalah")}, ${RR.r} ${tr("seri")} \u00b7 ${tr("Perubahan poin")} <strong>${tanda(RR.poin)}</strong>${RR.lengkap?"":` \u00b7 ${tr("(angka periode panjang lengkap setelah data tahunan tertarik)")}`}</p>
     ${journeyHtml}${badgeH}</div>`;
 
   // ===== TREN =====
@@ -3240,7 +3241,38 @@ function laporanLengkap(mode){
     <p class="sub">${tr("Terbaru dulu. Kolom \u201csalah\u201d = pembukaan / tengah / akhir.")}</p>
     <table class="lap"><tr><th>${tr("Tgl")}</th><th>${tr("Lawan & pembukaan")}</th><th class="num">${tr("Hasil")}</th><th class="num">${tr("Akurasi")}</th><th class="num">${tr("Salah")}</th></tr>${rows}</table></section>`;
 
-  return `<div id="lapDoc">${hero}${tren}${fase}${kv}${kepatuhan}${plan}${lampiran}</div>`;
+  // ── Waktu berpikir (dari jam partai teranalisis) ──
+  let _ply=0,_cepatPly=0,_tempoSum=0,_tempoN=0,_dalamSalah=0;
+  games.forEach(x=>{ const w=x.g.waktu; if(w){ _ply+=w.total||0; _cepatPly+=w.cepat||0; if(w.rata!=null){_tempoSum+=w.rata;_tempoN++;} } const b=x.g.blunder; if(b) _dalamSalah+=b.dalamSalah||0; });
+  const cepatPct=_ply?Math.round(_cepatPly/_ply*100):0;
+  const tempoAvg=_tempoN?(_tempoSum/_tempoN).toFixed(1):null;
+  const waktu = _ply===0 ? "" : `<section><p class="eyebrow">${tr("Waktu berpikir")}</p><h2>${tr("Seberapa sering melangkah tanpa berpikir")}</h2>
+    <p class="sub">${tr("Dari jam pada partai teranalisis. Langkah cepat = di bawah 5 detik.")}</p>
+    <div class="grid3">
+      ${cardStat(tr("Tempo rata-rata"), tempoAvg!=null?tempoAvg+"s":"\u2014", tr("per langkah"))}
+      ${cardStat(tr("Langkah < 5 detik"), cepatPct+"%", tr("makin kecil makin baik"), cepatPct<=20?"up":"down")}
+      ${cardStat(tr("Salah saat terburu-buru"), cepatSalah, _dalamSalah?tr("vs {a} salah setelah berpikir",{a:_dalamSalah}):tr("langkah < 5 detik yang salah"), cepatSalah===0?"up":"down")}
+    </div>
+    ${cepatSalah>_dalamSalah && cepatSalah>0 ? `<p class="sub" style="margin-top:10px">${tr("Lebih banyak kesalahan datang dari terburu-buru daripada kalkulasi salah \u2014 aturan tempo lebih mendesak daripada latihan taktik.")}</p>` : ""}</section>`;
+
+  // ── Repertoar / pembukaan (seluruh partai periode, termasuk arsip) ──
+  const _op={}; games.forEach(x=>{ const nm=x.g.opening; if(!nm)return; const o=_op[nm]||(_op[nm]={m:0,k:0,r:0,w:{m:0,k:0,r:0},b:{m:0,k:0,r:0}}); const res=x.g.res==="M"?"m":x.g.res==="K"?"k":"r"; o[res]++; o[x.g.putih?"w":"b"][res]++; });
+  const _opArr=Object.entries(_op).filter(e=>e[1].m+e[1].k+e[1].r>=3).sort((a,b)=>b[1].k-a[1].k).slice(0,8);
+  const pembukaan = _opArr.length===0 ? "" : `<section><p class="eyebrow">${tr("Repertoar")}</p><h2>${tr("Pembukaan mana yang menahan hasil")}</h2>
+    <p class="sub">${tr("Diurut dari yang paling sering kalah. Keluarga < 3 partai disembunyikan.")}</p>
+    <table class="lap"><tr><th>${tr("Pembukaan")}</th><th class="num">${tr("Putih M-K-S")}</th><th class="num">${tr("Hitam M-K-S")}</th><th class="num">${tr("Menang")}%</th></tr>
+    ${_opArr.map(e=>{const o=e[1],t=o.m+o.k+o.r,wp=Math.round(o.m/t*100);return `<tr><td>${esc(e[0])}</td><td class="num">${o.w.m}-${o.w.k}-${o.w.r}</td><td class="num">${o.b.m}-${o.b.k}-${o.b.r}</td><td class="num" style="color:${wp>=50?"#2e7d32":"#b23"}">${wp}%</td></tr>`;}).join("")}</table></section>`;
+
+  // ── Kepatuhan harian (rincian) ──
+  const _tPz=targets().puzzle;
+  const _kpRows = hariP.slice(0,45).map(d=>{ const pc=KD.pct(d), pz=puzzlesOn(d), lg=S.snaps[d]?S.snaps[d].langgar:""; return `<tr><td>${new Date(d).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td class="num" style="color:${pc>=100?"#2e7d32":pc>=50?"#9A7B2E":"#b23"}">${pc}%</td><td class="num" style="color:${pz>=_tPz||hariLibur(d)?"#2e7d32":"#b23"}">${pz}/${_tPz}</td><td>${hariLibur(d)?tr("Istirahat"):(lg||"\u2014")}</td></tr>`; }).join("");
+  const kepatuhanTbl = !_kpRows ? "" : `<section><p class="eyebrow">${tr("Kepatuhan harian")}</p><h2>${tr("Rincian per hari")}</h2><table class="lap"><tr><th>${tr("Tgl")}</th><th class="num">${tr("Patuh")}</th><th class="num">${tr("Puzzle")}</th><th>${tr("Catatan")}</th></tr>${_kpRows}</table></section>`;
+
+  // ── Refleksi anak ──
+  const _ref = hariP.concat([KD.today]).filter(d=>refleksiHari(d)).map(d=>{ const r=(typeof REFLEKSI!=="undefined"?REFLEKSI:[]).find(x=>x.id===refleksiHari(d))||{}; return `<tr><td>${new Date(d).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</td><td>${r.emo||""} ${tr(r.teks||"")}</td></tr>`; }).join("");
+  const refleksi = !_ref ? "" : `<section><p class="eyebrow">${tr("Refleksi anak")}</p><h2>${tr("Apa kata anak sendiri")}</h2><p class="sub">${tr("Penilaian diri harian anak \u2014 bandingkan dengan data mesin di atas.")}</p><table class="lap"><tr><th>${tr("Tgl")}</th><th>${tr("Kata anak")}</th></tr>${_ref}</table></section>`;
+
+  return `<div id="lapDoc">${hero}${tren}${fase}${waktu}${kv}${pembukaan}${kepatuhan}${kepatuhanTbl}${refleksi}${plan}${lampiran}</div>`;
 }
 async function fetchHasilRapid(){
   const u = (S.cfg.lichess || "").trim(); if(!u) return;
