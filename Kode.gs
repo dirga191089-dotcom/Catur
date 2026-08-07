@@ -6,9 +6,8 @@
  * PERAN SKRIP INI — dan yang BUKAN perannya.
  *
  * Perannya ada satu: menjadi SAKSI yang tidak pernah lupa.
- * Chess.com tidak menyimpan riwayat Puzzle Rush maupun riwayat rating taktik.
- * Ia hanya memberi keadaan SAAT INI. Kalau tidak ada yang memotretnya setiap
- * hari, hari itu hilang selamanya. Browser tidak bisa memotret saat tidak
+ * Lichess hanya memberi keadaan SAAT INI lewat API. Kalau tidak ada yang
+ * memotretnya setiap hari, hari itu hilang selamanya. Browser tidak bisa memotret saat tidak
  * dibuka. Skrip ini bisa — trigger harian jam 23:00, tanpa manusia.
  *
  * Yang BUKAN perannya: menjadi database. Sheet di sini adalah buku catatan,
@@ -22,8 +21,8 @@
  * 5. Selesai. Skrip berjalan sendiri tiap malam.
  *
  * ── RISIKO YANG SUDAH DIKETAHUI ─────────────────────────────────────────
- * Chess.com ada di belakang Cloudflare. Permintaan dari IP Google Apps Script
- * KADANG diblokir dengan HTTP 403. Kalau itu terjadi, skrip ini TIDAK akan
+ * Permintaan ke API kadang gagal (jaringan / rate limit). Kalau itu terjadi,
+ * skrip ini TIDAK akan
  * menulis angka nol seolah anak tidak latihan — ia menulis "GAGAL" di kolom
  * status dan mengirim email peringatan. Kesalahan diam adalah kesalahan
  * terburuk untuk aplikasi pengawasan.
@@ -34,12 +33,12 @@ const KONFIG = {
   /* Banyak anak. Tambahkan objek baru ke daftar ini; tidak perlu apa pun lagi.
      Setiap anak mendapat barisnya sendiri di sheet, dibedakan kolom "Anak". */
   anak: [
-    // chess: '' -> Chess.com DINONAKTIFKAN (sistem murni Lichess).
     // GANTI nama & username di bawah dengan data anak Anda sendiri di SALINAN
     // PRIBADI. Kalau file ini akan di-commit ke repo publik, JANGAN isi nama
     // asli / username asli di sini — nama anak dan akun game-nya jadi tertaut
     // publik selamanya (riwayat Git tidak melupakan).
-    { nama: 'NamaAnak', chess: '', lichess: 'UsernameLichess' },
+    { nama: 'NamaAnak', lichess: 'UsernameLichess' },
+    // { nama: 'Adik',  lichess: '' },
   ],
 
   // Email penerima laporan harian. Kosongkan array untuk mematikan email.
@@ -57,8 +56,7 @@ const KONFIG = {
   telegramToken:  '',
   telegramChatId: '',
 
-  // Kontak untuk header User-Agent. Chess.com MEMINTA ini, dan mengisinya
-  // memperkecil kemungkinan diblokir. Jangan dikosongkan.
+  // Kontak untuk header User-Agent — sopan santun terhadap API publik.
   kontak: 'ganti@email-anda.com',
 
   // Target harian. Harus sama dengan yang di dasbor HTML.
@@ -67,8 +65,6 @@ const KONFIG = {
     rapid:           2,  // partai rapid per hari         yang bisa diverifikasi API
     bulletMaks:      0,  // batas partai bullet (pagar, bukan target)
     partaiMaks:      6,  // batas total partai per hari (anti-tilt)
-    rushPercobaan:   0,  // Puzzle Rush Chess.com — 0 = tidak dipakai
-    rushSkor:        0,
   },
 
   jamCatat: 23,          // jam trigger harian (0-23), waktu spreadsheet
@@ -85,7 +81,6 @@ function pasang() {
   ScriptApp.newTrigger('catatHarian')
     .timeBased().atHour(KONFIG.jamCatat).everyDays(1).create();
   catatHarian();                        // jalankan sekali sekarang
-  backfillPartai();                     // tarik seluruh arsip partai
   SpreadsheetApp.getUi && SpreadsheetApp.getActive().toast(
     KONFIG.anak.length + ' anak terpasang. Skrip akan berjalan tiap hari jam ' + KONFIG.jamCatat + ':00.', 'RTGM Pantau', 8);
 }
@@ -102,8 +97,6 @@ function siapkanSheet_() {
     'Tanggal', 'Anak', 'Status ambil',
     'Puzzle (Lichess)', 'Puzzle benar', 'Puzzle salah', 'Rating puzzle',
     'Puzzle TOTAL kumulatif',
-    'Rush percobaan', 'Rush skor',
-    'Taktik tertinggi (CC)', 'Rekor baru?', 'Rating rapid', 'Rating blitz',
     'Partai hari ini', 'Rapid', 'Blitz', 'Bullet', 'Menang', 'Kalah', 'Seri',
     'Kalah beruntun', 'Akurasi rata2', 'Kepatuhan %', 'Pelanggaran',
     'Tema (JSON)',
@@ -158,19 +151,13 @@ function ambil_(url) {
     method: 'get',
     muteHttpExceptions: true,
     headers: {
-      // Chess.com meminta User-Agent berisi kontak. Ini bukan basa-basi:
-      // permintaan tanpa ini lebih sering diblokir Cloudflare.
       'User-Agent': 'RTGM-Pantau/1.0 (kontak: ' + KONFIG.kontak + ')',
       'Accept': 'application/json',
     },
   });
   const kode = res.getResponseCode();
-  if (kode === 403) {
-    throw new Error('403 — Cloudflare Chess.com memblokir IP Google Apps Script. ' +
-      'Ini terjadi berkala dan bukan kesalahan username. Coba lagi besok; kalau menetap, ' +
-      'gunakan dasbor HTML langsung dari browser (browser tidak diblokir).');
-  }
-  if (kode === 404) throw new Error('404 — username tidak ditemukan: ' + ANAK.chess);
+  if (kode === 403) throw new Error('403 — permintaan ditolak server.');
+  if (kode === 404) throw new Error('404 — username tidak ditemukan: ' + ANAK.lichess);
   if (kode === 429) throw new Error('429 — terlalu banyak permintaan. Kurangi frekuensi trigger.');
   if (kode !== 200) throw new Error('HTTP ' + kode + ' dari ' + url);
   return JSON.parse(res.getContentText());
@@ -178,12 +165,11 @@ function ambil_(url) {
 
 /* Anak yang sedang diproses. Diset oleh catatHarian() sebelum tiap putaran. */
 let ANAK = KONFIG.anak[0];
-const BASE = () => 'https://api.chess.com/pub/player/' + (ANAK.chess || '').toLowerCase();
 const LI   = () => 'https://lichess.org/api/user/' + (ANAK.lichess || '');
 
 /**
  * Lichess: SATU-SATUNYA sumber jumlah puzzle harian yang bisa diverifikasi.
- * PENTING: timestamp Lichess dalam MILIDETIK, Chess.com dalam DETIK.
+ * PENTING: timestamp Lichess dalam MILIDETIK.
  * Menyamakan keduanya adalah bug klasik yang membuat angka puzzle jadi nol
  * tanpa error apa pun — dan orang tua menghukum anak atas kesalahan kode.
  */
@@ -317,26 +303,37 @@ function pasangTokenLichess() {
   PropertiesService.getScriptProperties().setProperty('LICHESS_TOKEN', t.trim());
   console.log('Token tersimpan di Script Properties. SEKARANG kosongkan lagi variabel t di kode ini.');
 }
-/* ═══════════ HAPUS SEMUA DATA CHESS.COM (sekali jalan, permanen) ═══════════
-   Menghapus HANYA data milik Chess.com:
-     - Sheet 'Harian' kolom 9-14: Rush percobaan, Rush skor, Taktik tertinggi (CC),
-       Rekor baru?, Rating rapid (CC), Rating blitz (CC)
-     - Sheet 'Partai' : SELURUH isinya (sheet ini memang khusus partai Chess.com)
-   TIDAK menyentuh: puzzle Lichess, tema, kepatuhan, pelanggaran, dan kolom
-   jumlah partai (15-21) karena kolom itu CAMPURAN Chess.com + Lichess —
-   menghapusnya akan ikut membuang data Lichess.
-   Sebelum menghapus, seluruh spreadsheet disalin sebagai cadangan di Drive. */
-function hapusDataChesscom() {
+/* ═════════ MIGRASI: HAPUS KOLOM CHESS.COM DARI SHEET (sekali jalan) ═════════
+   WAJIB dijalankan SETELAH menempel kode ini, SEBELUM catatHarian() berikutnya.
+   Kode baru menulis 20 kolom; sheet lama punya 26. Tanpa migrasi ini, data akan
+   tertulis di kolom yang salah.
+   Yang dihapus: 6 kolom milik Chess.com (dicari lewat NAMA header, bukan nomor),
+   dan SELURUH isi sheet 'Partai' (sheet itu memang khusus partai Chess.com).
+   Seluruh spreadsheet disalin lebih dulu sebagai cadangan di Drive. */
+function migrasiHapusKolomChesscom() {
   const ss = SpreadsheetApp.getActive();
-  const cadangan = ss.copy('CADANGAN sebelum hapus Chess.com - ' +
+  const cadangan = ss.copy('CADANGAN sebelum migrasi Chess.com - ' +
     Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm'));
-  console.log('Cadangan dibuat: ' + cadangan.getUrl());
+  console.log('Cadangan: ' + cadangan.getUrl());
 
+  const KOLOM_CC = ['Rush percobaan', 'Rush skor', 'Taktik tertinggi (CC)',
+                    'Rekor baru?', 'Rating rapid', 'Rating blitz'];
   const shH = ss.getSheetByName(SHEET_HARIAN);
-  let selH = 0;
-  if (shH && shH.getLastRow() > 1) {
-    selH = shH.getLastRow() - 1;
-    shH.getRange(2, 9, selH, 6).clearContent();   // kolom 9..14
+  const dihapus = [];
+  if (shH) {
+    // Hapus dari kanan ke kiri supaya indeks kolom lain tidak bergeser.
+    KOLOM_CC.map(function (nama) {
+      const header = shH.getRange(1, 1, 1, shH.getLastColumn()).getValues()[0]
+        .map(function (h) { return String(h).trim(); });
+      return { nama: nama, i: header.indexOf(nama) };
+    }).filter(function (x) { return x.i >= 0; })
+      .sort(function (a, b) { return b.i - a.i; })
+      .forEach(function (x) {
+        const header = shH.getRange(1, 1, 1, shH.getLastColumn()).getValues()[0]
+          .map(function (h) { return String(h).trim(); });
+        const i = header.indexOf(x.nama);
+        if (i >= 0) { shH.deleteColumn(i + 1); dihapus.push(x.nama); }
+      });
   }
 
   const shP = ss.getSheetByName(SHEET_PARTAI);
@@ -346,9 +343,37 @@ function hapusDataChesscom() {
     shP.getRange(2, 1, selP, shP.getLastColumn()).clearContent();
   }
 
-  log_('HAPUS', 'Data Chess.com dihapus. Harian: ' + selH + ' baris (kolom 9-14), Partai: ' + selP + ' baris. Cadangan: ' + cadangan.getUrl());
-  console.log('SELESAI. Harian: ' + selH + ' baris dibersihkan (kolom 9-14). Partai: ' + selP + ' baris dihapus.');
-  console.log('Kalau ternyata salah, pulihkan dari cadangan: ' + cadangan.getUrl());
+  const sisa = shH ? shH.getRange(1, 1, 1, shH.getLastColumn()).getValues()[0].join(' | ') : '(sheet tak ada)';
+  console.log('Kolom dihapus: ' + (dihapus.join(', ') || '(tidak ada / sudah pernah dimigrasi)'));
+  console.log('Partai dibersihkan: ' + selP + ' baris.');
+  console.log('Header sekarang: ' + sisa);
+  console.log('Kalau salah, pulihkan dari cadangan di atas.');
+  log_('MIGRASI', 'Kolom Chess.com dihapus (' + dihapus.length + '). Partai: ' + selP + ' baris. Cadangan: ' + cadangan.getUrl());
+}
+
+/* Uji token Lichess dari sisi backend. Jalankan fungsi ini lalu baca Execution log.
+   Menjawab pasti: token yang dipakai yang mana, dan Lichess menerimanya atau tidak. */
+function tesTokenLichess() {
+  var t = _tokenLi_();
+  if (!t) { console.log('TIDAK ADA TOKEN. Isi Script Properties LICHESS_TOKEN, atau LICHESS_TOKEN_HARDCODE.'); return; }
+  var sumber = PropertiesService.getScriptProperties().getProperty('LICHESS_TOKEN')
+    ? 'Script Properties' : 'LICHESS_TOKEN_HARDCODE di kode';
+  console.log('Sumber token: ' + sumber + ' | awalan: ' + t.slice(0, 8) + '...');
+  var res = UrlFetchApp.fetch('https://lichess.org/api/puzzle/activity?max=5', {
+    method: 'get', muteHttpExceptions: true,
+    headers: { 'Accept': 'application/x-ndjson', 'Authorization': 'Bearer ' + t },
+  });
+  var kode = res.getResponseCode();
+  console.log('HTTP ' + kode);
+  if (kode === 200) {
+    var n = res.getContentText().split('\n').filter(String).length;
+    console.log('TOKEN VALID. ' + n + ' baris aktivitas puzzle terbaca.');
+  } else if (kode === 401) {
+    console.log('DITOLAK (401). Token dicabut, salah ketik, atau tanpa izin puzzle:read.');
+    console.log('Buat token baru di lichess.org/account/oauth/token (centang puzzle:read SAJA).');
+  } else {
+    console.log('Gagal: ' + res.getContentText().slice(0, 200));
+  }
 }
 
 function cabutTokenLichess() {
@@ -390,15 +415,12 @@ function ambilTemaLichess_(tanggal, tz) {
 
 /* Sheet lama tidak punya kolom 'Tema (JSON)'. Pastikan header kolom ke-26 ada. */
 function pastikanKolomTema_(sh) {
-  if (sh.getRange(1, 26).getValue() !== 'Tema (JSON)') {
-    sh.getRange(1, 26).setValue('Tema (JSON)')
+  if (sh.getRange(1, 20).getValue() !== 'Tema (JSON)') {
+    sh.getRange(1, 20).setValue('Tema (JSON)')
       .setFontWeight('bold').setBackground('#1B2130').setFontColor('#F1F2EB');
   }
 }
 
-function ambilStats_()    { return ambil_(BASE() + '/stats'); }
-function ambilArsip_()    { return ambil_(BASE() + '/games/archives').archives || []; }
-function ambilBulan_(url) { return ambil_(url).games || []; }
 
 // ═══════════════════ PENCATATAN HARIAN ═══════════════════
 /** Dipanggil trigger harian. Mengulang untuk SETIAP anak di KONFIG.anak. */
@@ -421,37 +443,7 @@ function catatSatuAnak_() {
   const tz = ss.getSpreadsheetTimeZone();
   const hariIni = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
 
-  let stats = null, partaiHariIni = [], status = 'OK';
-  try {
-    if (ANAK.chess) stats = ambilStats_();
-  } catch (e) {
-    // Chess.com gagal TIDAK boleh membuang data Lichess. Puzzle tetap dicatat.
-    log_('GAGAL', 'Ambil stats Chess.com: ' + e.message);
-    const liSaja = ambilLichess_(hariIni, tz);
-    const temaSaja = ambilTemaLichess_(hariIni, tz);
-    liSaja.tema = temaSaja.tema; liSaja.temaStatus = temaSaja.status;
-    tulisBaris_(hariIni, 'GAGAL Chess.com: ' + e.message, null, [], liSaja);
-    kirimNotif_('[Road To Grand Master] Chess.com GAGAL — ' + ANAK.nama + ' ' + hariIni,
-      'Data Chess.com tidak bisa ditarik hari ini.\n\n' + e.message +
-      '\n\nData Lichess TETAP tercatat: ' + liSaja.puzzle + ' puzzle.' +
-      '\n\nAngka partai untuk ' + hariIni + ' KOSONG karena pengambilannya gagal — ' +
-      'bukan karena anak tidak bermain. Jangan menghukum atas kesalahan kode.');
-    return;
-  }
-
-  // Partai hari ini diambil dari arsip bulan berjalan.
-  try {
-    const arsip = ANAK.chess ? ambilArsip_() : [];
-    if (arsip.length) {
-      const semua = ambilBulan_(arsip[arsip.length - 1]);
-      partaiHariIni = semua.filter(g =>
-        Utilities.formatDate(new Date(g.end_time * 1000), tz, 'yyyy-MM-dd') === hariIni);
-      simpanPartai_(semua, tz);
-    }
-  } catch (e) {
-    status = 'SEBAGIAN: arsip partai gagal (' + e.message + ')';
-    log_('PERINGATAN', 'Arsip gagal: ' + e.message);
-  }
+  let status = 'OK';
 
   const li = ambilLichess_(hariIni, tz);
   if (li.status !== 'OK' && li.status !== 'MATI') status += ' | Lichess ' + li.status;
@@ -461,7 +453,7 @@ function catatSatuAnak_() {
   li.tema = temaLi.tema; li.temaStatus = temaLi.status;
   if (['OK', 'MATI', 'TANPA TOKEN'].indexOf(temaLi.status) < 0) status += ' | Tema ' + temaLi.status;
 
-  const baris = tulisBaris_(hariIni, status, stats, partaiHariIni, li);
+  const baris = tulisBaris_(hariIni, status, null, [], li);
   kirimLaporan_(hariIni, baris);
 }
 
@@ -476,15 +468,6 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   // token / gagal, kolom dikosongkan -> frontend jatuh ke centang manual, bukan
   // mengaku 'terverifikasi nol'.
   const temaJson = (li.temaStatus === 'OK') ? JSON.stringify(li.tema || {}) : '';
-
-  const rush  = stats && stats.puzzle_rush && stats.puzzle_rush.daily ? stats.puzzle_rush.daily : null;
-  const rBest = stats && stats.puzzle_rush && stats.puzzle_rush.best  ? stats.puzzle_rush.best  : null;
-  const tac   = stats && stats.tactics && stats.tactics.highest ? stats.tactics.highest : null;
-
-  const rushPercobaan = rush ? (rush.total_attempts || 0) : 0;
-  const rushSkor      = rush ? (rush.score || 0) : 0;
-  const taktikTinggi  = tac ? tac.rating : '';
-  const rekorBaru     = tac && Utilities.formatDate(new Date(tac.date * 1000), tz, 'yyyy-MM-dd') === tanggal;
 
   const r = ringkasPartai_(partai);
 
@@ -503,7 +486,7 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   // deret kekalahan dihitung ulang lintas situs, urut waktu
   const semua = []
     .concat(partai.map(function (g) {
-      const me = ANAK.chess.toLowerCase();
+      const me = (ANAK.chess || '').toLowerCase();
       const putih = (g.white.username || '').toLowerCase() === me;
       const sisi = putih ? g.white : g.black;
       const seri = ['agreed','repetition','stalemate','insufficient','50move','timevsinsufficient'];
@@ -524,7 +507,6 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   // ikut dihitung di sini — kalau ikut, angkanya bohong.
   const cek = [];
   if (T.puzzle > 0)        cek.push(li.puzzle >= T.puzzle);
-  if (T.rushPercobaan > 0) cek.push(rushPercobaan >= T.rushPercobaan);
   cek.push(r.rapid >= T.rapid);
   cek.push(r.bullet <= T.bulletMaks);
   cek.push(r.total <= T.partaiMaks);
@@ -535,17 +517,11 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   if (r.bullet > T.bulletMaks)      langgar.push('bullet ' + r.bullet);
   if (r.total > T.partaiMaks)       langgar.push('volume ' + r.total);
   if (r.kalahBeruntun >= 3)         langgar.push('tilt ' + r.kalahBeruntun + ' kalah beruntun');
-  if (T.rushPercobaan > 0 && rushPercobaan === 0) langgar.push('Rush tidak dikerjakan');
-  if (rushPercobaan > 0 && rushSkor < T.rushSkor) langgar.push('skor Rush ' + rushSkor + ' < ' + T.rushSkor);
 
   const row = [
     tanggal, ANAK.nama, status,
     li.puzzle, li.benar, li.salah, li.ratingPuzzle,
     li.puzzleTotal == null ? '' : li.puzzleTotal,
-    rushPercobaan, rushSkor,
-    taktikTinggi, rekorBaru ? 'YA' : '',
-    stats && stats.chess_rapid && stats.chess_rapid.last ? stats.chess_rapid.last.rating : '',
-    stats && stats.chess_blitz && stats.chess_blitz.last ? stats.chess_blitz.last.rating : '',
     r.total, r.rapid, r.blitz, r.bullet, r.menang, r.kalah, r.seri,
     r.kalahBeruntun, r.akurasi || '', kepatuhan, langgar.join('; '),
     temaJson,
@@ -560,11 +536,11 @@ function tulisBaris_(tanggal, status, stats, partai, li) {
   if (idx > 0) sh.getRange(idx, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
 
-  return { tanggal, li, rushPercobaan, rushSkor, rekorBaru, kepatuhan, langgar, r, status };
+  return { tanggal, li, kepatuhan, langgar, r, status };
 }
 
 function ringkasPartai_(partai) {
-  const me = ANAK.chess.toLowerCase();
+  const me = (ANAK.chess || '').toLowerCase();
   const out = { total: partai.length, rapid: 0, blitz: 0, bullet: 0,
                 menang: 0, kalah: 0, seri: 0, kalahBeruntun: 0, akurasi: null };
   const seri = ['agreed', 'repetition', 'stalemate', 'insufficient', '50move', 'timevsinsufficient'];
@@ -592,63 +568,11 @@ function ringkasPartai_(partai) {
   return out;
 }
 
-function simpanPartai_(partai, tz) {
-  const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_PARTAI);
-  const me = ANAK.chess.toLowerCase();
-  const adaUrl = {};
-  sh.getDataRange().getValues().slice(1).forEach(r => adaUrl[r[9]] = true);
-
-  const seri = ['agreed', 'repetition', 'stalemate', 'insufficient', '50move', 'timevsinsufficient'];
-  const baru = partai.filter(g => !adaUrl[g.url]).sort((a, b) => a.end_time - b.end_time).map(g => {
-    const putih = (g.white.username || '').toLowerCase() === me;
-    const sisi = putih ? g.white : g.black;
-    const lawan = putih ? g.black : g.white;
-    const hasil = sisi.result === 'win' ? 'M' : (seri.indexOf(sisi.result) >= 0 ? 'R' : 'K');
-    const acc = g.accuracies ? (putih ? g.accuracies.white : g.accuracies.black) : '';
-    return [
-      ANAK.nama,
-      Utilities.formatDate(new Date(g.end_time * 1000), tz, 'yyyy-MM-dd HH:mm'),
-      g.time_class, lawan.username, lawan.rating, hasil, sisi.rating, acc || '',
-      ecoDari_(g.pgn), g.url,
-    ];
-  });
-  if (baru.length) sh.getRange(sh.getLastRow() + 1, 1, baru.length, baru[0].length).setValues(baru);
-}
-
-function ecoDari_(pgn) {
-  if (!pgn) return '';
-  const m = pgn.match(/\[ECO "([^"]+)"\]/);
-  return m ? m[1] : '';
-}
-
-// ═══════════════════ BACKFILL ═══════════════════
-/** Tarik SELURUH riwayat partai. Jalankan sekali saat pertama pasang. */
-function backfillPartai() {
-  KONFIG.anak.forEach(function (a) { ANAK = a; backfillSatu_(); });
-}
-function backfillSatu_() {
-  const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
-  if (!ANAK.chess) return;
-  let arsip;
-  try { arsip = ambilArsip_(); }
-  catch (e) { log_('GAGAL', 'Backfill: ' + e.message); return; }
-
-  let n = 0;
-  arsip.forEach(url => {
-    try {
-      const g = ambilBulan_(url);
-      simpanPartai_(g, tz);
-      n += g.length;
-      Utilities.sleep(400);   // sopan terhadap rate limit
-    } catch (e) { log_('PERINGATAN', 'Bulan gagal: ' + url + ' — ' + e.message); }
-  });
-  log_('OK', 'Backfill ' + ANAK.nama + ': ' + n + ' partai dari ' + arsip.length + ' bulan.');
-}
 
 // ═══════════════════ LAPORAN ═══════════════════
 function kirimLaporan_(tanggal, b) {
   const T = KONFIG.target;
-  const lulus = x => x ? '\u2713' : '\u2717';
+  const lulus = x => x ? '✓' : '✗';
 
   const badan = [
     'LAPORAN HARIAN — ' + ANAK.nama + ' — ' + tanggal,
@@ -680,7 +604,7 @@ function kirimLaporan_(tanggal, b) {
       : '',
     '',
     '--',
-    'Puzzle dihitung dari Lichess. Partai dihitung dari Chess.com + Lichess.',
+    'Puzzle dan partai dihitung dari Lichess.',
     'Pelajaran, video, dan latihan papan fisik TIDAK terlihat di sini sama sekali.',
     'Untuk itu, tanya anaknya. Dasbor tidak menggantikan percakapan.',
   ].filter(x => x !== '').join('\n');
@@ -736,11 +660,16 @@ function log_(tingkat, pesan) {
  * Salin URL /exec, tempel ke kolom "URL Web App" di dasbor HTML.
  *
  * Dua masalah selesai sekaligus:
- *   1. CORS — permintaan tidak lagi ke chess.com, tapi ke Google.
+ *   1. CORS — permintaan ke Google, bukan langsung ke API catur.
  *   2. Riwayat — dasbor mendapat SELURUH catatan harian, termasuk hari-hari
  *      saat dasbor tidak dibuka sama sekali.
  */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.ai) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ai: coachAIGemini(e.parameter.d || "", e.parameter.j || "review") }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   const minta = (e && e.parameter && e.parameter.anak) || null;
   ANAK = KONFIG.anak.filter(function (a) {
     return !minta || a.nama.toLowerCase() === String(minta).toLowerCase();
@@ -759,19 +688,12 @@ function doGet(e) {
     snaps[kunci] = {
       puzzles: r[3] || 0, puzzleWin: r[4] || 0, puzzleLoss: r[5] || 0, puzzleRating: r[6] || null,
       puzTotal: r[7] === '' || r[7] == null ? null : Number(r[7]),
-      rushAttempts: r[8] || 0, rushScore: r[9] || 0,
-      tacticsHigh: r[10] || null, rapid: r[12] || null, blitz: r[13] || null,
-      status: r[2], kepatuhan: r[23], langgar: r[24],
-      tema: (function () { var v = r[25]; if (v == null || String(v).trim() === '') return null;
+      status: r[2], kepatuhan: r[17], langgar: r[18],
+      tema: (function () { var v = r[19]; if (v == null || String(v).trim() === '') return null;
         try { return JSON.parse(v); } catch (e) { return null; } })(),
     };
   }
   let stats = null, games = [], lichess = null;
-  try { stats = ambilStats_(); } catch (e) { /* pakai catatan saja */ }
-  try {
-    const arsip = ambilArsip_();
-    if (arsip.length) games = ambilBulan_(arsip[arsip.length - 1]);
-  } catch (e) { /* abaikan */ }
   if (ANAK.lichess) {
     try {
       lichess = {
@@ -784,14 +706,18 @@ function doGet(e) {
   }
 
   // Tema live hari ini & beberapa hari terakhir — server-side, tanpa token di browser.
+  var temaStatus = 'TIDAK DIJALANKAN';
   try {
     var tokLi = _tokenLi_();
+    temaStatus = tokLi ? 'MENCOBA' : 'TANPA TOKEN';
     if (tokLi && ANAK.lichess) {
       var resT = UrlFetchApp.fetch('https://lichess.org/api/puzzle/activity?max=200', {
         method: 'get', muteHttpExceptions: true,
         headers: { 'Accept': 'application/x-ndjson', 'Authorization': 'Bearer ' + tokLi },
       });
-      if (resT.getResponseCode() === 200) {
+      var kodeT = resT.getResponseCode();
+      temaStatus = kodeT === 200 ? 'OK' : (kodeT === 401 ? 'TOKEN DITOLAK (401)' : 'HTTP ' + kodeT);
+      if (kodeT === 200) {
         var perHari = {};
         resT.getContentText().split('\n').filter(String).forEach(function (baris) {
           var a; try { a = JSON.parse(baris); } catch (e) { return; }
@@ -815,7 +741,7 @@ function doGet(e) {
 
   return ContentService
     .createTextOutput(JSON.stringify({
-      user: (ANAK.chess || '').toLowerCase(),
+      temaStatus: temaStatus,
       nama: ANAK.nama,
       daftarAnak: KONFIG.anak.map(function (a) { return a.nama; }),
       stats: stats, games: games, lichess: lichess, snaps: snaps,
@@ -831,7 +757,7 @@ function ujiTelegram() {
     const m = 'Telegram tidak diaktifkan (token atau chatId kosong).';
     console.log(m); return m;
   }
-  kirimTelegram_('Uji koneksi Road To Grand Master \u2014 kalau pesan ini sampai, laporan malam akan masuk ke sini.');
+  kirimTelegram_('Uji koneksi Road To Grand Master — kalau pesan ini sampai, laporan malam akan masuk ke sini.');
   const m = 'Pesan uji dikirim. Cek Telegram.';
   console.log(m); return m;
 }
@@ -859,18 +785,65 @@ function ujiSatu_() {
   } catch (e) {
     pesan += 'LICHESS GAGAL: ' + e.message + '\n\n';
   }
-  // ── Chess.com (sumber partai) ──
-  try {
-    const s = ambilStats_();
-    const rush = s.puzzle_rush && s.puzzle_rush.daily ? s.puzzle_rush.daily : null;
-    pesan += 'CHESS.COM BERHASIL.\n' +
-      '  Rapid           : ' + (s.chess_rapid && s.chess_rapid.last ? s.chess_rapid.last.rating : '-') + '\n' +
-      '  Taktik tertinggi: ' + (s.tactics && s.tactics.highest ? s.tactics.highest.rating : '-') + '\n' +
-      '  Puzzle Rush kini: ' + (rush ? rush.total_attempts + ' percobaan, skor ' + rush.score : 'belum ada');
-  } catch (e) {
-    pesan += 'CHESS.COM GAGAL: ' + e.message + '\n' +
-      '  Kalau ini 403, Cloudflare memblokir IP Google. Puzzle tetap tercatat lewat Lichess,\n' +
-      '  tapi partai tidak. Pakai dasbor browser untuk data partai.';
-  }
   return pesan;
+}
+
+/* ============ PELATIH AI (Gemini, gratis) ============
+   Kunci disimpan di Properti Skrip (GEMINI_KEY), TIDAK di file publik.
+   Frontend memanggil: <URL>/exec?ai=1&d=<json angka performa tanpa nama>.
+   Model bisa diganti via properti GEMINI_MODEL (default gemini-2.5-flash). */
+function coachAIGemini(dataStr, jenis) {
+  var props = PropertiesService.getScriptProperties();
+  var key = props.getProperty("GEMINI_KEY");
+  if (!key) return "ERROR: GEMINI_KEY belum diatur di Properti Skrip.";
+  var model = props.getProperty("GEMINI_MODEL") || "gemini-2.5-flash-lite";
+  var prompt;
+  if (jenis === "kurikulum") {
+    prompt =
+      "Kamu pelatih catur untuk seorang ANAK. Data di bawah berisi ringkasan statistik DAN beberapa partai rapid terbaru " +
+      "lengkap dengan data mesin (akurasi, kesalahan serius per fase) dan notasi langkah (moves). " +
+      "UTAMAKAN DATA MESIN. Notasi hanya untuk konteks pola pembukaan; JANGAN memvonis kualitas langkah spesifik sebagai benar/salah, " +
+      "karena analisis caturmu bisa keliru — cukup kenali pola berulang (mis. sering kalah cepat dengan pembukaan tertentu, banjir kesalahan di fase tertentu). " +
+      "Tugas: susun RENCANA LATIHAN UNTUK HARI INI, diturunkan dari partai-partai terbaru itu. " +
+      "Beri 3-5 tugas konkret hari ini: tema puzzle, review pembukaan tertentu bila terlihat pola, aturan tempo bila banyak langkah tanpa pikir, plus jumlah puzzle. " +
+      "Ringkas, daftar bernomor, Bahasa Indonesia. Akhiri satu kalimat penyemangat untuk anak.\n\nDATA:\n" + dataStr;
+  } else {
+    prompt =
+      "Kamu pelatih catur untuk seorang ANAK. Data di bawah berisi ringkasan statistik DAN beberapa partai terbaru " +
+      "dengan data mesin dan notasi langkah. UTAMAKAN DATA MESIN (akurasi, kesalahan per fase). " +
+      "Notasi hanya konteks; jangan memvonis langkah spesifik benar/salah karena analisis caturmu bisa keliru. Tanpa menyebut nama. " +
+      "Jawab dalam Bahasa Indonesia yang hangat dan ringkas, dalam 3 bagian pendek:\n" +
+      "1) Diagnosis: satu-dua kalimat, apa yang paling menahan hasil.\n" +
+      "2) Latihan minggu ini: dua-tiga saran konkret dan bisa dikerjakan.\n" +
+      "3) Untuk anak: satu kalimat penyemangat.\n" +
+      "Ini pendapat berbasis data, hindari klaim pasti.\n\nDATA:\n" + dataStr;
+  }
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+  var opt = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "x-goog-api-key": key },
+    payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    muteHttpExceptions: true
+  };
+  var res = UrlFetchApp.fetch(url, opt);
+  var code = res.getResponseCode();
+  if (code === 429) { Utilities.sleep(3000); res = UrlFetchApp.fetch(url, opt); code = res.getResponseCode(); }
+  var body = res.getContentText();
+  if (code !== 200) return "ERROR " + code + ": " + body.slice(0, 500);
+  try {
+    var j = JSON.parse(body);
+    var t = j.candidates && j.candidates[0] && j.candidates[0].content &&
+            j.candidates[0].content.parts && j.candidates[0].content.parts[0] &&
+            j.candidates[0].content.parts[0].text;
+    return t || ("ERROR: respons kosong. " + body.slice(0, 300));
+  } catch (err) {
+    return "ERROR parse: " + err;
+  }
+}
+
+// Jalankan ini dari editor (pilih tesGeminiCall lalu Run) untuk menguji kunci & model.
+function tesGeminiCall() {
+  var out = coachAIGemini('{"partai_rapid":20,"menang_persen":55,"akurasi_rata":78,"fase_terlemah":"pembukaan","salah_dimainkan_tanpa_pikir":6}');
+  Logger.log(out);
 }
