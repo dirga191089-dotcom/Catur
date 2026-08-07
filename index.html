@@ -1455,6 +1455,7 @@ async function fetchAll(){
       // (apalagi analisis engine). Kalau ditaruh, pengambilan partai dari
       // browser dilewati dan tab Partai/Coach jadi kosong.
       if(d.lichess) out.lichessGs = d.lichess;
+      if(d.partaiArsip) S.arsip = d.partaiArsip;
       if(d.snaps) Object.keys(d.snaps).forEach(k => {
         // Backend = sumber kebenaran. Salinan lokal hanya mengisi field yang
         // TIDAK dikirim backend; kalau lokal menimpa, angka hari ini bisa basi.
@@ -1737,13 +1738,29 @@ function normGames(){
       });
       if(!evalSeri.length) evalSeri = null;
     }
-    out.push({ t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
+    out.push({ id: g.id, t: g.lastMoveAt || g.createdAt, site:"Lichess", speed: speedNorm(g.speed), res,
       putih: isW, langkah: lgk, mini: res === "K" && lgk != null && lgk < MINI,
       rating: my.rating, poin: (my.ratingDiff != null ? my.ratingDiff : null), opp: esc((op.user && op.user.name) || "Anonim"), oppRating: op.rating,
       acc: my.analysis && my.analysis.accuracy != null ? my.analysis.accuracy : null,
       url: "https://lichess.org/" + g.id, opening: g.opening ? esc(g.opening.name) : null,
       eco: g.opening ? g.opening.eco : null, moves: g.moves || null, blunder, waktu, evalSeri });
   });
+  // Gabung ARSIP backend (riwayat penuh) yang tak ada di 100 partai live.
+  const _arsip = (S.arsip || []);
+  if(_arsip.length){
+    const _punya = {}; out.forEach(x=>{ if(x.id) _punya[x.id]=1; });
+    _arsip.forEach(a=>{
+      if(!a.id || _punya[a.id]) return;
+      const serius = (a.blunder!=null||a.mistake!=null) ? ((+a.blunder||0)+(+a.mistake||0)) : null;
+      const lgk = a.langkah!=null ? +a.langkah : null;
+      out.push({ id:a.id, t:new Date(a.t).getTime(), site:"Lichess", speed:a.speed||"rapid", res:a.res,
+        putih:!!a.putih, langkah:lgk, mini:a.res==="K"&&lgk!=null&&lgk<MINI,
+        rating:a.rating||null, poin:(a.poin!=null?+a.poin:null), opp:esc(a.opp||"Anonim"), oppRating:a.oppRating||null,
+        acc:(a.acc!=null?+a.acc:null), url:"https://lichess.org/"+a.id,
+        opening:a.opening?esc(a.opening):null, eco:a.eco||null, moves:null,
+        blunder:null, serius:serius, arsip:true, waktu:null, evalSeri:null });
+    });
+  }
   _ng = out.sort((a,b)=>b.t-a.t); _ngAt = kunci;
   return _ng;
 }
@@ -3208,7 +3225,7 @@ function laporanLengkap(mode){
       <td>${esc(x.g.opp||"?")}${x.g.oppRating?` <small style="color:var(--soft)">${x.g.oppRating}</small>`:""}<div class="lop">${x.g.putih?tr("Putih"):tr("Hitam")} \u00b7 ${x.g.opening?x.g.opening:tr("Pembukaan tak dikenal")}</div></td>
       <td class="num" style="color:${x.g.res==="M"?"#2e7d32":x.g.res==="K"?"#b23":"#666"};font-weight:700">${badge(x.g.res)}${x.g.poin!=null?`<div style="font-size:9px">${x.g.poin>=0?"+":""}${x.g.poin}</div>`:""}</td>
       <td class="num">${x.g.acc!=null?x.g.acc.toFixed(0)+"%":"\u2014"}</td>
-      <td class="num">${b?`${b.op}/${b.mid}/${b.eg}`:"\u2014"}</td></tr>`;
+      <td class="num">${b?`${b.op}/${b.mid}/${b.eg}`:(x.g.serius!=null?x.g.serius+" "+tr("serius"):"\u2014")}</td></tr>`;
   }).join("") || `<tr><td colspan="5">${tr("Belum ada partai rapid.")}</td></tr>`;
   const lampiran = `<section><p class="eyebrow">${tr("Lampiran")}</p><h2>${games.length} ${tr("partai rapid")}</h2>
     <p class="sub">${tr("Terbaru dulu. Kolom \u201csalah\u201d = pembukaan / tengah / akhir.")}</p>
