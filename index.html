@@ -1227,11 +1227,16 @@ function simpanAnak(){
 // ══ KONFIGURASI BAKUAN (sumber tunggal = file ini; tak perlu input per-perangkat) ══
 // Ganti URL ini kalau kamu redeploy ke deployment BARU. Kalau pakai 'Manage
 // deployments > Edit > New version', URL tetap sama dan baris ini tak perlu diubah.
-const BAKED_GS = "https://script.google.com/macros/s/AKfycbxWGobbmg-IYmLJuSwMiUJFcqHgVItOBifHg3NnLE9UbAdqCbv-puCrwovG7PiUemTx_w/exec";
+// KOSONG DENGAN SENGAJA: kalau file ini di-commit ke repo (apalagi publik),
+// mengisi URL /exec di sini membuat data anak bisa ditarik siapa pun yang
+// menemukan repo-nya, tanpa login. Isi lewat tab Pengaturan di browser
+// (tersimpan lokal, tidak ikut commit) — atau isi di sini HANYA di salinan
+// pribadi yang tidak kamu commit / bagikan.
+const BAKED_GS = "";
 const BAKED_CHESS = "";
-const BAKED_LICHESS = "VarishaChess";
+const BAKED_LICHESS = "";
 let S = {
-  cfg:{ name:"Varisha", chess:BAKED_CHESS, lichess:BAKED_LICHESS, proxy:"", csv:"", gs:BAKED_GS },
+  cfg:{ name:"", chess:BAKED_CHESS, lichess:BAKED_LICHESS, proxy:"", csv:"", gs:BAKED_GS },
   tier:1,
   targets:null,
   manual:null,
@@ -2687,7 +2692,15 @@ async function mintaCoachAI(mode, jenis){
     const url = u + (u.indexOf("?")>=0?"&":"?") + "ai=1&t=" + Date.now() + "&j=" + jenis + "&d=" + encodeURIComponent(JSON.stringify(stats));
     const r = await fetch(url, { cache:"no-store" });
     const j = await r.json();
-    const txt = (j && j.ai) || tr("Tidak ada respons.");
+    // doGet(e) di Kode.gs (backend) belum menangani parameter ai=1 sama sekali
+    // — tanpa cek ini, jawaban JSON normal (stats/games/dst, tanpa field "ai")
+    // akan salah dibaca sebagai "AI tidak punya jawaban", padahal fiturnya
+    // memang belum diimplementasikan di backend. Diam-diam salah > jujur gagal.
+    if(!j || !("ai" in j)){
+      out.innerHTML = `<div class="warnbox">${tr("Backend belum mendukung pelatih AI (parameter ai=1 belum ditangani di doGet(e), Kode.gs). Fitur ini butuh implementasi backend dulu sebelum bisa dipakai.")}</div>`;
+      return;
+    }
+    const txt = j.ai || tr("Tidak ada respons.");
     if(String(txt).indexOf("ERROR")===0){ out.innerHTML = `<div class="warnbox">${esc(String(txt))}</div>`; return; }
     out.innerHTML = `<div class="coach-vonis" style="white-space:pre-wrap">${esc(String(txt))}</div>`
       + `<p class="csub" style="margin-top:8px">${tr("Pendapat AI dari angka yang dikirim \u2014 tanpa nama atau partai spesifik. Bisa keliru; perlakukan sebagai masukan, bukan kebenaran.")}</p>`;
@@ -4636,9 +4649,9 @@ document.addEventListener("visibilitychange", () => {
   }
 
   if(!DB.anak.length){
-    const a = anakKosong("Varisha");
-    a.cfg.chess = "VarishaArbas";
-    a.cfg.lichess = "VarishaChess";
+    // Anak pertama kosong dengan sengaja — isi username di tab Pengaturan.
+    // Jangan bakukan nama/username asli di sini kalau file ini bisa dilihat publik.
+    const a = anakKosong("Anak 1");
     DB.anak = [a]; DB.aktif = a.id;
   }
   if(!DB.anak.some(x => x.id === DB.aktif)) DB.aktif = DB.anak[0].id;

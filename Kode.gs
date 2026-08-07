@@ -35,8 +35,11 @@ const KONFIG = {
      Setiap anak mendapat barisnya sendiri di sheet, dibedakan kolom "Anak". */
   anak: [
     // chess: '' -> Chess.com DINONAKTIFKAN (sistem murni Lichess).
-    { nama: 'Varisha', chess: '', lichess: 'VarishaChess' },
-    // { nama: 'Adik',  chess: '',             lichess: '' },
+    // GANTI nama & username di bawah dengan data anak Anda sendiri di SALINAN
+    // PRIBADI. Kalau file ini akan di-commit ke repo publik, JANGAN isi nama
+    // asli / username asli di sini — nama anak dan akun game-nya jadi tertaut
+    // publik selamanya (riwayat Git tidak melupakan).
+    { nama: 'NamaAnak', chess: '', lichess: 'UsernameLichess' },
   ],
 
   // Email penerima laporan harian. Kosongkan array untuk mematikan email.
@@ -294,7 +297,7 @@ function msLi_(t) { return t < 1e11 ? t * 1000 : t; }
    Project Settings > Script properties > tambah  LICHESS_TOKEN = <token puzzle:read>.
    (Atau tempel di pasangTokenLichess() sekali, jalankan, lalu kosongkan lagi.)
    /api/puzzle/activity selalu mengembalikan aktivitas PEMILIK token — jadi token
-   ini harus milik akun Lichess si anak (Varisha). Banyak anak = butuh mekanisme
+   ini harus milik akun Lichess si anak. Banyak anak = butuh mekanisme
    token per anak; untuk satu anak, ini sudah benar. */
 /* Opsi "tempel di kode": isi token puzzle:read di antara kutip di bawah, sekali.
    Berlaku di semua perangkat, tak perlu tempel di browser lagi.
