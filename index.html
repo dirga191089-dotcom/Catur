@@ -2647,16 +2647,22 @@ function viewRencanaPuzzleCard(){
   </section>`;
 }
 
-async function mintaCoachAI(){
+async function mintaCoachAI(mode){
+  mode = mode || S._aiMode || "minggu"; S._aiMode = mode;
   const out = $("#coachAIout"); if(!out) return;
   const u = BAKED_GS || S.cfg.gs;
   if(!u){ out.innerHTML = `<div class="warnbox">${tr("Backend belum tersambung.")}</div>`; return; }
-  const C = coachRingkas(30);
-  const RR = rapidRekap(dayKey(Date.now()-29*864e5));
+  const _n = new Date(); let _hN, _lbl, _bk;
+  if(mode==="hari"){ _hN=1; _lbl=tr("hari ini"); _bk=dayKey(_n.getTime()); }
+  else if(mode==="bulan"){ const aw=new Date(_n.getFullYear(),_n.getMonth(),1); _hN=Math.round((_n-aw)/864e5)+1; _lbl=tr("bulan ini"); _bk=dayKey(aw); }
+  else if(mode==="tahun"){ const aw=new Date(_n.getFullYear(),0,1); _hN=Math.round((_n-aw)/864e5)+1; _lbl=tr("tahun ini"); _bk=dayKey(aw); }
+  else { _hN=7; _lbl=tr("7 hari terakhir"); _bk=dayKey(_n.getTime()-6*864e5); }
+  const C = coachRingkas(_hN);
+  const RR = rapidRekap(_bk);
   const fase = C.terlemah ? ({op:tr("pembukaan"),mid:tr("permainan tengah"),eg:tr("akhir permainan")}[C.terlemah[0]] || C.terlemah[0]) : null;
   const rt = (S.data&&S.data.lichess&&S.data.lichess.prof&&S.data.lichess.prof.perfs&&S.data.lichess.prof.perfs.rapid&&S.data.lichess.prof.perfs.rapid.rating) || C.rating || null;
   const stats = {
-    periode:"30 hari", partai_rapid:C.n,
+    periode:_lbl, partai_rapid:C.n,
     menang_persen: RR.total?Math.round(RR.m/RR.total*100):null,
     menang:RR.m, kalah:RR.k, seri:RR.r, perubahan_poin:RR.poin,
     akurasi_rata: C.accRata!=null?+C.accRata.toFixed(1):null,
@@ -2693,6 +2699,7 @@ function viewPelatih(){
   return `
   <section class="box">
     ${H2("coach", tr("Pelatih AI"), tr("Gemini · gratis"))}
+    <div class="lr-modes" style="margin-bottom:8px"><button class="lr-mode${(S._aiMode||"minggu")==="hari"?" on":""}" data-aim="hari">${tr("Harian")}</button><button class="lr-mode${(S._aiMode||"minggu")==="minggu"?" on":""}" data-aim="minggu">${tr("Mingguan")}</button><button class="lr-mode${(S._aiMode||"minggu")==="bulan"?" on":""}" data-aim="bulan">${tr("Bulanan")}</button><button class="lr-mode${(S._aiMode||"minggu")==="tahun"?" on":""}" data-aim="tahun">${tr("Tahunan")}</button></div>
     <div class="cshare"><button class="btn go" id="bCoachAI">🧠 ${tr("Minta ulasan pelatih AI")}</button></div>
     <div id="coachAIout"><p class="csub" style="margin:0">${tr("Menekan tombol mengirim angka performa (tanpa nama) ke Gemini dan menampilkan ulasannya di sini.")}</p></div>
   </section>
@@ -3483,7 +3490,8 @@ function wireKepatuhanShare(){
   const bLp = $("#bLaporan");
   if(bLp) bLp.onclick = () => bukaLaporan("minggu");
   const bAI = $("#bCoachAI");
-  if(bAI) bAI.onclick = () => mintaCoachAI();
+  if(bAI) bAI.onclick = () => mintaCoachAI(S._aiMode || "minggu");
+  $$("[data-aim]").forEach(b => b.onclick = () => { S._aiMode = b.dataset.aim; $$("[data-aim]").forEach(x => x.classList.toggle("on", x.dataset.aim === S._aiMode)); });
   const gj=$("#goalJenis"), gt=$("#goalTarget"), gd=$("#goalTenggat");
   if(gj && S.goal){ gj.value=S.goal.jenis||"rating"; if(gt)gt.value=S.goal.target||""; if(gd)gd.value=S.goal.tenggat||""; }
   const gs=$("#goalSimpan"); if(gs) gs.onclick=()=>{ const v={ jenis:(gj&&gj.value)||"rating", target:+((gt&&gt.value)||0), tenggat:(gd&&gd.value)||"" }; if(!v.target){ alert(tr("Isi angka target dulu.")); return; } S.goal=v; persist(); render(); };
