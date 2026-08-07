@@ -298,9 +298,12 @@ function msLi_(t) { return t < 1e11 ? t * 1000 : t; }
    token per anak; untuk satu anak, ini sudah benar. */
 /* Opsi "tempel di kode": isi token puzzle:read di antara kutip di bawah, sekali.
    Berlaku di semua perangkat, tak perlu tempel di browser lagi.
-   CATATAN: ini tersimpan DI FILE Kode.gs (tidak publik, tapi ikut kalau file
-   dibagikan/di-commit). Kalau ragu, kosongkan dan pakai Script Properties. */
-const LICHESS_TOKEN_HARDCODE = 'lip_1ydnk5YQdMseboA6FOlG';
+   PERINGATAN: JANGAN pakai opsi ini kalau file ini di-commit ke Git / dibagikan.
+   Token yang ditempel di sini ikut ke riwayat Git SELAMANYA, bahkan setelah
+   dihapus lagi — commit lama masih menyimpannya. Kalau repo ini publik (atau
+   bisa jadi publik), token akan bocor. Pakai Script Properties (lihat
+   pasangTokenLichess() di bawah) yang TIDAK pernah masuk kontrol versi. */
+const LICHESS_TOKEN_HARDCODE = '';
 function _tokenLi_() {
   return PropertiesService.getScriptProperties().getProperty('LICHESS_TOKEN')
       || (LICHESS_TOKEN_HARDCODE || '').trim();
